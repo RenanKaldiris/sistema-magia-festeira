@@ -1,0 +1,839 @@
+MAGIA FESTEIRA
+
+Manual do Sistema de Catálogo, Inventário, Agenda e IA
+
+Documento de produto e arquitetura - versão 1.0
+
+Pesquisa e recomendações atualizadas em 02/09/2026
+
+Objetivo: criar uma operação única em que catálogo, estoque, locações, agenda, imagens e agente de IA compartilhem a mesma fonte de dados.
+
+0. Visão executiva
+
+O sistema será desenhado como uma plataforma de gestão de locação de decoração e terá a Magia Festeira como primeira operação. A estrutura deve nascer preparada para futuramente atender outras empresas, mas sem misturar os dados da Magia com terceiros.
+
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:type="auto" w:w="0"/><w:jc w:val="center"/><w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/></w:tblPr><w:tblGrid><w:gridCol w:w="3360"/><w:gridCol w:w="3360"/><w:gridCol w:w="3360"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Camada
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Função principal
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Fonte/tecnologia recomendada
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Catálogo público
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Portfólio com busca, filtros, fotos, variações, kits e CTA para WhatsApp
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Aplicação web responsiva
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Dashboard
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Gestão de temas, itens, estoque, reservas, clientes, pagamentos, usuários e relatórios
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Aplicação web autenticada
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Banco
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fonte única de verdade para operação
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Supabase + PostgreSQL
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Imagens
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Armazenamento original + versões redimensionadas quando necessário
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Supabase Storage
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Automação
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>WhatsApp, Google Drive, Google Calendar, notificações e orquestração
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>n8n + APIs
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>IA
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Visão multimodal, identificação, categorização, comandos e atualização
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>LLM multimodal + function/tool calling
+
+Recomendação-chave: não usar o PostgreSQL do HostGator como segundo banco principal. O sistema deve ter um PostgreSQL primário no Supabase. O HostGator pode continuar hospedando outros componentes, mas duplicar a base operacional aumentaria risco de divergência, sincronização e manutenção.
+
+1. Requisitos consolidados
+
+Acervo inicial com mais de 100 temas e possibilidade de crescimento para milhares de registros.
+
+Cada tema pode possuir múltiplas fotos e uma foto principal.
+
+Estrutura hierárquica: tema principal -&gt; variações -&gt; kits -&gt; itens/opcionais.
+
+Suporte a itens avulsos com estoque próprio e reutilizáveis em diferentes temas.
+
+Campos mínimos: categoria, personagens, quantidade de peças, valor, descrição, observações e código interno.
+
+Código único por registro, com numeração controlada e sem colisões.
+
+Cadastro manual pelo dashboard.
+
+Importação em lote a partir de pasta de fotos.
+
+Importação a partir de link/pasta do Google Drive.
+
+Cadastro por WhatsApp com foto(s), texto e/ou link de Drive.
+
+Futuro suporte a Telegram/API sem reescrever o núcleo do sistema.
+
+IA identifica o tema e variações, mas pergunta quando houver ambiguidade relevante.
+
+Após cadastrar, a IA informa o resultado e permite correção.
+
+Agenda mensal, semanal e diária.
+
+Reserva deve respeitar o período completo entre retirada e devolução.
+
+Conflitos de estoque devem bloquear a reserva e gerar alerta para avaliação humana.
+
+Agenda sincronizada com Google Calendar.
+
+Controle operacional apenas de reserva, locação, devolução e alerta de conflito na primeira versão; etapas de entrega/montagem etc. não serão obrigatórias.
+
+Catálogo público funciona como portfólio, sem expor disponibilidade interna.
+
+Botão de interesse direcionando ao WhatsApp.
+
+Compartilhamento direto de um tema específico por URL.
+
+Funcionários com níveis de acesso e permissões distintas.
+
+Dashboard com indicadores e exportação de relatórios.
+
+Arquitetura preparada para futuro SaaS multiempresa.
+
+2. Modelo conceitual do acervo
+
+A separação entre entidades é essencial para não duplicar estoque e para permitir que um item avulso seja usado em diferentes locações.
+
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:type="auto" w:w="0"/><w:jc w:val="center"/><w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/></w:tblPr><w:tblGrid><w:gridCol w:w="3360"/><w:gridCol w:w="3360"/><w:gridCol w:w="3360"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Entidade
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Exemplo
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Regra
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Tema
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Vingadores
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>É o produto/tema principal do catálogo.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Variação
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Vingadores Baby
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Diferencia uma versão visual/estilo do tema.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Kit
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Bronze / Prata / Ouro
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Define composição e preço comercial.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Item
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Display de chão
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Peça/objeto do estoque, podendo ser avulso.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Unidade de estoque
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Display #003
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Existência física individual quando necessário.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Reserva/Locação
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>João - 15/09
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Compromete estoque durante um intervalo.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Foto
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Foto 01
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Arquivo relacionado a tema, variação ou item.
+
+Exemplo de estrutura: 
+
+Tema: Vingadores  Variações: Baby | Verde | Todos os Heróis  Kits: Bronze | Prata | Ouro  Opcionais: Display | Cômoda fake  Fotos: 6
+
+3. Estrutura recomendada do banco
+
+Para o futuro SaaS, todas as entidades operacionais devem ter tenant_id desde o início, mesmo que exista apenas uma empresa agora. Isso permite evoluir sem remodelar o banco posteriormente.
+
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:type="auto" w:w="0"/><w:jc w:val="center"/><w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/></w:tblPr><w:tblGrid><w:gridCol w:w="3360"/><w:gridCol w:w="3360"/><w:gridCol w:w="3360"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Tabela
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Principais campos
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Observação
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>tenants
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, name, slug, status, created_at
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Empresa/conta.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>users
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, tenant_id, role_id, name, email, status
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Usuários da equipe.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>roles / permissions
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>role_id, permission_key
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Controle granular.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>categories
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, tenant_id, name, slug
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Categorias do catálogo.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>themes
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, tenant_id, code, name, description, notes, category_id, price_from, status
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Tema principal.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>theme_variants
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, theme_id, name, description, ai_confidence
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Variações.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>items
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, tenant_id, code, name, category, quantity_total, quantity_available, price
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Itens avulsos/estoque.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>stock_units
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, tenant_id, item_id/theme_id, serial_or_unit_code, status
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Unidades físicas quando necessário.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>kits
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, theme_id, name, price, active
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Bronze/Prata/Ouro.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>kit_items
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>kit_id, item_id, quantity
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Composição do kit.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>theme_items
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>theme_id, item_id, quantity, required
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Itens associados ao tema.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>media
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, tenant_id, entity_type, entity_id, storage_path, original_name, sort_order, is_primary
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fotos.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>customers
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, tenant_id, name, phone, email, notes
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Clientes.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>rentals
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, tenant_id, customer_id, event_date, pickup_date, return_date, status, total, paid, balance
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Reserva/locação.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>rental_lines
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>rental_id, theme/kit/item references, qty, unit_price
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Itens comprometidos.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>payments
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, rental_id, amount, method, paid_at, note
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Histórico de pagamentos.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>calendar_sync
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>rental_id, provider, external_event_id, sync_status
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Espelho do Google Calendar.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>imports
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, source_type, source_ref, status, started_at, finished_at
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Rastreamento de importações.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>import_assets
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>import_id, source_file, fingerprint, status, detected_entity
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Processamento por arquivo.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>ai_runs
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, channel, input, model, status, confidence, output, created_at
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Auditoria da IA.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>audit_logs
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>id, tenant_id, user_id, action, entity, entity_id, payload, created_at
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Histórico crítico.
+
+4. Arquitetura de solução recomendada
+
+CLIENTES / EQUIPE       |       +--&gt; Catálogo público / Dashboard web       |            |       |            +--&gt; Supabase Auth       |            +--&gt; Supabase REST/SDK       |       +--&gt; WhatsApp Cloud API --&gt; n8n --&gt; Agente multimodal --&gt; API interna       |                                   |       |                                   +--&gt; Supabase DB/Storage       |       +--&gt; Google Drive --&gt; n8n --&gt; fila de importação --&gt; IA --&gt; Supabase       |       +--&gt; Google Calendar &lt;--&gt; n8n/API &lt;--&gt; reservas no SupabaseFONTE DE VERDADE: Supabase/PostgreSQLAUTOMAÇÃO: n8nARQUIVOS: Supabase StorageCALENDÁRIO: Google Calendar como integração/espelho, não como estoque principal
+
+Supabase: a documentação atual posiciona Postgres como núcleo do projeto, com Auth, Storage, Realtime e Functions integrados. Storage usa metadados em Postgres, mas os objetos devem ser manipulados via Storage API, não editando diretamente o schema de storage. RLS deve ser aplicado às tabelas expostas. [R1-R4]
+
+5. Arquivos e imagens
+
+Preservar o arquivo original exatamente como recebido, sem sobrescrever o original.
+
+Gerar versões derivadas somente quando necessário para performance do dashboard/catalogo.
+
+Guardar metadados: nome original, MIME, tamanho, dimensão, checksum/fingerprint, caminho no Storage e entidade relacionada.
+
+Usar foto principal + galeria ordenável por tema/variação/item.
+
+Evitar guardar binários dentro do PostgreSQL.
+
+Usar o Storage API para upload, move, delete e políticas de acesso. [R3]
+
+6. Agente de IA: comportamento esperado
+
+O agente deve ser tratado como um operador com ferramentas controladas, e não como um modelo com permissão irrestrita para escrever no banco.
+
+6.1 Fluxo de foto pelo WhatsApp
+
+Receber webhook de mensagem de mídia.
+
+Identificar remetente autorizado (e/ou perfil de operador).
+
+Baixar a mídia para armazenamento próprio imediatamente; URLs de mídia da WhatsApp Cloud API expiram após 5 minutos. [R5-R7]
+
+Calcular fingerprint para evitar duplicação acidental.
+
+Consultar temas/variações existentes para tentar encontrar correspondência.
+
+Analisar a imagem com modelo multimodal.
+
+Produzir saída estruturada com nome principal, possível variação, categoria, personagens, descrição, observações, itens visíveis e confiança.
+
+Se houver certeza suficiente: criar ou atualizar o cadastro de acordo com regras de duplicidade.
+
+Se houver ambiguidade: não inventar; perguntar com opções curtas.
+
+Responder no WhatsApp com resumo do que foi feito e permitir correções.
+
+Registrar a execução da IA e a decisão humana no log.
+
+6.2 Exemplo de resposta da IA
+
+✅ Cadastro realizadoMF-0127 - VingadoresVariação: Vingadores BabyCategoria: Super-heróisFotos adicionadas: 4⚠️ Não consegui confirmar se a variação é "Baby" ou "Kids".1 - Vingadores Baby2 - Vingadores KidsResponda 1 ou 2.
+
+6.3 Regras de duplicidade
+
+Se o tema já existir e a nova foto for do mesmo tema, perguntar se deve adicionar à galeria existente.
+
+Se houver correspondência provável com variação existente, sugerir atualização da variação em vez de criar novo tema.
+
+Nunca criar múltiplos cadastros só porque recebeu várias fotos do mesmo produto.
+
+Usar fingerprint/hash para detectar o mesmo arquivo repetido.
+
+7. Importação em lote
+
+Pasta local
+
+Google Drive
+
+WhatsApp com várias imagens
+
+Futuro Telegram/API
+
+A importação deve funcionar como uma fila de jobs. Para 100+ imagens, não executar tudo em uma única requisição síncrona. Criar importação -&gt; assets -&gt; processamento individual -&gt; agrupamento -&gt; revisão -&gt; publicação.
+
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:type="auto" w:w="0"/><w:jc w:val="center"/><w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/></w:tblPr><w:tblGrid><w:gridCol w:w="5040"/><w:gridCol w:w="5040"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Status
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Significado
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Recebido
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Arquivo detectado.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Baixando
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Arquivo sendo obtido da origem.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Processando
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>IA e normalização.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Agrupado
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Associado a tema existente ou candidato novo.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Revisão
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Precisa de decisão humana.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Publicado
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Entrou no catálogo.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Erro
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Falhou; manter motivo e permitir retry.
+
+8. Google Drive
+
+A API do Google Drive permite listar arquivos/pastas e baixar arquivos blob usando files.get com alt=media. Portanto, o requisito de colar um link de pasta e importar suas imagens é viável; o sistema deve transformar o link em fileId, listar os descendentes e baixar apenas os tipos suportados. [R8-R9]
+
+Preferir OAuth com escopo mínimo necessário.
+
+Registrar drive_file_id, nome, MIME, pasta de origem e data da importação.
+
+Impedir reimportação do mesmo arquivo quando a mesma pasta for enviada novamente, salvo ação explícita do usuário.
+
+9. Agenda, locações e disponibilidade
+
+A disponibilidade deve ser calculada pelo estoque interno. O Google Calendar será uma integração operacional para visualização e sincronização, não o banco de inventário.
+
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:type="auto" w:w="0"/><w:jc w:val="center"/><w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/></w:tblPr><w:tblGrid><w:gridCol w:w="5040"/><w:gridCol w:w="5040"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Campo
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Exemplo
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Data do evento
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>15/06/2026
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Cliente
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>João
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Tema
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Vingadores
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Kit
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Prata
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Valor
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>R$ 169,90
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Itens inclusos
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Display de chão; cômoda fake
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Retirada
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>14/09/2026
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Devolução
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>16/09/2026
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Pago
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>R$ 60,00
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Saldo
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>R$ 109,90
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Status
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Reservado / Alugado / Devolvido
+
+9.1 Regra de conflito
+
+Uma reserva deve comprometer o estoque no intervalo completo entre retirada e devolução, conforme a política operacional definida. Antes de confirmar a reserva, o sistema consulta locações ativas e quantidade física disponível.
+
+disponivel = estoque_total - quantidade_comprometida_no_intervalo
+
+Se disponível &gt;= quantidade solicitada: permitir.
+
+Se disponível &lt; quantidade solicitada: bloquear a confirmação e exibir conflito.
+
+O usuário pode abrir o conflito e avaliar a situação antes de prosseguir por uma ação administrativa explícita.
+
+9.2 Google Calendar
+
+A API do Google Calendar suporta criação, listagem, atualização e monitoramento de eventos, além do endpoint FreeBusy para retornar intervalos ocupados. As cotas atuais informadas pelo Google são 10.000 requisições/minuto por projeto e 600/minuto por usuário/projeto para Calendar; o uso padrão está sem custo adicional dentro das regras vigentes em 2026. [R10-R12]
+
+Ao criar reserva: criar/atualizar evento e salvar external_event_id.
+
+Ao editar reserva: atualizar o evento associado.
+
+Ao cancelar: cancelar/apagar evento conforme política.
+
+Se a sincronização externa falhar, manter a reserva interna e colocar sync_status=error; nunca perder a reserva por falha do Calendar.
+
+10. Catálogo público
+
+Portfólio visual, mobile-first e também otimizado para desktop.
+
+Busca por nome, personagem e termos relevantes.
+
+Filtros por categoria, subcategoria/tema e variação.
+
+Página de tema com URL compartilhável.
+
+Galeria de fotos com foto principal em destaque.
+
+Exibir tema, variações, kits e opcionais conforme configuração pública.
+
+Não exibir estoque, conflitos ou agenda interna.
+
+CTA: "Tenho interesse neste tema" -&gt; WhatsApp com mensagem pré-preenchida contendo nome/código do tema e URL.
+
+10.1 Dashboard administrativo
+
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:type="auto" w:w="0"/><w:jc w:val="center"/><w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/></w:tblPr><w:tblGrid><w:gridCol w:w="5040"/><w:gridCol w:w="5040"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Módulo
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Funções
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Visão geral
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Indicadores, próximos eventos, conflitos, saldo a receber, importações pendentes.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Temas
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>CRUD, fotos, variações, kits, itens e publicação.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Itens/estoque
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Quantidade, unidades, disponibilidade e ajustes.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Agenda
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Mensal, semanal e diária; reservas e conflitos.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Clientes
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Cadastro e histórico.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Pagamentos
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Pago, saldo e histórico.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Importações
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fila, status, erros, revisão e publicação.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>IA
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Histórico de comandos, confiança e pendências.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Relatórios
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Exportações e indicadores.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Usuários
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Perfis, permissões e auditoria.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Configurações
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Integrações, identidade visual, códigos e regras.
+
+11. Segurança e governança
+
+Ativar RLS em todas as tabelas expostas no Supabase e criar políticas por tenant/role. [R2]
+
+Nunca enviar service-role key para o navegador.
+
+Segredos de Meta, Google, n8n e modelos devem permanecer no servidor/secret manager.
+
+Validar todas as entradas do agente antes de executar mutações.
+
+Function/tool calling deve usar schemas estritos e validação de argumentos; a documentação da API recomenda validar argumentos antes de executar funções. [R13-R14]
+
+Registrar ações críticas em audit_logs.
+
+Implementar idempotência em webhooks e importações.
+
+Aplicar rate limit e autenticação nos endpoints internos.
+
+12. Papel de cada ferramenta
+
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:type="auto" w:w="0"/><w:jc w:val="center"/><w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/></w:tblPr><w:tblGrid><w:gridCol w:w="3360"/><w:gridCol w:w="3360"/><w:gridCol w:w="3360"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Ferramenta
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Papel recomendado
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Não usar como
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Antigravity
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Ambiente agente de desenvolvimento para construir, testar, depurar e manter o código.
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Banco de produção ou camada obrigatória de runtime.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Supabase
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Postgres, Auth, Storage, Realtime, Functions.
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Apenas um painel; ele será parte da infraestrutura.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>n8n
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Orquestração e integrações: WhatsApp, Drive, Calendar, IA, notificações.
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fonte de verdade do estoque.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Google Calendar
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Visualização/sincronização da agenda.
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Banco principal de disponibilidade.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Google Drive
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Origem de imagens/importações.
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Armazenamento principal do catálogo.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>WhatsApp Cloud API
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Entrada de imagens/texto e retorno ao operador.
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Banco de dados.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>LLM multimodal
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Identificação e interpretação de imagens, classificação e linguagem.
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fonte absoluta da verdade para estoque/preço.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>HostGator
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Hospedagem auxiliar, DNS, serviços existentes ou n8n se compatível com seu ambiente.
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Segundo banco operacional independente.
+
+O n8n atualmente oferece integrações publicadas para WhatsApp Business Cloud, Google Drive, Google Calendar e Supabase, e o catálogo de integrações apresenta exemplos de agentes multimodais com Gemini/OpenAI e Supabase. [R15-R18]
+
+13. Preparação para virar SaaS
+
+Adicionar tenant_id em todos os registros operacionais.
+
+Separar configurações por empresa: marca, domínio, categorias, regras e integrações.
+
+Isolar dados por RLS.
+
+Não colocar IDs ou secrets de uma empresa em código estático.
+
+Criar slug/URL pública por empresa no futuro, por exemplo /maria-festeira ou subdomínio.
+
+Manter arquitetura de integrações desacoplada: WhatsApp, Telegram e futuros canais devem chamar serviços internos comuns.
+
+14. Plano de implementação
+
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:type="auto" w:w="0"/><w:jc w:val="center"/><w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/></w:tblPr><w:tblGrid><w:gridCol w:w="5040"/><w:gridCol w:w="5040"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Fase
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Entrega
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fase 0 - Base
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Repositório, stack, ambiente, CI/checks, variáveis, Supabase e migrations.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fase 1 - Banco e Auth
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Schema, RLS, usuários, roles, seeds e auditoria.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fase 2 - Dashboard de acervo
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Temas, variações, kits, itens, fotos e estoque.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fase 3 - Catálogo público
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Busca, filtros, página de tema, compartilhamento e WhatsApp CTA.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fase 4 - Agenda
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Reservas, conflito de estoque, clientes, pagamentos, calendário mensal/semanal/diário.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fase 5 - Google Calendar
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>OAuth, criação/atualização de eventos, sync status e tratamento de falhas.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fase 6 - Importador
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Pasta local, Google Drive, fila, deduplicação e revisão.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fase 7 - Agente WhatsApp
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Webhook, mídia, visão, tools, confirmação, correção e logs.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fase 8 - Hardening
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Testes, RLS, idempotência, segurança, performance, acessibilidade e observabilidade.
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Fase 9 - Expansão
+
+<w:tcPr><w:tcW w:type="dxa" w:w="5040"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Telegram/API, automações de CRM, contratos/financeiro e multiempresa.
+
+15. Critérios de aceite essenciais
+
+Cadastrar manualmente Vingadores com 4 fotos e uma variação.
+
+Adicionar mais 2 fotos ao mesmo tema sem criar duplicata indevida.
+
+Cadastrar Kit Prata e vincular itens ao kit.
+
+Cadastrar uma cômoda como item avulso e utilizá-la em dois temas distintos.
+
+Ter estoque 2 para um tema e permitir 2 reservas sobrepostas no mesmo intervalo.
+
+Tentar uma terceira reserva e receber conflito/alerta sem confirmação automática.
+
+Criar uma reserva e sincronizar evento no Google Calendar.
+
+Editar a reserva e refletir a alteração no evento externo.
+
+Enviar foto pelo WhatsApp e ter mídia armazenada antes da análise expirar.
+
+Enviar várias fotos do mesmo tema e obter um único agrupamento.
+
+Enviar foto ambígua e receber pergunta de confirmação.
+
+Mandar link do Google Drive e importar imagens da pasta.
+
+Reimportar a mesma pasta e evitar duplicatas.
+
+Compartilhar um tema pelo catálogo e abrir sua página pública diretamente.
+
+Clicar no botão de WhatsApp e abrir conversa com contexto do tema.
+
+Funcionário sem permissão de administrador não consegue alterar configurações críticas.
+
+Gerar/exportar relatório operacional sem expor secrets ou dados de outros tenants.
+
+16. Viabilidade e custos: fotografia atual
+
+Os valores abaixo são referências das páginas atuais consultadas e podem mudar. A arquitetura foi escolhida mais pela compatibilidade e controle do que por depender de um único fornecedor.
+
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:type="auto" w:w="0"/><w:jc w:val="center"/><w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/></w:tblPr><w:tblGrid><w:gridCol w:w="3360"/><w:gridCol w:w="3360"/><w:gridCol w:w="3360"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Serviço
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Situação consultada
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/><w:shd w:fill="EDEDED"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>Impacto
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Supabase
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Free: 1 GB Storage e 500 MB DB; Pro a partir de US$25/mês, com 8 GB de disco e 100 GB Storage incluídos no plano listado.
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Adequado para MVP; imagens podem exigir upgrade conforme uso. [R19]
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>n8n Cloud
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Starter listado a €20/mês anual e Pro a €50/mês anual; self-hosted também existe.
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Pode começar self-hosted se fizer sentido operacional. [R20]
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Antigravity
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Plano individual listado a US$0/mês; planos Google AI aumentam limites.
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Bom ambiente para desenvolvimento agentic. [R21]
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Google Calendar API
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Uso padrão sem custo adicional; quotas atuais publicadas.
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Boa opção para integração de agenda. [R10-R12]
+
+<w:tc><w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>WhatsApp Cloud API
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>API oficial de mensagens, mídia e webhooks; custos variam conforme política/categoria de mensagens da Meta.
+
+<w:tcPr><w:tcW w:type="dxa" w:w="3360"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:r/><w:r><w:rPr><w:b w:val="0"/><w:sz w:val="18"/></w:rPr><w:t>Viável, mas orçamento deve ser verificado no momento da ativação. [R5-R7]
+
+17. Decisões técnicas fechadas
+
+Supabase/PostgreSQL é a fonte central de verdade.
+
+Supabase Storage é o armazenamento oficial das imagens do catálogo.
+
+n8n é a camada de orquestração, não a base do inventário.
+
+Google Calendar é sincronização/visualização; disponibilidade real é calculada no banco interno.
+
+WhatsApp Cloud API será o canal inicial do agente.
+
+Google Drive será fonte de importação, não o repositório definitivo das imagens.
+
+Agente usa ferramentas explícitas para ler/criar/editar dados.
+
+Ações de alto impacto e ambiguidades relevantes pedem confirmação humana.
+
+O schema nasce multi-tenant, mas com Magia Festeira como único tenant inicial.
+
+O dashboard e o catálogo público compartilham a mesma base, mas têm autenticação, permissões e superfícies diferentes.
+
+18. Fontes consultadas
+
+[R1] Supabase - Architecturehttps://supabase.com/docs/guides/getting-started/architecture
+
+[R2] Supabase - Row Level Securityhttps://supabase.com/docs/guides/database/postgres/row-level-security
+
+[R3] Supabase - Storage Schemahttps://supabase.com/docs/guides/storage/schema/design
+
+[R4] Supabase - Edge Functionshttps://supabase.com/docs/guides/functions
+
+[R5] Meta/WhatsApp - Business Platform overviewhttps://developers.facebook.com/documentation/business-messaging/whatsapp/overview
+
+[R6] Meta/WhatsApp Postman - Mediahttps://www.postman.com/meta/whatsapp-business-platform/folder/13382743-ecb27be5-4d27-4763-bbee-6a8002c04bf3
+
+[R7] Meta/WhatsApp Postman - Webhook payload / messageshttps://www.postman.com/meta/whatsapp-business-platform/folder/tduohwq/webhook-payload-reference
+
+[R8] Google Drive - Search files and foldershttps://developers.google.com/workspace/drive/api/guides/search-files
+
+[R9] Google Drive - Download and export fileshttps://developers.google.com/workspace/drive/api/guides/manage-downloads
+
+[R10] Google Calendar - Events API referencehttps://developers.google.com/workspace/calendar/api/v3/reference/events
+
+[R11] Google Calendar - FreeBusyhttps://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query
+
+[R12] Google Calendar - Usage limitshttps://developers.google.com/workspace/calendar/api/guides/quota
+
+[R13] OpenAI - API quickstart / image input / toolshttps://platform.openai.com/docs/quickstart/make-your-first-api-request
+
+[R14] OpenAI - Function/tool calling referencehttps://platform.openai.com/docs/api-reference
+
+[R15] n8n - WhatsApp Business Cloudhttps://n8n.io/integrations/whatsapp-business-cloud/
+
+[R16] n8n - Google Drivehttps://n8n.io/integrations/google-drive/
+
+[R17] n8n - Google Calendarhttps://n8n.io/integrations/google-calendar/
+
+[R18] n8n - Supabasehttps://n8n.io/integrations/supabase/
+
+[R19] Supabase - Pricinghttps://supabase.com/pricing
+
+[R20] n8n - Pricinghttps://n8n.io/pricing/
+
+[R21] Google Antigravity - Pricinghttps://antigravity.google/pricing
+
+[R22] Google Antigravity - Overviewhttps://antigravity.google/docs/ide/overview/
