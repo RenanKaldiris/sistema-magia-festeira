@@ -4,7 +4,7 @@
   "description": "Sistema de gestão, orçamentos, estoque, agenda e catálogo da Magia Festeira.",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
