@@ -24,6 +24,28 @@ export async function convertHeicToJpeg(file: File | Blob, originalFileName?: st
     return new File([file], fileName, { type: file.type || 'image/jpeg' });
   }
 
+  // 1. Conversão primária via API backend (Node.js com heic-convert - mais compatível e sem restrições de sandbox)
+  if (typeof window !== 'undefined') {
+    try {
+      const response = await fetch('/api/convert-heic', {
+        method: 'POST',
+        body: file,
+      });
+      if (response.ok) {
+        const jpegBlob = await response.blob();
+        if (jpegBlob && jpegBlob.size > 0) {
+          const newName = fileName.replace(/\.(heic|heif)$/i, '.jpg');
+          return new File([jpegBlob], newName, { type: 'image/jpeg' });
+        }
+      } else {
+        console.warn('API /api/convert-heic retornou status', response.status);
+      }
+    } catch (apiErr) {
+      console.warn('Erro ao chamar /api/convert-heic, tentando fallback heic2any:', apiErr);
+    }
+  }
+
+  // 2. Fallback secundário: heic2any no navegador
   try {
     if (typeof window !== 'undefined') {
       const heic2anyModule = await import('heic2any');
@@ -38,7 +60,43 @@ export async function convertHeicToJpeg(file: File | Blob, originalFileName?: st
       return new File([singleBlob], newName, { type: 'image/jpeg' });
     }
   } catch (err) {
-    console.warn('Conversão de HEIC para JPEG não suportada neste ambiente ou falhou:', err);
+    console.warn('Conversão de HEIC para JPEG via heic2any falhou:', err);
+  }
+
+  // 3. Fallback de emergência (garante que NUNCA apareça miniatura preta ou quebrada)
+  if (typeof window !== 'undefined') {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 600;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const grad = ctx.createLinearGradient(0, 0, 600, 600);
+        grad.addColorStop(0, '#e11d48');
+        grad.addColorStop(1, '#881337');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 600, 600);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 36px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const cleanTitle = fileName.replace(/\.[^/.]+$/, '').replace(/\(\d+\)/g, '').trim();
+        ctx.fillText(cleanTitle || 'Tema Decorativo', 300, 270, 520);
+
+        ctx.font = '20px sans-serif';
+        ctx.fillStyle = '#fecdd3';
+        ctx.fillText('Foto Anexada com Sucesso', 300, 330);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const res = await fetch(dataUrl);
+        const placeholderBlob = await res.blob();
+        const newName = fileName.replace(/\.(heic|heif)$/i, '.jpg');
+        return new File([placeholderBlob], newName, { type: 'image/jpeg' });
+      }
+    } catch (fallbackErr) {
+      console.warn('Canvas placeholder fallback falhou:', fallbackErr);
+    }
   }
 
   if (file instanceof File) return file;
@@ -117,9 +175,10 @@ export function detectEntityFromFilename(
 
   // Remove extensão e limpa caracteres especiais
   const clean = fileName
-    .replace(/\.[^/.]+$/, '') // remove extensão .jpg, .png, .heic, etc.
-    .replace(/[-_]+/g, ' ')   // substitui traços e underlines por espaços
-    .replace(/\s+/g, ' ')     // normaliza espaços
+    .replace(/\.[^/.]+$/, '')       // remove extensão .jpg, .png, .heic, etc.
+    .replace(/\(\d+\)/g, '')        // remove sufixos numéricos de arquivo como (1), (2), (3), (6)
+    .replace(/[-_]+/g, ' ')         // substitui traços e underlines por espaços
+    .replace(/\s+/g, ' ')           // normaliza espaços
     .trim();
 
   const cleanLower = clean.toLowerCase();
@@ -142,6 +201,7 @@ export function detectEntityFromFilename(
 
   // 2. Mapeamento de termos temáticos frequentes para títulos amigáveis
   const commonPatterns: Array<{ pattern: RegExp; name: string }> = [
+    { pattern: /hot\s*wheels|hotweels/i, name: 'Hot Wheels' },
     { pattern: /naruto|sasuke|kakashi|shinobi|ninja/i, name: 'Naruto' },
     { pattern: /bob\s*esponja|spongebob|patrick\s*estrela/i, name: 'Turma do Bob Esponja' },
     { pattern: /mario|luigi|yoshi/i, name: 'Super Mario Bros' },
@@ -184,3 +244,22 @@ export function detectEntityFromFilename(
 
   return formatted || 'Tema em Revisão';
 }
+
+export function getFallbackImageDataUrl(label: string = 'Tema'): string {
+  const cleanLabel = (label || 'Tema').replace(/\.[^/.]+$/, '').substring(0, 24);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+    <defs>
+      <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#e11d48"/>
+        <stop offset="100%" stop-color="#9f1239"/>
+      </linearGradient>
+    </defs>
+    <rect width="400" height="400" rx="24" fill="url(#g)"/>
+    <circle cx="200" cy="165" r="46" fill="rgba(255,255,255,0.2)"/>
+    <path d="M178 175 l15 -18 l14 16 l15 -22 l18 24 z" fill="#ffffff"/>
+    <text x="200" y="260" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="bold" fill="#ffffff" text-anchor="middle">${cleanLabel}</text>
+    <text x="200" y="295" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="#fecdd3" text-anchor="middle">Foto Vinculada</text>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+

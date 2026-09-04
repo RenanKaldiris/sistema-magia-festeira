@@ -21,7 +21,7 @@ import { store } from '@/lib/store';
 import { Import, ImportAsset, Theme } from '@/types/database';
 import { formatDateBR } from '@/lib/dateUtils';
 import { ThemeEditDrawer } from './ThemeEditDrawer';
-import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg } from '@/lib/imageUtils';
+import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
 
 interface StagedFile {
   id: string;
@@ -81,20 +81,31 @@ export function ImportacoesTabContent() {
     const fileList = Array.from(files);
 
     fileList.forEach(async (rawFile, idx) => {
-      // 1. Converte HEIC/HEIF para JPEG (assegura renderização nativa de miniaturas em qualquer navegador)
-      const file = await convertHeicToJpeg(rawFile);
-      const instantPreview = URL.createObjectURL(file);
       const stageId = 'stg-' + Date.now() + '-' + idx + '-' + Math.random().toString(36).substring(2, 7);
+      const isHeic = isHeicFile(rawFile);
+      const initialPreview = isHeic
+        ? getFallbackImageDataUrl(rawFile.name)
+        : URL.createObjectURL(rawFile);
 
       setStagedFiles((prev) => [
         ...prev,
         {
           id: stageId,
-          name: file.name,
-          previewUrl: instantPreview,
-          size: file.size,
+          name: rawFile.name,
+          previewUrl: initialPreview,
+          size: rawFile.size,
         },
       ]);
+
+      // 1. Converte HEIC/HEIF para JPEG (assegura renderização nativa de miniaturas em qualquer navegador)
+      const file = await convertHeicToJpeg(rawFile);
+      const instantPreview = URL.createObjectURL(file);
+
+      setStagedFiles((prev) =>
+        prev.map((item) =>
+          item.id === stageId ? { ...item, name: file.name, previewUrl: instantPreview } : item
+        )
+      );
 
       // 2. Compressão assíncrona via Canvas para Base64 leve e persistente
       try {
@@ -361,10 +372,13 @@ export function ImportacoesTabContent() {
               type="file"
               ref={localFileInputRef}
               multiple
-              accept="image/*"
+              accept="image/*,.heic,.heif,.HEIC,.HEIF"
               className="hidden"
               id="local-folder-input-tab"
-              onChange={(e) => handleFileSelect(e.target.files)}
+              onChange={(e) => {
+                handleFileSelect(e.target.files);
+                if (e.target) e.target.value = '';
+              }}
             />
 
             {stagedFiles.length === 0 ? (
@@ -428,7 +442,7 @@ export function ImportacoesTabContent() {
                         alt={file.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLElement).style.opacity = '0';
+                          e.currentTarget.src = getFallbackImageDataUrl(file.name);
                         }}
                       />
                       <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] truncate px-1 py-0.5 font-mono">
@@ -567,11 +581,15 @@ export function ImportacoesTabContent() {
                         alt={asset.source_file}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLElement).style.opacity = '0';
+                          e.currentTarget.src = getFallbackImageDataUrl(asset.detected_entity || asset.source_file);
                         }}
                       />
                     ) : (
-                      <ImageIcon className="w-8 h-8 text-slate-400" />
+                      <img
+                        src={getFallbackImageDataUrl(asset.detected_entity || asset.source_file)}
+                        alt={asset.source_file}
+                        className="w-full h-full object-cover"
+                      />
                     )}
                   </div>
 

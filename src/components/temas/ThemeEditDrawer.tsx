@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Theme, EntityStatus, Media } from '@/types/database';
 import { store } from '@/lib/store';
-import { fileToDataUrl, convertHeicToJpeg } from '@/lib/imageUtils';
+import { fileToDataUrl, convertHeicToJpeg, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
 
 interface ThemeEditDrawerProps {
   theme: (Theme & { imageUrl?: string }) | null;
@@ -43,50 +43,26 @@ export function ThemeEditDrawer({
   onApprove,
 }: ThemeEditDrawerProps) {
   const [name, setName] = useState('');
-  const [basePrice, setBasePrice] = useState<number>(179.9);
+  const [basePrice, setBasePrice] = useState<number | string>(179.9);
   const [stockQuantity, setStockQuantity] = useState<number>(1);
   const [characters, setCharacters] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<EntityStatus>('active');
   const [featured, setFeatured] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Media Gallery State
   const [mediaList, setMediaList] = useState<Media[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  // Sub-modal do Google Drive
   const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
   const [driveUrlInput, setDriveUrlInput] = useState('');
-  const [notification, setNotification] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const showNotification = (msg: string) => {
-    setNotification(msg);
-    setTimeout(() => setNotification(null), 3000);
-  };
-
   const refreshMedia = (themeId: string) => {
-    const details = store.getThemeById(themeId);
-    let list = details?.media || store.getMediaByEntity('theme', themeId);
-    if ((!list || list.length === 0) && (theme as any)?.imageUrl) {
-      list = [
-        {
-          id: 'temp-media-' + themeId,
-          tenant_id: 'a0000000-0000-0000-0000-000000000001',
-          entity_type: 'theme',
-          entity_id: themeId,
-          storage_path: (theme as any).imageUrl,
-          original_name: 'foto_principal.jpg',
-          mime_type: 'image/jpeg',
-          file_size: 500000,
-          fingerprint: `sha256-${themeId}`,
-          sort_order: 1,
-          is_primary: true,
-          created_at: new Date().toISOString(),
-        },
-      ];
-    }
-    setMediaList(list || []);
+    const list = store.getMediaByEntity('theme', themeId);
+    setMediaList(list);
   };
 
   useEffect(() => {
@@ -94,13 +70,44 @@ export function ThemeEditDrawer({
       setName(theme.name || '');
       setBasePrice(theme.base_price !== undefined ? theme.base_price : 179.9);
       setStockQuantity(theme.stock_quantity || 1);
-      setCharacters(theme.characters ? theme.characters.join(', ') : '');
+      setCharacters(theme.characters?.join(', ') || '');
       setDescription(theme.description || '');
-      setStatus(theme.status === 'inactive' ? 'inactive' : 'active');
+      setStatus(theme.status || 'active');
       setFeatured(!!theme.featured);
-      refreshMedia(theme.id);
+
+      if (isPreApproval) {
+        // Modo pré-aprovação: inicializa media list com a foto original se houver
+        if (theme.imageUrl) {
+          setMediaList([
+            {
+              id: 'pre-media-1',
+              tenant_id: 'a0000000-0000-0000-0000-000000000001',
+              entity_type: 'theme',
+              entity_id: theme.id,
+              storage_path: theme.imageUrl,
+              original_name: `${theme.name || 'foto'}_capa.jpg`,
+              mime_type: 'image/jpeg',
+              file_size: 450000,
+              fingerprint: `pre-${Date.now()}`,
+              sort_order: 1,
+              is_primary: true,
+              ai_tags: theme.characters || [],
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        } else {
+          setMediaList([]);
+        }
+      } else {
+        refreshMedia(theme.id);
+      }
     }
-  }, [theme]);
+  }, [theme, isPreApproval]);
+
+  const showNotification = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   // Handle ESC key to close
   useEffect(() => {
@@ -126,8 +133,10 @@ export function ThemeEditDrawer({
     }
 
     files.forEach(async (rawFile) => {
-      const file = await convertHeicToJpeg(rawFile);
-      const instantPreview = URL.createObjectURL(file);
+      const isHeic = isHeicFile(rawFile);
+      const instantPreview = isHeic
+        ? getFallbackImageDataUrl(rawFile.name)
+        : URL.createObjectURL(rawFile);
       const isFirst = mediaList.length === 0;
       const mediaId = '20000000-' + Math.random().toString(36).substring(2, 14);
 
@@ -137,9 +146,9 @@ export function ThemeEditDrawer({
         entity_type: 'theme',
         entity_id: theme.id,
         storage_path: instantPreview,
-        original_name: file.name,
-        mime_type: file.type || 'image/jpeg',
-        file_size: file.size,
+        original_name: rawFile.name,
+        mime_type: rawFile.type || 'image/jpeg',
+        file_size: rawFile.size,
         fingerprint: `sha256-${theme.id.substring(0, 6)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         sort_order: mediaList.length + 1,
         is_primary: isFirst,
@@ -149,29 +158,42 @@ export function ThemeEditDrawer({
 
       if (isPreApproval) {
         setMediaList((prev) => [...prev, tempMedia]);
-        // Em background, atualiza com Base64 comprimido
-        try {
-          const permanentUrl = await fileToDataUrl(file);
-          if (permanentUrl) {
-            setMediaList((prev) =>
-              prev.map((m) => (m.id === mediaId ? { ...m, storage_path: permanentUrl } : m))
-            );
+      }
+
+      // 1. Converte HEIC/HEIF para JPEG se necessário
+      const file = await convertHeicToJpeg(rawFile);
+      const convertedPreview = URL.createObjectURL(file);
+
+      // Atualiza preview com JPEG nativo
+      setMediaList((prev) =>
+        prev.map((m) =>
+          m.id === mediaId ? { ...m, storage_path: convertedPreview, original_name: file.name } : m
+        )
+      );
+
+      // 2. Compressão leve para Base64
+      try {
+        const permanentUrl = await fileToDataUrl(file);
+        if (permanentUrl) {
+          setMediaList((prev) =>
+            prev.map((m) => (m.id === mediaId ? { ...m, storage_path: permanentUrl } : m))
+          );
+          if (!isPreApproval) {
+            store.addMediaToEntity({
+              ...tempMedia,
+              storage_path: permanentUrl,
+              original_name: file.name,
+            });
+            refreshMedia(theme.id);
           }
-        } catch {
-          // Mantém instantPreview
         }
-      } else {
-        // Modo edição de tema existente: persiste no store
-        try {
-          const permanentUrl = await fileToDataUrl(file);
-          const finalMedia: Media = {
+      } catch {
+        if (!isPreApproval) {
+          store.addMediaToEntity({
             ...tempMedia,
-            storage_path: permanentUrl || instantPreview,
-          };
-          store.addMediaToEntity(finalMedia);
-          refreshMedia(theme.id);
-        } catch {
-          store.addMediaToEntity(tempMedia);
+            storage_path: convertedPreview,
+            original_name: file.name,
+          });
           refreshMedia(theme.id);
         }
       }
@@ -395,7 +417,7 @@ export function ThemeEditDrawer({
                   ref={fileInputRef}
                   onChange={handleFileUpload}
                   multiple
-                  accept="image/*"
+                  accept="image/*,.heic,.heif,.HEIC,.HEIF"
                   className="hidden"
                 />
                 <button
@@ -423,7 +445,7 @@ export function ThemeEditDrawer({
                   ref={galleryInputRef}
                   onChange={handleFileUpload}
                   multiple
-                  accept="image/*"
+                  accept="image/*,.heic,.heif,.HEIC,.HEIF"
                   className="hidden"
                 />
                 <button
@@ -489,7 +511,7 @@ export function ThemeEditDrawer({
                         alt={media.original_name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLElement).style.opacity = '0';
+                          e.currentTarget.src = getFallbackImageDataUrl(media.original_name);
                         }}
                       />
 

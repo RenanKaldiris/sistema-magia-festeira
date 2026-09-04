@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Item, Media } from '@/types/database';
 import { store } from '@/lib/store';
-import { fileToDataUrl } from '@/lib/imageUtils';
+import { fileToDataUrl, getFallbackImageDataUrl } from '@/lib/imageUtils';
 
 interface ItemEditDrawerProps {
   item: Item | null;
@@ -378,7 +378,7 @@ export function ItemEditDrawer({
                   ref={fileInputRef}
                   onChange={handleFileUpload}
                   multiple
-                  accept="image/*"
+                  accept="image/*,.heic,.heif,.HEIC,.HEIF"
                   className="hidden"
                 />
                 <button
@@ -404,7 +404,7 @@ export function ItemEditDrawer({
                   ref={galleryInputRef}
                   onChange={handleFileUpload}
                   multiple
-                  accept="image/*"
+                  accept="image/*,.heic,.heif,.HEIC,.HEIF"
                   className="hidden"
                 />
                 <button
@@ -460,6 +460,9 @@ export function ItemEditDrawer({
                         src={m.storage_path}
                         alt={m.original_name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = getFallbackImageDataUrl(m.original_name);
+                        }}
                       />
                       {m.is_primary && (
                         <span className="absolute bottom-1 left-1 bg-rose-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">

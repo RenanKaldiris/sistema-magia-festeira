@@ -36,7 +36,7 @@ import { DeleteConfirmationModal } from '@/components/temas/DeleteConfirmationMo
 import { OrcamentoModal } from '@/components/temas/OrcamentoModal';
 import { ItensTabContent } from '@/components/temas/ItensTabContent';
 import { ImportacoesTabContent } from '@/components/temas/ImportacoesTabContent';
-import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg } from '@/lib/imageUtils';
+import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
 
 type TabType = 'temas' | 'itens' | 'importacoes';
 type SortField = 'name' | 'price' | 'status';
@@ -233,25 +233,37 @@ function TemasManagementContent() {
     }
 
     files.forEach(async (rawFile, idx) => {
-      // 1. Converte HEIC/HEIF para JPEG se necessário (essencial para navegadores Chrome/Android exibirem miniatura)
-      const file = await convertHeicToJpeg(rawFile);
-      const instantPreview = URL.createObjectURL(file);
       const tempId = `temp-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`;
+      const isHeic = isHeicFile(rawFile);
+      const initialPreview = isHeic
+        ? getFallbackImageDataUrl(rawFile.name)
+        : URL.createObjectURL(rawFile);
 
+      // Pré-visualização instantânea (0ms) para que nunca fique quadrado escuro/vazio
       setUploadedFiles((prev) => [
         ...prev,
-        { id: tempId, file, previewUrl: instantPreview, name: file.name },
+        { id: tempId, file: rawFile, previewUrl: initialPreview, name: rawFile.name },
       ]);
 
-      // 2. Se o nome do tema ainda não foi preenchido, sugere automaticamente o nome identificado do arquivo
+      // Se o nome do tema ainda não foi preenchido, sugere automaticamente o nome identificado do arquivo
       setName((prevName) => {
         if (!prevName || prevName.trim() === '') {
-          return detectEntityFromFilename(file.name, themes);
+          return detectEntityFromFilename(rawFile.name, themes);
         }
         return prevName;
       });
 
-      // 3. Compressão assíncrona para Base64 leve via Canvas (protege cota do LocalStorage)
+      // 1. Converte HEIC/HEIF para JPEG se necessário (garante JPEG nativo para Chrome/Windows/Android)
+      const file = await convertHeicToJpeg(rawFile);
+      const convertedPreview = URL.createObjectURL(file);
+
+      setUploadedFiles((prev) =>
+        prev.map((item) =>
+          item.id === tempId ? { ...item, file, previewUrl: convertedPreview, name: file.name } : item
+        )
+      );
+
+      // 2. Compressão assíncrona para Base64 leve via Canvas (protege cota do LocalStorage)
       try {
         const permanentDataUrl = await fileToDataUrl(file);
         if (permanentDataUrl) {
@@ -663,11 +675,15 @@ function TemasManagementContent() {
                               alt={theme.name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                (e.target as HTMLElement).style.display = 'none';
+                                e.currentTarget.src = getFallbackImageDataUrl(theme.name);
                               }}
                             />
                           ) : (
-                            <Sparkles className="w-6 h-6 text-slate-300 dark:text-slate-600" />
+                            <img
+                              src={getFallbackImageDataUrl(theme.name)}
+                              alt={theme.name}
+                              className="w-full h-full object-cover"
+                            />
                           )}
                         </div>
                         <div className="min-w-0">
@@ -896,11 +912,15 @@ function TemasManagementContent() {
                                     alt={theme.name}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
-                                      (e.target as HTMLElement).style.display = 'none';
+                                      e.currentTarget.src = getFallbackImageDataUrl(theme.name);
                                     }}
                                   />
                                 ) : (
-                                  <Sparkles className="w-5 h-5 text-slate-300 dark:text-slate-600" />
+                                  <img
+                                    src={getFallbackImageDataUrl(theme.name)}
+                                    alt={theme.name}
+                                    className="w-full h-full object-cover"
+                                  />
                                 )}
                               </div>
                               <div>
@@ -1149,7 +1169,7 @@ function TemasManagementContent() {
                     ref={newThemeFileInputRef}
                     onChange={handleNewThemeUpload}
                     multiple
-                    accept="image/*"
+                    accept="image/*,.heic,.heif,.HEIC,.HEIF"
                     className="hidden"
                   />
                   <button
@@ -1175,7 +1195,7 @@ function TemasManagementContent() {
                     ref={newThemeGalleryInputRef}
                     onChange={handleNewThemeUpload}
                     multiple
-                    accept="image/*"
+                    accept="image/*,.heic,.heif,.HEIC,.HEIF"
                     className="hidden"
                   />
                   <button
@@ -1241,7 +1261,7 @@ function TemasManagementContent() {
                             alt={fileItem.name}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              (e.target as HTMLElement).style.opacity = '0';
+                              e.currentTarget.src = getFallbackImageDataUrl(fileItem.name);
                             }}
                           />
                           {idx === 0 && (
@@ -1321,23 +1341,27 @@ function TemasManagementContent() {
                 <input
                   type="file"
                   ref={variantFileInputRef}
-                  accept="image/*"
+                  accept="image/*,.heic,.heif,.HEIC,.HEIF"
                   className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (ev) => {
-                        const dataUrl = ev.target?.result as string;
-                        if (dataUrl) {
-                          setVariantPhoto({
-                            file,
-                            previewUrl: dataUrl,
-                            name: file.name,
-                          });
-                        }
-                      };
-                      reader.readAsDataURL(file);
+                  onChange={async (e) => {
+                    const rawFile = e.target.files?.[0];
+                    if (rawFile) {
+                      const isHeic = isHeicFile(rawFile);
+                      const initialPreview = isHeic
+                        ? getFallbackImageDataUrl(rawFile.name)
+                        : URL.createObjectURL(rawFile);
+                      setVariantPhoto({
+                        file: rawFile,
+                        previewUrl: initialPreview,
+                        name: rawFile.name,
+                      });
+                      const file = await convertHeicToJpeg(rawFile);
+                      const permanentUrl = await fileToDataUrl(file);
+                      setVariantPhoto({
+                        file,
+                        previewUrl: permanentUrl || URL.createObjectURL(file),
+                        name: file.name,
+                      });
                     }
                   }}
                 />
@@ -1352,7 +1376,14 @@ function TemasManagementContent() {
                   </button>
                   {variantPhoto && (
                     <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700">
-                      <img src={variantPhoto.previewUrl} alt={variantPhoto.name} className="w-full h-full object-cover" />
+                      <img
+                        src={variantPhoto.previewUrl}
+                        alt={variantPhoto.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = getFallbackImageDataUrl(variantPhoto.name);
+                        }}
+                      />
                       <button
                         type="button"
                         onClick={() => setVariantPhoto(null)}
@@ -1437,23 +1468,27 @@ function TemasManagementContent() {
                 <input
                   type="file"
                   ref={kitFileInputRef}
-                  accept="image/*"
+                  accept="image/*,.heic,.heif,.HEIC,.HEIF"
                   className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (ev) => {
-                        const dataUrl = ev.target?.result as string;
-                        if (dataUrl) {
-                          setKitPhoto({
-                            file,
-                            previewUrl: dataUrl,
-                            name: file.name,
-                          });
-                        }
-                      };
-                      reader.readAsDataURL(file);
+                  onChange={async (e) => {
+                    const rawFile = e.target.files?.[0];
+                    if (rawFile) {
+                      const isHeic = isHeicFile(rawFile);
+                      const initialPreview = isHeic
+                        ? getFallbackImageDataUrl(rawFile.name)
+                        : URL.createObjectURL(rawFile);
+                      setKitPhoto({
+                        file: rawFile,
+                        previewUrl: initialPreview,
+                        name: rawFile.name,
+                      });
+                      const file = await convertHeicToJpeg(rawFile);
+                      const permanentUrl = await fileToDataUrl(file);
+                      setKitPhoto({
+                        file,
+                        previewUrl: permanentUrl || URL.createObjectURL(file),
+                        name: file.name,
+                      });
                     }
                   }}
                 />
@@ -1468,7 +1503,14 @@ function TemasManagementContent() {
                   </button>
                   {kitPhoto && (
                     <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700">
-                      <img src={kitPhoto.previewUrl} alt={kitPhoto.name} className="w-full h-full object-cover" />
+                      <img
+                        src={kitPhoto.previewUrl}
+                        alt={kitPhoto.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = getFallbackImageDataUrl(kitPhoto.name);
+                        }}
+                      />
                       <button
                         type="button"
                         onClick={() => setKitPhoto(null)}

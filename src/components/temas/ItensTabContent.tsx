@@ -883,7 +883,7 @@ export function ItensTabContent() {
                     ref={fileInputRef}
                     onChange={handleFileUpload}
                     multiple
-                    accept="image/*"
+                    accept="image/*,.heic,.heif,.HEIC,.HEIF"
                     className="hidden"
                   />
                   <button
@@ -909,7 +909,7 @@ export function ItensTabContent() {
                     ref={galleryInputRef}
                     onChange={handleFileUpload}
                     multiple
-                    accept="image/*"
+                    accept="image/*,.heic,.heif,.HEIC,.HEIF"
                     className="hidden"
                   />
                   <button
