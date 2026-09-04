@@ -221,15 +221,24 @@ export function ItensTabContent() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const newItems: UploadedFileItem[] = Array.from(files).map((file) => ({
-      id: 'up-' + Math.random().toString(36).substring(2, 9),
-      name: file.name,
-      previewUrl: URL.createObjectURL(file),
-    }));
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        if (dataUrl) {
+          const newItem: UploadedFileItem = {
+            id: 'up-' + Math.random().toString(36).substring(2, 9),
+            name: file.name,
+            previewUrl: dataUrl,
+          };
+          setUploadedFiles((prev) => [...prev, newItem]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
 
-    setUploadedFiles((prev) => [...prev, ...newItems]);
     e.target.value = '';
-    showNotification(`${newItems.length} foto(s) carregada(s) com sucesso.`);
+    showNotification(`${files.length} foto(s) carregada(s) com sucesso.`);
   };
 
   const handleAddDrive = (e: React.FormEvent) => {
@@ -869,7 +878,7 @@ export function ItensTabContent() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
                   >
                     <FolderPlus className="w-4 h-4 text-rose-500" />
                     <span>Do Dispositivo</span>
@@ -878,7 +887,7 @@ export function ItensTabContent() {
                   <button
                     type="button"
                     onClick={() => setIsDriveModalOpen((prev) => !prev)}
-                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
                   >
                     <Link2 className="w-4 h-4 text-blue-500" />
                     <span>Google Drive</span>
@@ -895,7 +904,7 @@ export function ItensTabContent() {
                   <button
                     type="button"
                     onClick={() => galleryInputRef.current?.click()}
-                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
                   >
                     <Smartphone className="w-4 h-4 text-emerald-500" />
                     <span>Da Galeria</span>

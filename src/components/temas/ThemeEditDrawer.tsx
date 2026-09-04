@@ -18,10 +18,19 @@ import { Theme, EntityStatus, Media } from '@/types/database';
 import { store } from '@/lib/store';
 
 interface ThemeEditDrawerProps {
-  theme: Theme | null;
+  theme: (Theme & { imageUrl?: string }) | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (updated: Theme) => void;
+  isPreApproval?: boolean;
+  onApprove?: (themeData: {
+    name: string;
+    base_price: number;
+    stock_quantity: number;
+    characters: string[];
+    description: string;
+    imageUrl?: string;
+  }) => void;
 }
 
 export function ThemeEditDrawer({
@@ -29,9 +38,11 @@ export function ThemeEditDrawer({
   isOpen,
   onClose,
   onSave,
+  isPreApproval = false,
+  onApprove,
 }: ThemeEditDrawerProps) {
   const [name, setName] = useState('');
-  const [basePrice, setBasePrice] = useState<number>(0);
+  const [basePrice, setBasePrice] = useState<number>(179.9);
   const [stockQuantity, setStockQuantity] = useState<number>(1);
   const [characters, setCharacters] = useState('');
   const [description, setDescription] = useState('');
@@ -55,13 +66,32 @@ export function ThemeEditDrawer({
 
   const refreshMedia = (themeId: string) => {
     const details = store.getThemeById(themeId);
-    setMediaList(details?.media || store.getMediaByEntity('theme', themeId));
+    let list = details?.media || store.getMediaByEntity('theme', themeId);
+    if ((!list || list.length === 0) && (theme as any)?.imageUrl) {
+      list = [
+        {
+          id: 'temp-media-' + themeId,
+          tenant_id: 'a0000000-0000-0000-0000-000000000001',
+          entity_type: 'theme',
+          entity_id: themeId,
+          storage_path: (theme as any).imageUrl,
+          original_name: 'foto_principal.jpg',
+          mime_type: 'image/jpeg',
+          file_size: 500000,
+          fingerprint: `sha256-${themeId}`,
+          sort_order: 1,
+          is_primary: true,
+          created_at: new Date().toISOString(),
+        },
+      ];
+    }
+    setMediaList(list || []);
   };
 
   useEffect(() => {
     if (theme) {
       setName(theme.name || '');
-      setBasePrice(theme.base_price || 0);
+      setBasePrice(theme.base_price !== undefined ? theme.base_price : 179.9);
       setStockQuantity(theme.stock_quantity || 1);
       setCharacters(theme.characters ? theme.characters.join(', ') : '');
       setDescription(theme.description || '');
@@ -95,7 +125,9 @@ export function ThemeEditDrawer({
         const dataUrl = event.target?.result as string;
         if (dataUrl) {
           const isFirst = mediaList.length === 0;
-          store.addMediaToEntity({
+          const newMedia: Media = {
+            id: '20000000-' + Math.random().toString(36).substring(2, 14),
+            tenant_id: 'a0000000-0000-0000-0000-000000000001',
             entity_type: 'theme',
             entity_id: theme.id,
             storage_path: dataUrl,
@@ -103,10 +135,18 @@ export function ThemeEditDrawer({
             mime_type: file.type || 'image/jpeg',
             file_size: file.size,
             fingerprint: `sha256-${theme.id.substring(0, 6)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            sort_order: mediaList.length + 1,
             is_primary: isFirst,
-            ai_tags: theme.characters || [],
-          });
-          refreshMedia(theme.id);
+            ai_tags: characters.split(',').map((c) => c.trim()).filter(Boolean),
+            created_at: new Date().toISOString(),
+          };
+
+          if (isPreApproval) {
+            setMediaList((prev) => [...prev, newMedia]);
+          } else {
+            store.addMediaToEntity(newMedia);
+            refreshMedia(theme.id);
+          }
           showNotification(`Foto "${file.name}" adicionada ao tema.`);
         }
       };
@@ -122,7 +162,9 @@ export function ThemeEditDrawer({
     if (!driveUrlInput.trim()) return;
 
     const isFirst = mediaList.length === 0;
-    store.addMediaToEntity({
+    const newMedia: Media = {
+      id: '20000000-' + Math.random().toString(36).substring(2, 14),
+      tenant_id: 'a0000000-0000-0000-0000-000000000001',
       entity_type: 'theme',
       entity_id: theme.id,
       storage_path: driveUrlInput.trim(),
@@ -130,27 +172,48 @@ export function ThemeEditDrawer({
       mime_type: 'image/jpeg',
       file_size: 500000,
       fingerprint: `sha256-drive-${theme.id.substring(0, 6)}-${Date.now()}`,
+      sort_order: mediaList.length + 1,
       is_primary: isFirst,
-      ai_tags: theme.characters || [],
-    });
+      ai_tags: characters.split(',').map((c) => c.trim()).filter(Boolean),
+      created_at: new Date().toISOString(),
+    };
+
+    if (isPreApproval) {
+      setMediaList((prev) => [...prev, newMedia]);
+    } else {
+      store.addMediaToEntity(newMedia);
+      refreshMedia(theme.id);
+    }
 
     setDriveUrlInput('');
     setIsDriveModalOpen(false);
-    refreshMedia(theme.id);
     showNotification('Foto do Google Drive adicionada ao tema.');
   };
 
   // Set Primary Image
   const handleSetPrimary = (mediaId: string) => {
-    store.setPrimaryMedia('theme', theme.id, mediaId);
-    refreshMedia(theme.id);
+    if (isPreApproval) {
+      setMediaList((prev) =>
+        prev.map((m) => ({
+          ...m,
+          is_primary: m.id === mediaId,
+        }))
+      );
+    } else {
+      store.setPrimaryMedia('theme', theme.id, mediaId);
+      refreshMedia(theme.id);
+    }
     showNotification('Foto definida como capa principal!');
   };
 
   // Delete Media
   const handleDeleteMedia = (mediaId: string) => {
-    store.deleteMedia(mediaId);
-    refreshMedia(theme.id);
+    if (isPreApproval) {
+      setMediaList((prev) => prev.filter((m) => m.id !== mediaId));
+    } else {
+      store.deleteMedia(mediaId);
+      refreshMedia(theme.id);
+    }
     showNotification('Foto removida do tema.');
   };
 
@@ -167,6 +230,23 @@ export function ThemeEditDrawer({
         .filter(Boolean);
 
       const primary = mediaList.find((m) => m.is_primary) || mediaList[0];
+
+      if (isPreApproval) {
+        onSave({
+          ...theme,
+          name: name.trim(),
+          base_price: Number(basePrice) || 179.9,
+          stock_quantity: Number(stockQuantity) || 1,
+          characters: charsArray,
+          description: description.trim() || null,
+          status: status === 'inactive' ? 'inactive' : 'active',
+          featured,
+          imageUrl: primary?.storage_path || (theme as any).imageUrl,
+        } as any);
+        showNotification('Alterações na fila de revisão salvas com sucesso!');
+        setTimeout(() => onClose(), 400);
+        return;
+      }
 
       const updated = store.updateTheme(theme.id, {
         name: name.trim(),
@@ -187,6 +267,30 @@ export function ThemeEditDrawer({
     }
   };
 
+  const handleApproveAction = () => {
+    if (!name.trim()) return;
+    setIsSaving(true);
+    const charsArray = characters
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    const primary = mediaList.find((m) => m.is_primary) || mediaList[0];
+
+    if (onApprove) {
+      onApprove({
+        name: name.trim(),
+        base_price: Number(basePrice) || 179.9,
+        stock_quantity: Number(stockQuantity) || 1,
+        characters: charsArray,
+        description: description.trim() || `Tema aprovado a partir da fila de revisão.`,
+        imageUrl: primary?.storage_path || (theme as any).imageUrl,
+      });
+    }
+    setIsSaving(false);
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true">
       {/* Backdrop */}
@@ -203,29 +307,37 @@ export function ThemeEditDrawer({
             <div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded-md bg-slate-900 dark:bg-rose-600 text-white text-[10px] font-bold">
-                  {theme.code}
+                  {theme.code || 'MF-NOVO'}
                 </span>
                 <span
                   className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                    status === 'active'
+                    isPreApproval
+                      ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/40'
+                      : status === 'active'
                       ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
                       : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400'
                   }`}
                 >
-                  {status === 'active' ? 'Ativo no Catálogo' : 'Inativo (Oculto)'}
+                  {isPreApproval
+                    ? 'Aguardando Aprovação'
+                    : status === 'active'
+                    ? 'Ativo no Catálogo'
+                    : 'Inativo (Oculto)'}
                 </span>
               </div>
               <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white mt-1 truncate max-w-[320px]">
-                {theme.name}
+                {theme.name || 'Tema Sem Nome'}
               </h2>
               <span className="text-[11px] text-slate-500 dark:text-slate-400 block -mt-0.5">
-                Edição Rápida de Tema & Acervo
+                {isPreApproval
+                  ? 'Revisão Pré-Aprovação: ajuste dados e fotos antes de publicar'
+                  : 'Edição Rápida de Tema & Acervo'}
               </span>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               aria-label="Fechar gaveta de edição"
             >
               <X className="w-5 h-5" />
@@ -266,7 +378,7 @@ export function ThemeEditDrawer({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors"
+                  className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
                 >
                   <FolderPlus className="w-4 h-4 text-rose-500" />
                   <span>Do Dispositivo</span>
@@ -276,7 +388,7 @@ export function ThemeEditDrawer({
                 <button
                   type="button"
                   onClick={() => setIsDriveModalOpen(true)}
-                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors"
+                  className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
                 >
                   <Link2 className="w-4 h-4 text-blue-500" />
                   <span>Google Drive</span>
@@ -294,7 +406,7 @@ export function ThemeEditDrawer({
                 <button
                   type="button"
                   onClick={() => galleryInputRef.current?.click()}
-                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors"
+                  className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
                 >
                   <Smartphone className="w-4 h-4 text-emerald-500" />
                   <span>Da Galeria</span>
@@ -353,10 +465,6 @@ export function ThemeEditDrawer({
                         src={media.storage_path}
                         alt={media.original_name}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=200';
-                        }}
                       />
 
                       {/* Capa Principal Badge */}
@@ -510,23 +618,46 @@ export function ThemeEditDrawer({
             </div>
 
             {/* Footer Buttons inside drawer */}
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5">
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={isSaving}
-                className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-xs sm:text-sm"
               >
                 Cancelar
               </button>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold shadow-xs flex items-center gap-2 transition-colors disabled:opacity-50"
-              >
-                <Save className="w-4 h-4" />
-                <span>{isSaving ? 'Salvando...' : 'Salvar Alterações'}</span>
-              </button>
+
+              {isPreApproval && onApprove ? (
+                <>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 rounded-xl font-semibold border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer text-xs sm:text-sm"
+                  >
+                    <Save className="w-4 h-4 text-slate-500" />
+                    <span>Salvar na Fila</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleApproveAction}
+                    disabled={isSaving}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl font-bold shadow-xs flex items-center gap-2 transition-colors cursor-pointer text-xs sm:text-sm"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Aprovar & Publicar no Catálogo</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl font-semibold shadow-xs flex items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer text-xs sm:text-sm"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Salvando...' : 'Salvar Alterações'}</span>
+                </button>
+              )}
             </div>
           </form>
         </div>

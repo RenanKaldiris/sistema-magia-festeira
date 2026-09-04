@@ -45,10 +45,10 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
     );
   }
 
-  const [activeImage, setActiveImage] = useState<string>(
+  const initialImage =
     theme.primary_media?.storage_path ||
-      (theme.media.length > 0 ? theme.media[0].storage_path : 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=1200')
-  );
+    (theme.media.length > 0 ? theme.media[0].storage_path : '');
+  const [activeImage, setActiveImage] = useState<string>(initialImage);
 
   const [copied, setCopied] = useState(false);
 
@@ -95,7 +95,7 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
 
           <button
             onClick={handleShare}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
           >
             <Share2 className="w-3.5 h-3.5" />
             <span>{copied ? 'Link Copiado!' : 'Compartilhar Tema'}</span>
@@ -109,13 +109,21 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
           
           {/* Left Column: Image Showcase & Gallery (7 cols) */}
           <div className="lg:col-span-7 space-y-4">
-            <div className="aspect-4/3 sm:aspect-16/10 w-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm relative group">
-              <img
-                src={activeImage}
-                alt={theme.name}
-                className="w-full h-full object-cover transition-all duration-300"
-              />
-              <div className="absolute top-4 left-4 flex gap-2">
+            {/* Main Photo Showcase - Preserving original decor proportions without aggressive cropping */}
+            <div className="w-full min-h-[380px] max-h-[620px] rounded-3xl overflow-hidden bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-sm relative group flex items-center justify-center p-3">
+              {activeImage ? (
+                <img
+                  src={activeImage}
+                  alt={theme.name}
+                  className="max-h-[580px] w-auto h-auto max-w-full object-contain rounded-2xl mx-auto transition-all duration-300"
+                />
+              ) : (
+                <div className="py-24 text-center text-slate-400 dark:text-slate-500">
+                  <Sparkles className="w-12 h-12 mx-auto mb-2 stroke-1 text-slate-500" />
+                  <span className="text-sm font-medium">Sem imagem cadastrada</span>
+                </div>
+              )}
+              <div className="absolute top-4 left-4 flex gap-2 z-10">
                 <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur text-white text-xs font-bold">
                   {theme.code}
                 </span>
@@ -127,17 +135,18 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
               </div>
             </div>
 
-            {/* Thumbnail Strip */}
-            {theme.media && theme.media.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+            {/* Thumbnail Strip positioned below main photo */}
+            {theme.media && theme.media.length > 0 && (
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none pt-1">
                 {theme.media.map((img) => (
                   <button
                     key={img.id}
+                    type="button"
                     onClick={() => setActiveImage(img.storage_path)}
-                    className={`relative w-20 h-20 rounded-2xl overflow-hidden shrink-0 border-2 transition-all ${
+                    className={`relative w-20 h-24 rounded-2xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer bg-slate-100 dark:bg-slate-800 ${
                       activeImage === img.storage_path
-                        ? 'border-rose-600 ring-2 ring-rose-200 dark:ring-rose-900 scale-95'
-                        : 'border-transparent opacity-75 hover:opacity-100'
+                        ? 'border-rose-600 ring-2 ring-rose-200 dark:ring-rose-900 scale-100 shadow-md'
+                        : 'border-slate-200 dark:border-slate-700 opacity-70 hover:opacity-100'
                     }`}
                   >
                     <img src={img.storage_path} alt={img.original_name} className="w-full h-full object-cover" />

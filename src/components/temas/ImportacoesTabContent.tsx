@@ -18,8 +18,9 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { store } from '@/lib/store';
-import { Import, ImportAsset } from '@/types/database';
+import { Import, ImportAsset, Theme } from '@/types/database';
 import { formatDateBR } from '@/lib/dateUtils';
+import { ThemeEditDrawer } from './ThemeEditDrawer';
 
 interface StagedFile {
   id: string;
@@ -37,6 +38,10 @@ export function ImportacoesTabContent() {
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Estado para Gaveta de Edição Pré-Aprovação
+  const [reviewingAsset, setReviewingAsset] = useState<ImportAsset | null>(null);
+  const [preApprovalTheme, setPreApprovalTheme] = useState<(Theme & { imageUrl?: string }) | null>(null);
 
   const localFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -72,15 +77,26 @@ export function ImportacoesTabContent() {
   const handleFileSelect = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    const newStaged: StagedFile[] = Array.from(files).map((file) => ({
-      id: 'stg-' + Math.random().toString(36).substring(2, 9),
-      name: file.name,
-      previewUrl: URL.createObjectURL(file),
-      size: file.size,
-    }));
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        if (dataUrl) {
+          setStagedFiles((prev) => [
+            ...prev,
+            {
+              id: 'stg-' + Math.random().toString(36).substring(2, 9),
+              name: file.name,
+              previewUrl: dataUrl,
+              size: file.size,
+            },
+          ]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
 
-    setStagedFiles((prev) => [...prev, ...newStaged]);
-    showNotification(`${newStaged.length} foto(s) carregada(s) para visualização.`);
+    showNotification(`${files.length} foto(s) carregada(s) para visualização.`);
   };
 
   const handleRemoveStagedFile = (id: string) => {
@@ -176,6 +192,63 @@ export function ImportacoesTabContent() {
     setSelectedAssetIds([]);
     setAssets(store.getImportAssets());
     showNotification(`${count} asset(s) removido(s) da fila de revisão.`);
+  };
+
+  const handleOpenPreApprovalDrawer = (asset: ImportAsset) => {
+    setReviewingAsset(asset);
+    const detected = asset.detected_entity && asset.detected_entity !== 'Novo Lote Local'
+      ? asset.detected_entity
+      : asset.source_file.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+
+    const virtualTheme: Theme & { imageUrl?: string } = {
+      id: asset.id,
+      tenant_id: 'a0000000-0000-0000-0000-000000000001',
+      code: 'MF-NOVO',
+      name: detected || 'Tema em Revisão',
+      slug: (detected || 'tema').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      category_id: null,
+      characters: asset.detected_entity && asset.detected_entity !== 'Novo Lote Local' ? [asset.detected_entity] : [],
+      piece_count: 15,
+      base_price: 179.9,
+      description: `Tema decorativo importado do arquivo ${asset.source_file}.`,
+      notes: null,
+      status: 'active',
+      stock_quantity: 1,
+      featured: true,
+      created_at: asset.created_at,
+      updated_at: asset.created_at,
+      imageUrl: asset.storage_path || undefined,
+    };
+    setPreApprovalTheme(virtualTheme);
+  };
+
+  const handleApprovePreApprovalTheme = (data: {
+    name: string;
+    base_price: number;
+    stock_quantity: number;
+    characters: string[];
+    description: string;
+    imageUrl?: string;
+  }) => {
+    if (!reviewingAsset) return;
+    const created = store.approveImportAsset(reviewingAsset.id, data);
+    setAssets(store.getImportAssets());
+    setSelectedAssetIds((prev) => prev.filter((id) => id !== reviewingAsset.id));
+    setReviewingAsset(null);
+    setPreApprovalTheme(null);
+    showNotification(`Tema "${created?.name || data.name}" aprovado e publicado com sucesso no catálogo comercial!`);
+  };
+
+  const handleSavePreApprovalDraft = (updated: Theme) => {
+    if (!reviewingAsset) return;
+    store.updateImportAsset(reviewingAsset.id, {
+      detected_entity: updated.name,
+      storage_path: (updated as any).imageUrl || reviewingAsset.storage_path,
+    });
+    setAssets(store.getImportAssets());
+    setReviewingAsset(null);
+    setPreApprovalTheme(null);
+    showNotification('Alterações salvas no asset em revisão.');
   };
 
   const pendingAssets = assets.filter((a) => a.status === 'review');
@@ -450,13 +523,15 @@ export function ImportacoesTabContent() {
               return (
                 <div
                   key={asset.id}
-                  className={`p-5 rounded-2xl border transition-all flex gap-4 items-start relative ${
+                  onClick={() => handleOpenPreApprovalDrawer(asset)}
+                  title="Clique para revisar e editar dados pré-aprovação"
+                  className={`p-5 rounded-2xl border transition-all flex gap-4 items-start relative cursor-pointer ${
                     isSelected
                       ? 'border-rose-400 dark:border-rose-600 bg-rose-50/30 dark:bg-rose-950/20 shadow-xs'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-700'
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md'
                   }`}
                 >
-                  <label className="shrink-0 cursor-pointer pt-1">
+                  <label className="shrink-0 cursor-pointer pt-1" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={isSelected}
@@ -465,17 +540,21 @@ export function ImportacoesTabContent() {
                     />
                   </label>
 
-                  <div className="w-24 h-24 rounded-xl bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-300 dark:border-slate-700 relative">
-                    <img
-                      src={asset.storage_path || 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=300'}
-                      alt={asset.source_file}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="w-24 h-24 rounded-xl bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-300 dark:border-slate-700 relative flex items-center justify-center">
+                    {asset.storage_path ? (
+                      <img
+                        src={asset.storage_path}
+                        alt={asset.source_file}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <ImageIcon className="w-8 h-8 text-slate-400" />
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-bold text-slate-900 dark:text-white truncate block">
-                      {asset.source_file}
+                      {asset.detected_entity && asset.detected_entity !== 'Novo Lote Local' ? asset.detected_entity : asset.source_file}
                     </span>
                     <span className="text-[10px] text-slate-400 dark:text-slate-500 block font-mono truncate">
                       Hash: {asset.fingerprint}
@@ -491,22 +570,24 @@ export function ImportacoesTabContent() {
                       </span>
                     </div>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <div className="mt-3 flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
+                        type="button"
                         onClick={() => handlePublishAsset(asset.id)}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold transition-colors flex items-center gap-1 shadow-xs"
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Aprovar & Publicar</span>
                       </button>
                       <button
+                        type="button"
                         onClick={() => {
                           store.deleteImportAssetsBatch([asset.id]);
                           setSelectedAssetIds((prev) => prev.filter((id) => id !== asset.id));
                           setAssets(store.getImportAssets());
                           showNotification('Asset removido da fila de revisão.');
                         }}
-                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-medium transition-colors flex items-center gap-1"
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
                         title="Rejeitar / Remover este asset"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -565,6 +646,19 @@ export function ImportacoesTabContent() {
           </table>
         </div>
       </div>
+
+      {/* Gaveta de Edição Pré-Aprovação */}
+      <ThemeEditDrawer
+        theme={preApprovalTheme}
+        isOpen={!!preApprovalTheme}
+        onClose={() => {
+          setPreApprovalTheme(null);
+          setReviewingAsset(null);
+        }}
+        onSave={handleSavePreApprovalDraft}
+        isPreApproval={true}
+        onApprove={handleApprovePreApprovalTheme}
+      />
     </div>
   );
 }

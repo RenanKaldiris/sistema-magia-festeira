@@ -376,7 +376,7 @@ export function ItemEditDrawer({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
+                  className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
                 >
                   <FolderPlus className="w-4 h-4 text-rose-500" />
                   <span>Do Dispositivo</span>
@@ -385,7 +385,7 @@ export function ItemEditDrawer({
                 <button
                   type="button"
                   onClick={() => setIsDriveModalOpen(!isDriveModalOpen)}
-                  className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
+                  className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
                 >
                   <Link2 className="w-4 h-4 text-blue-500" />
                   <span>Google Drive</span>
@@ -402,7 +402,7 @@ export function ItemEditDrawer({
                 <button
                   type="button"
                   onClick={() => galleryInputRef.current?.click()}
-                  className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
+                  className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
                 >
                   <Smartphone className="w-4 h-4 text-emerald-500" />
                   <span>Da Galeria</span>

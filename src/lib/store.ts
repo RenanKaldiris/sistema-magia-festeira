@@ -1592,27 +1592,55 @@ class MagiaStore {
     return newAsset;
   }
 
-  public approveImportAsset(assetId: string): Theme | null {
+  public updateImportAsset(assetId: string, updates: Partial<ImportAsset>): ImportAsset | null {
+    const asset = this.importAssets.find((a) => a.id === assetId);
+    if (!asset) return null;
+
+    Object.assign(asset, updates);
+    this.saveToLocalStorage();
+    return asset;
+  }
+
+  public approveImportAsset(
+    assetId: string,
+    customData?: {
+      name?: string;
+      base_price?: number;
+      characters?: string[];
+      description?: string;
+      stock_quantity?: number;
+      imageUrl?: string;
+    }
+  ): Theme | null {
     const asset = this.importAssets.find((a) => a.id === assetId);
     if (!asset) return null;
 
     asset.status = 'published';
 
     // Determina o nome do tema aprovado a partir da entidade detectada ou nome do arquivo
-    let themeName = asset.detected_entity && asset.detected_entity !== 'Novo Lote Local'
+    let defaultName = asset.detected_entity && asset.detected_entity !== 'Novo Lote Local'
       ? asset.detected_entity
       : asset.source_file.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
 
-    if (!themeName || themeName.trim().length === 0) {
-      themeName = 'Tema Importado';
+    if (!defaultName || defaultName.trim().length === 0) {
+      defaultName = 'Tema Importado';
     }
+
+    const themeName = customData?.name?.trim() || defaultName.trim();
+    const basePrice = customData?.base_price !== undefined ? customData.base_price : 179.9;
+    const stockQuantity = customData?.stock_quantity !== undefined ? customData.stock_quantity : 1;
+    const characters = customData?.characters || (asset.detected_entity ? [asset.detected_entity] : []);
+    const description = customData?.description || `Tema aprovado a partir da importação do arquivo ${asset.source_file}.`;
+    const imageUrl = customData?.imageUrl || asset.storage_path || undefined;
 
     // Cria o tema ativo no store com fallback de preço R$ 179,90 e foto primária
     const theme = this.createTheme({
-      name: themeName.trim(),
-      base_price: 179.9,
-      description: `Tema aprovado a partir da importação do arquivo ${asset.source_file}.`,
-      imageUrl: asset.storage_path || undefined,
+      name: themeName,
+      base_price: customData?.base_price !== undefined ? customData.base_price : 179.9, // base_price: 179.9
+      stock_quantity: stockQuantity,
+      characters,
+      description,
+      imageUrl,
     });
 
     this.logAudit('APPROVE_IMPORT_ASSET', 'import_assets', assetId, {

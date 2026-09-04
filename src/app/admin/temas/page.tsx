@@ -622,19 +622,16 @@ function TemasManagementContent() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 min-w-0">
-                        <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
-                          <img
-                            src={
-                              details?.primary_media?.storage_path ||
-                              'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=200'
-                            }
-                            alt={theme.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src =
-                                'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=200';
-                            }}
-                          />
+                        <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                          {details?.primary_media?.storage_path ? (
+                            <img
+                              src={details.primary_media.storage_path}
+                              alt={theme.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Sparkles className="w-6 h-6 text-slate-300 dark:text-slate-600" />
+                          )}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -855,19 +852,16 @@ function TemasManagementContent() {
                           {/* Código / Tema */}
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
-                                <img
-                                  src={
-                                    details?.primary_media?.storage_path ||
-                                    'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=200'
-                                  }
-                                  alt={theme.name}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).src =
-                                      'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=200';
-                                  }}
-                                />
+                              <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                                {details?.primary_media?.storage_path ? (
+                                  <img
+                                    src={details.primary_media.storage_path}
+                                    alt={theme.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Sparkles className="w-5 h-5 text-slate-300 dark:text-slate-600" />
+                                )}
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
@@ -1122,7 +1116,7 @@ function TemasManagementContent() {
                   <button
                     type="button"
                     onClick={() => newThemeFileInputRef.current?.click()}
-                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors"
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
                   >
                     <FolderPlus className="w-4 h-4 text-rose-500" />
                     <span>Do Dispositivo</span>
@@ -1131,7 +1125,7 @@ function TemasManagementContent() {
                   <button
                     type="button"
                     onClick={() => setIsDriveModalOpen(true)}
-                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors"
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
                   >
                     <Link2 className="w-4 h-4 text-blue-500" />
                     <span>Google Drive</span>
@@ -1148,7 +1142,7 @@ function TemasManagementContent() {
                   <button
                     type="button"
                     onClick={() => newThemeGalleryInputRef.current?.click()}
-                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors"
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex flex-col items-center gap-1 transition-colors cursor-pointer"
                   >
                     <Smartphone className="w-4 h-4 text-emerald-500" />
                     <span>Da Galeria</span>
@@ -1290,11 +1284,18 @@ function TemasManagementContent() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      setVariantPhoto({
-                        file,
-                        previewUrl: URL.createObjectURL(file),
-                        name: file.name,
-                      });
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        const dataUrl = ev.target?.result as string;
+                        if (dataUrl) {
+                          setVariantPhoto({
+                            file,
+                            previewUrl: dataUrl,
+                            name: file.name,
+                          });
+                        }
+                      };
+                      reader.readAsDataURL(file);
                     }
                   }}
                 />
@@ -1302,7 +1303,7 @@ function TemasManagementContent() {
                   <button
                     type="button"
                     onClick={() => variantFileInputRef.current?.click()}
-                    className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   >
                     <UploadCloud className="w-4 h-4 text-rose-500" />
                     <span>{variantPhoto ? 'Trocar Foto' : 'Carregar Foto'}</span>
@@ -1399,11 +1400,18 @@ function TemasManagementContent() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      setKitPhoto({
-                        file,
-                        previewUrl: URL.createObjectURL(file),
-                        name: file.name,
-                      });
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        const dataUrl = ev.target?.result as string;
+                        if (dataUrl) {
+                          setKitPhoto({
+                            file,
+                            previewUrl: dataUrl,
+                            name: file.name,
+                          });
+                        }
+                      };
+                      reader.readAsDataURL(file);
                     }
                   }}
                 />
@@ -1411,7 +1419,7 @@ function TemasManagementContent() {
                   <button
                     type="button"
                     onClick={() => kitFileInputRef.current?.click()}
-                    className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   >
                     <UploadCloud className="w-4 h-4 text-rose-500" />
                     <span>{kitPhoto ? 'Trocar Foto' : 'Carregar Foto'}</span>
