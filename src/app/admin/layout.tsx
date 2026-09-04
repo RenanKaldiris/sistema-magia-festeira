@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
-import { DatabaseStatusBadge } from '@/components/database/DatabaseStatusBadge';
+import { DatabaseKeepAlive } from '@/components/database/DatabaseKeepAlive';
 import { UserCircle, Menu } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -53,8 +53,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           <div className="flex items-center gap-2.5 sm:gap-4">
-            {/* Database Status Badge (PostgreSQL Hostgator) */}
-            <DatabaseStatusBadge />
+            {/* Background Keep-Alive (Silent 30s ping) */}
+            <DatabaseKeepAlive />
 
             {/* Theme Toggle (Modo Claro / Escuro) */}
             <ThemeToggle />

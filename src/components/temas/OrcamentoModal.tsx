@@ -37,13 +37,15 @@ export interface OrcamentoItem {
 interface OrcamentoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialThemeIds: string[];
+  initialThemeIds?: string[];
+  initialItemIds?: string[];
 }
 
 export function OrcamentoModal({
   isOpen,
   onClose,
-  initialThemeIds,
+  initialThemeIds = [],
+  initialItemIds = [],
 }: OrcamentoModalProps) {
   // Client & Event Details
   const [customerName, setCustomerName] = useState('');
@@ -69,7 +71,9 @@ export function OrcamentoModal({
   useEffect(() => {
     if (isOpen) {
       const allThemes = store.getThemes();
-      const initialItems: OrcamentoItem[] = allThemes
+      const allItems = store.getItems();
+
+      const themeItems: OrcamentoItem[] = allThemes
         .filter((t) => initialThemeIds.includes(t.id))
         .map((t) => {
           const details = store.getThemeById(t.id);
@@ -83,10 +87,22 @@ export function OrcamentoModal({
             imageUrl: details?.primary_media?.storage_path,
           };
         });
-      setItems(initialItems);
+
+      const itemItems: OrcamentoItem[] = allItems
+        .filter((it) => initialItemIds.includes(it.id))
+        .map((it) => ({
+          id: it.id,
+          type: 'item',
+          name: it.name,
+          code: it.code,
+          price: it.unit_price,
+          quantity: 1,
+        }));
+
+      setItems([...themeItems, ...itemItems]);
       setIsShareMenuOpen(false);
     }
-  }, [isOpen, initialThemeIds]);
+  }, [isOpen, initialThemeIds, initialItemIds]);
 
   // Calculations
   const subtotal = useMemo(() => {
@@ -578,7 +594,7 @@ export function OrcamentoModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
               Cancelar
             </button>

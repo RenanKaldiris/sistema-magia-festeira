@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { History, Shield, Bot, Calendar, Search, RefreshCw } from 'lucide-react';
 import { store } from '@/lib/store';
 import { formatDateTimeBR } from '@/lib/dateUtils';
+import { DatabaseStatusBadge } from '@/components/database/DatabaseStatusBadge';
 
 export default function AdminLogsPage() {
   const [auditLogs, setAuditLogs] = useState(store.getAuditLogs());
@@ -36,13 +37,14 @@ export default function AdminLogsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
+          <DatabaseStatusBadge />
           <button
             onClick={() => {
               setAuditLogs(store.getAuditLogs());
               setAiRuns(store.getAIRuns());
             }}
-            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-xs transition-colors"
+            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-xs transition-colors cursor-pointer"
             title="Atualizar Logs"
           >
             <RefreshCw className="w-4 h-4" />

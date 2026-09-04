@@ -585,13 +585,56 @@ class MagiaStore {
   ];
 
   // ============================================================================
-  // CONSTRUTOR E SINCRONIZAÇÃO AUTOMÁTICA COM SUPABASE NA NUVEM
+  // CONSTRUTOR E SINCRONIZAÇÃO EM TEMPO REAL (BROADCASTCHANNEL + STORAGE)
   // ============================================================================
+
+  private listeners: Array<() => void> = [];
+  private broadcastChannel: BroadcastChannel | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
       this.loadFromLocalStorage();
       this.syncWithSupabase();
+
+      // BroadcastChannel para sincronização instantânea entre abas sem reload
+      if (typeof BroadcastChannel !== 'undefined') {
+        try {
+          this.broadcastChannel = new BroadcastChannel('magia_festeira_realtime_sync');
+          this.broadcastChannel.onmessage = (event) => {
+            if (event.data && event.data.type === 'STATE_UPDATED') {
+              this.loadFromLocalStorage();
+              this.notifyListeners();
+            }
+          };
+        } catch (e) {
+          console.warn('[BroadcastChannel Setup Error]', e);
+        }
+      }
+
+      // Listener de storage para fallback entre janelas
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'magia_festeira_local_store') {
+          this.loadFromLocalStorage();
+          this.notifyListeners();
+        }
+      });
+    }
+  }
+
+  public subscribe(listener: () => void): () => void {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  private notifyListeners() {
+    for (const listener of this.listeners) {
+      try {
+        listener();
+      } catch (e) {
+        console.error('[Store Listener Error]', e);
+      }
     }
   }
 
@@ -613,6 +656,18 @@ class MagiaStore {
         auditLogs: this.auditLogs,
       };
       localStorage.setItem('magia_festeira_local_store', JSON.stringify(state));
+
+      // Dispara atualização em tempo real para outras abas
+      if (this.broadcastChannel) {
+        try {
+          this.broadcastChannel.postMessage({ type: 'STATE_UPDATED', timestamp: Date.now() });
+        } catch (err) {
+          console.warn('[BroadcastChannel Post Error]', err);
+        }
+      }
+
+      // Notifica inscritos locais
+      this.notifyListeners();
     } catch (e) {
       console.warn('[LocalStorage Save Error]', e);
     }
@@ -1046,7 +1101,7 @@ class MagiaStore {
     name: string;
     category_id?: string;
     characters?: string[];
-    base_price: number;
+    base_price?: number;
     description?: string;
     stock_quantity?: number;
     imageUrl?: string;
@@ -1066,7 +1121,7 @@ class MagiaStore {
       category_id: data.category_id || null,
       characters: data.characters || [],
       piece_count: 15,
-      base_price: data.base_price || 150.0,
+      base_price: data.base_price !== undefined ? data.base_price : 179.9,
       description: data.description || null,
       notes: null,
       status: 'active',
@@ -1314,6 +1369,7 @@ class MagiaStore {
     const item: Item = {
       ...data,
       id,
+      status: data.status || 'active',
       quantity_available: data.quantity_total,
       created_at: now,
       updated_at: now,
@@ -1341,6 +1397,72 @@ class MagiaStore {
 
     this.saveToLocalStorage();
     return item;
+  }
+
+  public updateItem(id: string, updates: Partial<Item>): Item {
+    const idx = this.items.findIndex((item) => item.id === id);
+    if (idx === -1) throw new Error('Item não encontrado');
+
+    const updated: Item = {
+      ...this.items[idx],
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+
+    this.items[idx] = updated;
+    this.logAudit('UPDATE_ITEM', 'items', id, updates);
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('items').update({
+          name: updated.name,
+          category: updated.category,
+          description: updated.description,
+          quantity_total: updated.quantity_total,
+          quantity_available: updated.quantity_available,
+          unit_price: updated.unit_price,
+          status: updated.status,
+        }).eq('id', id),
+        'Update Item'
+      );
+    }
+
+    this.saveToLocalStorage();
+    return updated;
+  }
+
+  public deleteItem(id: string): boolean {
+    const idx = this.items.findIndex((item) => item.id === id);
+    if (idx === -1) return false;
+    const removed = this.items.splice(idx, 1)[0];
+    this.logAudit('DELETE_ITEM', 'items', id, { code: removed.code, name: removed.name });
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('items').delete().eq('id', id),
+        'Delete Item'
+      );
+    }
+
+    this.saveToLocalStorage();
+    return true;
+  }
+
+  public deleteItems(ids: string[]): number {
+    const countBefore = this.items.length;
+    this.items = this.items.filter((item) => !ids.includes(item.id));
+    const deletedCount = countBefore - this.items.length;
+    this.logAudit('DELETE_ITEMS_BATCH', 'items', undefined, { count: deletedCount, ids });
+
+    if (isSupabaseConfigured && supabase && ids.length > 0) {
+      safeSupabaseOperation(
+        supabase.from('items').delete().in('id', ids),
+        'Delete Items Batch'
+      );
+    }
+
+    this.saveToLocalStorage();
+    return deletedCount;
   }
 
   public addMediaToEntity(data: Omit<Media, 'id' | 'created_at' | 'tenant_id' | 'sort_order'> & { sort_order?: number }): {
@@ -1470,13 +1592,56 @@ class MagiaStore {
     return newAsset;
   }
 
-  public approveImportAsset(assetId: string): boolean {
+  public approveImportAsset(assetId: string): Theme | null {
     const asset = this.importAssets.find((a) => a.id === assetId);
-    if (!asset) return false;
+    if (!asset) return null;
+
     asset.status = 'published';
-    this.logAudit('APPROVE_IMPORT_ASSET', 'import_assets', assetId, { file: asset.source_file, entity: asset.detected_entity });
+
+    // Determina o nome do tema aprovado a partir da entidade detectada ou nome do arquivo
+    let themeName = asset.detected_entity && asset.detected_entity !== 'Novo Lote Local'
+      ? asset.detected_entity
+      : asset.source_file.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+
+    if (!themeName || themeName.trim().length === 0) {
+      themeName = 'Tema Importado';
+    }
+
+    // Cria o tema ativo no store com fallback de preço R$ 179,90 e foto primária
+    const theme = this.createTheme({
+      name: themeName.trim(),
+      base_price: 179.9,
+      description: `Tema aprovado a partir da importação do arquivo ${asset.source_file}.`,
+      imageUrl: asset.storage_path || undefined,
+    });
+
+    this.logAudit('APPROVE_IMPORT_ASSET', 'import_assets', assetId, {
+      file: asset.source_file,
+      entity: asset.detected_entity,
+      themeId: theme.id,
+      themeName: theme.name,
+    });
+
     this.saveToLocalStorage();
-    return true;
+    return theme;
+  }
+
+  public approveImportAssetsBatch(assetIds: string[]): Theme[] {
+    const approved: Theme[] = [];
+    for (const id of assetIds) {
+      const theme = this.approveImportAsset(id);
+      if (theme) approved.push(theme);
+    }
+    return approved;
+  }
+
+  public deleteImportAssetsBatch(assetIds: string[]): number {
+    const countBefore = this.importAssets.length;
+    this.importAssets = this.importAssets.filter((a) => !assetIds.includes(a.id));
+    const deletedCount = countBefore - this.importAssets.length;
+    this.logAudit('DELETE_IMPORT_ASSETS_BATCH', 'import_assets', undefined, { count: deletedCount, assetIds });
+    this.saveToLocalStorage();
+    return deletedCount;
   }
 
   public logAudit(action: string, entity: string, entityId?: string, payload?: Record<string, unknown> | object) {

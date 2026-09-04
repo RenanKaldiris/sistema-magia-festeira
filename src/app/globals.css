@@ -52,3 +52,10 @@ body {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* Mobile input auto-zoom prevention: iOS Safari & mobile Chrome auto-zoom if font-size < 16px */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}

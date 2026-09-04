@@ -96,7 +96,7 @@ function TemasManagementContent() {
   // New Theme Form State
   const [name, setName] = useState('');
   const [characters, setCharacters] = useState('');
-  const [basePrice, setBasePrice] = useState(180);
+  const [basePrice, setBasePrice] = useState(179.9);
   const [stockQuantity, setStockQuantity] = useState(1);
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<EntityStatus>('active');
@@ -112,16 +112,27 @@ function TemasManagementContent() {
   const [kitName, setKitName] = useState('');
   const [kitPrice, setKitPrice] = useState(150);
   const [kitDesc, setKitDesc] = useState('');
+  const [kitPhoto, setKitPhoto] = useState<UploadedFilePreview | null>(null);
+  const kitFileInputRef = useRef<HTMLInputElement>(null);
 
   // New Variant Form State
   const [variantName, setVariantName] = useState('');
   const [variantDesc, setVariantDesc] = useState('');
+  const [variantPhoto, setVariantPhoto] = useState<UploadedFilePreview | null>(null);
+  const variantFileInputRef = useRef<HTMLInputElement>(null);
 
   // Master checkbox ref for indeterminate state
   const masterCheckboxRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setThemes(store.getThemes());
+
+    // Inscrição reativa para atualizações instantâneas entre abas e mutações locais
+    const unsubscribe = store.subscribe(() => {
+      setThemes(store.getThemes());
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const showNotification = (msg: string) => {
@@ -316,6 +327,7 @@ function TemasManagementContent() {
     setIsNewThemeModalOpen(false);
     setName('');
     setCharacters('');
+    setBasePrice(179.9);
     setDescription('');
     setUploadedFiles([]);
     showNotification(`Tema "${created.name}" (${created.code}) cadastrado com sucesso!`);
@@ -326,11 +338,26 @@ function TemasManagementContent() {
     e.preventDefault();
     if (!selectedThemeForKit || !kitName.trim()) return;
 
-    store.createKit(selectedThemeForKit.id, kitName, Number(kitPrice), kitDesc);
+    const created = store.createKit(selectedThemeForKit.id, kitName, Number(kitPrice), kitDesc);
+    if (kitPhoto) {
+      store.addMediaToEntity({
+        entity_type: 'kit',
+        entity_id: created.id,
+        storage_path: kitPhoto.previewUrl,
+        original_name: kitPhoto.name,
+        mime_type: 'image/jpeg',
+        file_size: kitPhoto.file?.size || 400000,
+        fingerprint: `sha256-kit-${created.id.substring(0, 6)}-${Date.now()}`,
+        is_primary: true,
+        ai_tags: [],
+      });
+    }
+
     setSelectedThemeForKit(null);
     setKitName('');
     setKitDesc('');
-    showNotification(`Kit "${kitName}" adicionado ao tema.`);
+    setKitPhoto(null);
+    showNotification(`Kit "${kitName}" adicionado ao tema com sucesso.`);
   };
 
   // Create Variant
@@ -338,10 +365,25 @@ function TemasManagementContent() {
     e.preventDefault();
     if (!selectedThemeForVariant || !variantName.trim()) return;
 
-    store.createThemeVariant(selectedThemeForVariant.id, variantName, variantDesc);
+    const created = store.createThemeVariant(selectedThemeForVariant.id, variantName, variantDesc);
+    if (variantPhoto) {
+      store.addMediaToEntity({
+        entity_type: 'variant',
+        entity_id: created.id,
+        storage_path: variantPhoto.previewUrl,
+        original_name: variantPhoto.name,
+        mime_type: 'image/jpeg',
+        file_size: variantPhoto.file?.size || 400000,
+        fingerprint: `sha256-var-${created.id.substring(0, 6)}-${Date.now()}`,
+        is_primary: true,
+        ai_tags: [],
+      });
+    }
+
     setSelectedThemeForVariant(null);
     setVariantName('');
     setVariantDesc('');
+    setVariantPhoto(null);
     showNotification(`Variação "${variantName}" vinculada ao tema com sucesso.`);
   };
 
@@ -362,94 +404,95 @@ function TemasManagementContent() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Temas, Itens e Estoque
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Gestão integrada de cenários, peças avulsas de acervo e fila de importação de fotos.
-          </p>
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          Temas, Itens e Estoque
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+          Gestão integrada de cenários, peças avulsas de acervo e fila de importação de fotos.
+        </p>
+      </div>
+
+      {/* Internal Subpage Tabs + Main Action Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="flex items-center gap-2 overflow-x-auto select-none py-0.5">
+          <button
+            type="button"
+            onClick={() => handleTabChange('temas')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
+              activeTab === 'temas'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Palette className="w-4 h-4" />
+            <span>Temas de Decoração</span>
+            <span
+              className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                activeTab === 'temas'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              {themes.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTabChange('itens')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
+              activeTab === 'itens'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Package2 className="w-4 h-4" />
+            <span>Itens & Estoque</span>
+            <span
+              className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                activeTab === 'itens'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              {store.getItems().length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTabChange('importacoes')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
+              activeTab === 'importacoes'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
+            }`}
+          >
+            <UploadCloud className="w-4 h-4" />
+            <span>Histórico e Importações</span>
+            <span
+              className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                activeTab === 'importacoes'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              {store.getImportAssets().length}
+            </span>
+          </button>
         </div>
 
         {activeTab === 'temas' && (
           <button
+            type="button"
             onClick={() => setIsNewThemeModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs sm:text-sm font-bold shadow-xs transition-colors shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Cadastrar Novo Tema</span>
           </button>
         )}
-      </div>
-
-      {/* Internal Subpage Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto select-none">
-        <button
-          type="button"
-          onClick={() => handleTabChange('temas')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
-            activeTab === 'temas'
-              ? 'bg-rose-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Palette className="w-4 h-4" />
-          <span>Temas de Decoração</span>
-          <span
-            className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-              activeTab === 'temas'
-                ? 'bg-white/20 text-white'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-            }`}
-          >
-            {themes.length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleTabChange('itens')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
-            activeTab === 'itens'
-              ? 'bg-rose-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Package2 className="w-4 h-4" />
-          <span>Itens & Estoque</span>
-          <span
-            className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-              activeTab === 'itens'
-                ? 'bg-white/20 text-white'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-            }`}
-          >
-            {store.getItems().length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleTabChange('importacoes')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
-            activeTab === 'importacoes'
-              ? 'bg-rose-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
-          }`}
-        >
-          <UploadCloud className="w-4 h-4" />
-          <span>Histórico e Importações</span>
-          <span
-            className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-              activeTab === 'importacoes'
-                ? 'bg-white/20 text-white'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-            }`}
-          >
-            {store.getImportAssets().length}
-          </span>
-        </button>
       </div>
 
       {/* Notification Toast */}
@@ -1051,12 +1094,12 @@ function TemasManagementContent() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Personagens (separados por vírgula)</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tag ou Ref (separados por vírgula)</label>
                 <input
                   type="text"
                   value={characters}
                   onChange={(e) => setCharacters(e.target.value)}
-                  placeholder="Ex: Leãozinho, Girafa, Elefantinho"
+                  placeholder="Ex: Homem-Aranha, Vingadores, Tardezinha, 1 Ano..."
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
                 />
               </div>
@@ -1200,13 +1243,13 @@ function TemasManagementContent() {
                 <button
                   type="button"
                   onClick={() => setIsNewThemeModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className="px-4 py-2.5 rounded-xl font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold shadow-xs"
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl font-bold shadow-xs transition-colors cursor-pointer"
                 >
                   Salvar Tema
                 </button>
@@ -1235,6 +1278,50 @@ function TemasManagementContent() {
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
                 />
               </div>
+
+              {/* Upload de Foto da Variação */}
+              <div className="space-y-1.5">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300">Foto da Variação (Arquivo)</label>
+                <input
+                  type="file"
+                  ref={variantFileInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setVariantPhoto({
+                        file,
+                        previewUrl: URL.createObjectURL(file),
+                        name: file.name,
+                      });
+                    }
+                  }}
+                />
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => variantFileInputRef.current?.click()}
+                    className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <UploadCloud className="w-4 h-4 text-rose-500" />
+                    <span>{variantPhoto ? 'Trocar Foto' : 'Carregar Foto'}</span>
+                  </button>
+                  {variantPhoto && (
+                    <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700">
+                      <img src={variantPhoto.previewUrl} alt={variantPhoto.name} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setVariantPhoto(null)}
+                        className="absolute top-0.5 right-0.5 p-0.5 bg-black/70 text-white rounded hover:bg-rose-600 transition-colors cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Diferenciais Visuais</label>
                 <textarea
@@ -1245,17 +1332,21 @@ function TemasManagementContent() {
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
                 />
               </div>
+
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setSelectedThemeForVariant(null)}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  onClick={() => {
+                    setSelectedThemeForVariant(null);
+                    setVariantPhoto(null);
+                  }}
+                  className="px-4 py-2.5 rounded-xl font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold shadow-xs"
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl font-bold shadow-xs transition-colors cursor-pointer"
                 >
                   Salvar Variação
                 </button>
@@ -1284,6 +1375,7 @@ function TemasManagementContent() {
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
                 />
               </div>
+
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Preço (R$) *</label>
                 <input
@@ -1295,6 +1387,50 @@ function TemasManagementContent() {
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
                 />
               </div>
+
+              {/* Upload de Foto do Kit */}
+              <div className="space-y-1.5">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300">Foto do Kit (Arquivo)</label>
+                <input
+                  type="file"
+                  ref={kitFileInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setKitPhoto({
+                        file,
+                        previewUrl: URL.createObjectURL(file),
+                        name: file.name,
+                      });
+                    }
+                  }}
+                />
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => kitFileInputRef.current?.click()}
+                    className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <UploadCloud className="w-4 h-4 text-rose-500" />
+                    <span>{kitPhoto ? 'Trocar Foto' : 'Carregar Foto'}</span>
+                  </button>
+                  {kitPhoto && (
+                    <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700">
+                      <img src={kitPhoto.previewUrl} alt={kitPhoto.name} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setKitPhoto(null)}
+                        className="absolute top-0.5 right-0.5 p-0.5 bg-black/70 text-white rounded hover:bg-rose-600 transition-colors cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Composição do Kit</label>
                 <textarea
@@ -1305,17 +1441,21 @@ function TemasManagementContent() {
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
                 />
               </div>
+
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setSelectedThemeForKit(null)}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  onClick={() => {
+                    setSelectedThemeForKit(null);
+                    setKitPhoto(null);
+                  }}
+                  className="px-4 py-2.5 rounded-xl font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold shadow-xs"
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl font-bold shadow-xs transition-colors cursor-pointer"
                 >
                   Salvar Kit
                 </button>

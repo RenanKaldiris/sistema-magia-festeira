@@ -129,6 +129,7 @@ export interface Item {
   quantity_total: number;
   quantity_available: number;
   unit_price: number;
+  status?: 'active' | 'inactive';
   created_at: string;
   updated_at: string;
 }
@@ -167,7 +168,7 @@ export interface ThemeItem {
 export interface Media {
   id: string;
   tenant_id: string;
-  entity_type: 'theme' | 'variant' | 'item' | 'banner';
+  entity_type: 'theme' | 'variant' | 'item' | 'kit' | 'banner';
   entity_id: string;
   storage_path: string;
   thumbnail_path?: string | null;
@@ -177,7 +178,7 @@ export interface Media {
   fingerprint: string; // Hash SHA-256
   sort_order: number;
   is_primary: boolean;
-  ai_tags: string[];
+  ai_tags?: string[];
   created_at: string;
 }
 

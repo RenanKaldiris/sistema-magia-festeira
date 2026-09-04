@@ -1,13 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  themeNames: string[];
+  themeNames?: string[];
+  itemNames?: string[];
+  entityLabel?: string;
   isSubmitting?: boolean;
 }
 
@@ -15,12 +17,26 @@ export function DeleteConfirmationModal({
   isOpen,
   onClose,
   onConfirm,
-  themeNames,
+  themeNames = [],
+  itemNames = [],
+  entityLabel = 'Tema',
   isSubmitting = false,
 }: DeleteConfirmationModalProps) {
+  const names = themeNames.length > 0 ? themeNames : itemNames;
+  const count = names.length;
+
+  const [confirmText, setConfirmText] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setConfirmText('');
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const count = themeNames.length;
+  const isMulti = count > 1;
+  const canConfirm = !isMulti || confirmText.trim().toUpperCase() === 'EXCLUIR';
 
   return (
     <div
@@ -41,7 +57,7 @@ export function DeleteConfirmationModal({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             aria-label="Fechar modal"
           >
             <X className="w-5 h-5" />
@@ -50,25 +66,25 @@ export function DeleteConfirmationModal({
 
         <div>
           <h3 id="modal-delete-title" className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-            Confirmar Exclusão {count > 1 ? `em Lote (${count} Temas)` : 'de Tema'}
+            Confirmar Exclusão {isMulti ? `em Lote (${count} ${entityLabel}s)` : `de ${entityLabel}`}
           </h3>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
             Tem certeza de que deseja excluir{' '}
             <strong className="text-rose-600 dark:text-rose-400">
-              {count} {count > 1 ? 'temas selecionados' : 'tema selecionado'}
+              {count} {isMulti ? `${entityLabel.toLowerCase()}s selecionados` : `${entityLabel.toLowerCase()} selecionado`}
             </strong>
-            ? Esta ação removerá permanentemente os registros do acervo e não pode ser desfeita.
+            ? Esta ação removerá permanentemente os registros e não pode ser desfeita.
           </p>
         </div>
 
-        {/* Selected theme names list */}
+        {/* Selected names list */}
         {count > 0 && (
           <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 max-h-32 overflow-y-auto space-y-1.5">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
-              Itens a serem excluídos:
+              {entityLabel}s a serem excluídos:
             </span>
             <div className="flex flex-wrap gap-1.5">
-              {themeNames.map((name, idx) => (
+              {names.map((name, idx) => (
                 <span
                   key={idx}
                   className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-medium border border-slate-200 dark:border-slate-700 shadow-2xs"
@@ -80,20 +96,36 @@ export function DeleteConfirmationModal({
           </div>
         )}
 
+        {/* Typed Confirmation for Multiple Items (Exigência de Segurança 3.3) */}
+        {isMulti && (
+          <div className="space-y-1.5 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50">
+            <label className="block text-xs font-semibold text-amber-900 dark:text-amber-200">
+              Digite <span className="font-mono font-black text-rose-600 dark:text-rose-400">EXCLUIR</span> para habilitar a confirmação:
+            </label>
+            <input
+              type="text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="EXCLUIR"
+              className="w-full px-3 py-2 border border-amber-300 dark:border-amber-800/80 rounded-xl bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white font-bold placeholder:font-normal uppercase tracking-wider focus:ring-2 focus:ring-rose-500 focus:outline-none"
+            />
+          </div>
+        )}
+
         <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs sm:text-sm font-semibold transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 rounded-xl font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs sm:text-sm transition-colors cursor-pointer disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            disabled={isSubmitting}
-            className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold shadow-xs flex items-center gap-2 transition-colors disabled:opacity-50"
+            disabled={isSubmitting || !canConfirm}
+            className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs sm:text-sm font-bold shadow-xs flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Trash2 className="w-4 h-4" />
             <span>{isSubmitting ? 'Excluindo...' : `Sim, Excluir (${count})`}</span>
