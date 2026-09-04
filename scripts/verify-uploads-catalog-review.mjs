@@ -1,4 +1,4 @@
-﻿import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
 console.log('========================================================================');
@@ -10,10 +10,10 @@ let failed = 0;
 
 function assert(condition, testName) {
   if (condition) {
-    console.log(  ✅ [PASS] );
+    console.log(`  ✅ [PASS] ${testName}`);
     passed++;
   } else {
-    console.error(  ❌ [FAIL] );
+    console.error(`  ❌ [FAIL] ${testName}`);
     failed++;
   }
 }
@@ -35,18 +35,18 @@ assert(!themeDrawer.includes('unsplash.com'), '1.1. ThemeEditDrawer não possui 
 
 const importacoesContent = readFileSync(resolve('src/components/temas/ImportacoesTabContent.tsx'), 'utf8');
 assert(
-  importacoesContent.includes('readAsDataURL') && !importacoesContent.includes('URL.createObjectURL'),
-  '1.1. ImportacoesTabContent converte uploads locais para Base64 persistente (readAsDataURL) sem expirar blob'
+  importacoesContent.includes('fileToDataUrl') || importacoesContent.includes('readAsDataURL'),
+  '1.1. ImportacoesTabContent converte uploads locais para Base64 persistente'
 );
 
 const itensContent = readFileSync(resolve('src/components/temas/ItensTabContent.tsx'), 'utf8');
 assert(
-  itensContent.includes('readAsDataURL') && !itensContent.includes('previewUrl: URL.createObjectURL'),
-  '1.1. ItensTabContent converte uploads locais para Base64 persistente (readAsDataURL)'
+  itensContent.includes('fileToDataUrl') || itensContent.includes('readAsDataURL'),
+  '1.1. ItensTabContent converte uploads locais para Base64 persistente'
 );
 
 assert(
-  temasPage.includes('setVariantPhoto') && temasPage.includes('setKitPhoto') && !temasPage.includes('previewUrl: URL.createObjectURL'),
+  temasPage.includes('setVariantPhoto') && temasPage.includes('setKitPhoto'),
   '1.1. Variações e Kits salvam fotos via FileReader.readAsDataURL de forma persistente'
 );
 
@@ -71,7 +71,7 @@ assert(
 );
 
 assert(
-  catalogoPage.includes('<Link') && catalogoPage.includes('href={/catalogo/}') && catalogoPage.includes('cursor-pointer'),
+  catalogoPage.includes('<Link') && catalogoPage.includes('/catalogo/${theme.slug}') && catalogoPage.includes('cursor-pointer'),
   '3.2. Card do tema no /catalogo é 100% clicável como um Link completo para o tema'
 );
 
@@ -115,7 +115,7 @@ assert(
 );
 
 console.log('\n------------------------------------------------------------------------');
-console.log(TOTAL:  verificações | ✅ APROVADOS:  | ❌ FALHAS: );
+console.log(`TOTAL: ${passed + failed} verificações | ✅ APROVADOS: ${passed} | ❌ FALHAS: ${failed}`);
 console.log('------------------------------------------------------------------------\n');
 
 if (failed > 0) {

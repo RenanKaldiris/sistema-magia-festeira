@@ -25,6 +25,7 @@ import { BatchActionBar } from '@/components/temas/BatchActionBar';
 import { DeleteConfirmationModal } from '@/components/temas/DeleteConfirmationModal';
 import { OrcamentoModal } from '@/components/temas/OrcamentoModal';
 import { ItemEditDrawer } from '@/components/temas/ItemEditDrawer';
+import { fileToDataUrl } from '@/lib/imageUtils';
 
 interface UploadedFileItem {
   id: string;
@@ -218,26 +219,36 @@ export function ItensTabContent() {
 
   // File Upload Handlers for New Item
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        if (dataUrl) {
-          const newItem: UploadedFileItem = {
-            id: 'up-' + Math.random().toString(36).substring(2, 9),
-            name: file.name,
-            previewUrl: dataUrl,
-          };
-          setUploadedFiles((prev) => [...prev, newItem]);
-        }
+    const files = Array.from(fileList);
+    if (e.target) {
+      e.target.value = '';
+    }
+
+    files.forEach(async (file) => {
+      const instantPreview = URL.createObjectURL(file);
+      const itemId = 'up-' + Math.random().toString(36).substring(2, 9);
+      const newItem: UploadedFileItem = {
+        id: itemId,
+        name: file.name,
+        previewUrl: instantPreview,
       };
-      reader.readAsDataURL(file);
+      setUploadedFiles((prev) => [...prev, newItem]);
+
+      try {
+        const permanentUrl = await fileToDataUrl(file);
+        if (permanentUrl) {
+          setUploadedFiles((prev) =>
+            prev.map((item) => (item.id === itemId ? { ...item, previewUrl: permanentUrl } : item))
+          );
+        }
+      } catch {
+        // Mantém instantPreview
+      }
     });
 
-    e.target.value = '';
     showNotification(`${files.length} foto(s) carregada(s) com sucesso.`);
   };
 

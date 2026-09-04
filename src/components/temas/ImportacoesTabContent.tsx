@@ -21,6 +21,7 @@ import { store } from '@/lib/store';
 import { Import, ImportAsset, Theme } from '@/types/database';
 import { formatDateBR } from '@/lib/dateUtils';
 import { ThemeEditDrawer } from './ThemeEditDrawer';
+import { fileToDataUrl, detectEntityFromFilename } from '@/lib/imageUtils';
 
 interface StagedFile {
   id: string;
@@ -77,26 +78,39 @@ export function ImportacoesTabContent() {
   const handleFileSelect = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        if (dataUrl) {
-          setStagedFiles((prev) => [
-            ...prev,
-            {
-              id: 'stg-' + Math.random().toString(36).substring(2, 9),
-              name: file.name,
-              previewUrl: dataUrl,
-              size: file.size,
-            },
-          ]);
+    const fileList = Array.from(files);
+
+    fileList.forEach(async (file, idx) => {
+      // 1. Prévia instantânea imediata (0ms)
+      const instantPreview = URL.createObjectURL(file);
+      const stageId = 'stg-' + Date.now() + '-' + idx + '-' + Math.random().toString(36).substring(2, 7);
+
+      setStagedFiles((prev) => [
+        ...prev,
+        {
+          id: stageId,
+          name: file.name,
+          previewUrl: instantPreview,
+          size: file.size,
+        },
+      ]);
+
+      // 2. Compressão assíncrona via Canvas para Base64 leve e persistente
+      try {
+        const permanentUrl = await fileToDataUrl(file);
+        if (permanentUrl) {
+          setStagedFiles((prev) =>
+            prev.map((item) =>
+              item.id === stageId ? { ...item, previewUrl: permanentUrl } : item
+            )
+          );
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.warn('Compressão via Canvas falhou para imagem em lote, mantendo preview:', err);
+      }
     });
 
-    showNotification(`${files.length} foto(s) carregada(s) para visualização.`);
+    showNotification(`${fileList.length} foto(s) carregada(s) para visualização.`);
   };
 
   const handleRemoveStagedFile = (id: string) => {
@@ -133,17 +147,19 @@ export function ImportacoesTabContent() {
     if (stagedFiles.length === 0) return;
 
     const count = stagedFiles.length;
+    const allThemes = store.getThemes();
     const job = store.queueImport('local_folder', `Upload Local (${count} arquivos)`, count);
 
     // Registra os assets na fila estritamente com status 'review' (requer aprovação do operador)
     stagedFiles.forEach((f, idx) => {
+      const identifiedEntity = detectEntityFromFilename(f.name, allThemes);
       store.addImportAsset({
         import_id: job.id,
         source_file: f.name,
-        fingerprint: `sha256-local-${Date.now()}-${idx}`,
+        fingerprint: `sha256-local-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
         status: 'review',
-        detected_entity: 'Novo Lote Local',
-        confidence: 0.92,
+        detected_entity: identifiedEntity,
+        confidence: 0.94,
         storage_path: f.previewUrl,
       });
     });

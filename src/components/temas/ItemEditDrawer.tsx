@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Item, Media } from '@/types/database';
 import { store } from '@/lib/store';
+import { fileToDataUrl } from '@/lib/imageUtils';
 
 interface ItemEditDrawerProps {
   item: Item | null;
@@ -83,33 +84,40 @@ export function ItemEditDrawer({
 
   // File Upload Handler (Device & Gallery)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        if (dataUrl) {
-          const isFirst = mediaList.length === 0;
-          store.addMediaToEntity({
-            entity_type: 'item',
-            entity_id: item.id,
-            storage_path: dataUrl,
-            original_name: file.name,
-            mime_type: file.type || 'image/jpeg',
-            file_size: file.size,
-            fingerprint: `sha256-item-${item.id.substring(0, 6)}-${Date.now()}`,
-            is_primary: isFirst,
-            ai_tags: [item.name, category],
-          });
-          refreshMedia(item.id);
-          showNotification('Foto anexada com sucesso!');
-        }
-      };
-      reader.readAsDataURL(file);
+    const files = Array.from(fileList);
+    if (e.target) {
+      e.target.value = '';
+    }
+
+    files.forEach(async (file) => {
+      const instantPreview = URL.createObjectURL(file);
+      const isFirst = mediaList.length === 0;
+      let finalStoragePath = instantPreview;
+
+      try {
+        const permanent = await fileToDataUrl(file);
+        if (permanent) finalStoragePath = permanent;
+      } catch {
+        // Usa instantPreview
+      }
+
+      store.addMediaToEntity({
+        entity_type: 'item',
+        entity_id: item.id,
+        storage_path: finalStoragePath,
+        original_name: file.name,
+        mime_type: file.type || 'image/jpeg',
+        file_size: file.size,
+        fingerprint: `sha256-item-${item.id.substring(0, 6)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        is_primary: isFirst,
+        ai_tags: [item.name, category],
+      });
+      refreshMedia(item.id);
+      showNotification('Foto anexada com sucesso!');
     });
-    e.target.value = '';
   };
 
   // Google Drive Add

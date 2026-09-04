@@ -36,6 +36,7 @@ import { DeleteConfirmationModal } from '@/components/temas/DeleteConfirmationMo
 import { OrcamentoModal } from '@/components/temas/OrcamentoModal';
 import { ItensTabContent } from '@/components/temas/ItensTabContent';
 import { ImportacoesTabContent } from '@/components/temas/ImportacoesTabContent';
+import { fileToDataUrl, detectEntityFromFilename } from '@/lib/imageUtils';
 
 type TabType = 'temas' | 'itens' | 'importacoes';
 type SortField = 'name' | 'price' | 'status';
@@ -47,6 +48,7 @@ interface SortState {
 }
 
 interface UploadedFilePreview {
+  id?: string;
   file?: File;
   previewUrl: string;
   name: string;
@@ -221,24 +223,47 @@ function TemasManagementContent() {
 
   // Upload handler for New Theme (Device & Gallery)
   const handleNewThemeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        if (dataUrl) {
-          setUploadedFiles((prev) => [
-            ...prev,
-            { file, previewUrl: dataUrl, name: file.name },
-          ]);
+    const files = Array.from(fileList);
+    // Reset seguro após capturar a lista de arquivos
+    if (e.target) {
+      e.target.value = '';
+    }
+
+    files.forEach(async (file, idx) => {
+      // 1. Prévia instantânea imediata (0ms)
+      const instantPreview = URL.createObjectURL(file);
+      const tempId = `temp-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`;
+
+      setUploadedFiles((prev) => [
+        ...prev,
+        { id: tempId, file, previewUrl: instantPreview, name: file.name },
+      ]);
+
+      // 2. Se o nome do tema ainda não foi preenchido, sugere automaticamente o nome identificado do arquivo
+      setName((prevName) => {
+        if (!prevName || prevName.trim() === '') {
+          return detectEntityFromFilename(file.name, themes);
         }
-      };
-      reader.readAsDataURL(file);
-    });
+        return prevName;
+      });
 
-    if (e.target) e.target.value = '';
+      // 3. Compressão assíncrona para Base64 leve via Canvas (protege cota do LocalStorage)
+      try {
+        const permanentDataUrl = await fileToDataUrl(file);
+        if (permanentDataUrl) {
+          setUploadedFiles((prev) =>
+            prev.map((item) =>
+              item.id === tempId ? { ...item, previewUrl: permanentDataUrl } : item
+            )
+          );
+        }
+      } catch (err) {
+        console.warn('Compressão via Canvas ignorada, mantendo preview instantâneo:', err);
+      }
+    });
   };
 
   // Google Drive Add for New Theme

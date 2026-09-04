@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Theme, EntityStatus, Media } from '@/types/database';
 import { store } from '@/lib/store';
+import { fileToDataUrl } from '@/lib/imageUtils';
 
 interface ThemeEditDrawerProps {
   theme: (Theme & { imageUrl?: string }) | null;
@@ -116,44 +117,65 @@ export function ThemeEditDrawer({
 
   // File Upload Handler (Device & Gallery)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        if (dataUrl) {
-          const isFirst = mediaList.length === 0;
-          const newMedia: Media = {
-            id: '20000000-' + Math.random().toString(36).substring(2, 14),
-            tenant_id: 'a0000000-0000-0000-0000-000000000001',
-            entity_type: 'theme',
-            entity_id: theme.id,
-            storage_path: dataUrl,
-            original_name: file.name,
-            mime_type: file.type || 'image/jpeg',
-            file_size: file.size,
-            fingerprint: `sha256-${theme.id.substring(0, 6)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-            sort_order: mediaList.length + 1,
-            is_primary: isFirst,
-            ai_tags: characters.split(',').map((c) => c.trim()).filter(Boolean),
-            created_at: new Date().toISOString(),
-          };
+    const files = Array.from(fileList);
+    if (e.target) {
+      e.target.value = '';
+    }
 
-          if (isPreApproval) {
-            setMediaList((prev) => [...prev, newMedia]);
-          } else {
-            store.addMediaToEntity(newMedia);
-            refreshMedia(theme.id);
-          }
-          showNotification(`Foto "${file.name}" adicionada ao tema.`);
-        }
+    files.forEach(async (file) => {
+      const instantPreview = URL.createObjectURL(file);
+      const isFirst = mediaList.length === 0;
+      const mediaId = '20000000-' + Math.random().toString(36).substring(2, 14);
+
+      const tempMedia: Media = {
+        id: mediaId,
+        tenant_id: 'a0000000-0000-0000-0000-000000000001',
+        entity_type: 'theme',
+        entity_id: theme.id,
+        storage_path: instantPreview,
+        original_name: file.name,
+        mime_type: file.type || 'image/jpeg',
+        file_size: file.size,
+        fingerprint: `sha256-${theme.id.substring(0, 6)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        sort_order: mediaList.length + 1,
+        is_primary: isFirst,
+        ai_tags: characters.split(',').map((c) => c.trim()).filter(Boolean),
+        created_at: new Date().toISOString(),
       };
-      reader.readAsDataURL(file);
-    });
 
-    if (e.target) e.target.value = '';
+      if (isPreApproval) {
+        setMediaList((prev) => [...prev, tempMedia]);
+        // Em background, atualiza com Base64 comprimido
+        try {
+          const permanentUrl = await fileToDataUrl(file);
+          if (permanentUrl) {
+            setMediaList((prev) =>
+              prev.map((m) => (m.id === mediaId ? { ...m, storage_path: permanentUrl } : m))
+            );
+          }
+        } catch {
+          // Mantém instantPreview
+        }
+      } else {
+        // Modo edição de tema existente: persiste no store
+        try {
+          const permanentUrl = await fileToDataUrl(file);
+          const finalMedia: Media = {
+            ...tempMedia,
+            storage_path: permanentUrl || instantPreview,
+          };
+          store.addMediaToEntity(finalMedia);
+          refreshMedia(theme.id);
+        } catch {
+          store.addMediaToEntity(tempMedia);
+          refreshMedia(theme.id);
+        }
+      }
+      showNotification(`Foto "${file.name}" adicionada ao tema.`);
+    });
   };
 
   // Google Drive Add Handler

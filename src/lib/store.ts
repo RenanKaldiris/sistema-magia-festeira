@@ -748,7 +748,7 @@ class MagiaStore {
     return [...this.categories].sort((a, b) => a.sort_order - b.sort_order);
   }
 
-  public getThemes(filters?: { categoryId?: string; search?: string; status?: string }) {
+  public getThemes(filters?: { categoryId?: string; search?: string; status?: string }): ThemeWithDetails[] {
     let list = [...this.themes];
     if (filters?.categoryId) {
       list = list.filter((t) => t.category_id === filters.categoryId);
@@ -765,7 +765,7 @@ class MagiaStore {
           t.characters.some((c) => c.toLowerCase().includes(q))
       );
     }
-    return list;
+    return list.map((t) => this.enrichTheme(t));
   }
 
   public getThemeBySlug(slug: string): ThemeWithDetails | null {
@@ -798,7 +798,26 @@ class MagiaStore {
     const media = this.media
       .filter((m) => m.entity_type === 'theme' && m.entity_id === theme.id)
       .sort((a, b) => a.sort_order - b.sort_order);
-    const primaryMedia = media.find((m) => m.is_primary) || media[0] || null;
+    let primaryMedia = media.find((m) => m.is_primary) || media[0] || null;
+
+    if (!primaryMedia && (theme as any).imageUrl) {
+      primaryMedia = {
+        id: `virtual-${theme.id}`,
+        tenant_id: theme.tenant_id,
+        entity_type: 'theme',
+        entity_id: theme.id,
+        storage_path: (theme as any).imageUrl,
+        thumbnail_path: (theme as any).imageUrl,
+        original_name: `${theme.slug}_capa.jpg`,
+        mime_type: 'image/jpeg',
+        file_size: 500000,
+        fingerprint: `virtual-${theme.id}`,
+        sort_order: 1,
+        is_primary: true,
+        ai_tags: theme.characters || [],
+        created_at: theme.created_at,
+      };
+    }
 
     return {
       ...theme,
@@ -1112,7 +1131,7 @@ class MagiaStore {
     const id = 'e0000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
     const now = new Date().toISOString();
 
-    const newTheme: Theme = {
+    const newTheme: Theme & { imageUrl?: string } = {
       id,
       tenant_id: DEFAULT_TENANT_ID,
       code,
@@ -1129,6 +1148,7 @@ class MagiaStore {
       featured: true,
       created_at: now,
       updated_at: now,
+      ...(data.imageUrl ? { imageUrl: data.imageUrl } : {}),
     };
 
     this.themes.push(newTheme);
@@ -1142,7 +1162,7 @@ class MagiaStore {
         original_name: `${slug}_capa.jpg`,
         mime_type: 'image/jpeg',
         file_size: 500000,
-        fingerprint: `sha256-${id.substring(0, 8)}`,
+        fingerprint: `sha256-theme-${id}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
         is_primary: true,
         ai_tags: data.characters || [],
       });
@@ -1469,10 +1489,24 @@ class MagiaStore {
     media: Media;
     isDuplicate: boolean;
   } {
-    // Deduplicação por fingerprint SHA-256
-    const existing = this.media.find((m) => m.fingerprint === data.fingerprint);
+    // Deduplicação estrita por entidade (não bloqueia mídias de entidades diferentes)
+    const existing = this.media.find(
+      (m) =>
+        m.entity_type === data.entity_type &&
+        m.entity_id === data.entity_id &&
+        (m.storage_path === data.storage_path || (data.fingerprint && m.fingerprint === data.fingerprint))
+    );
     if (existing) {
       return { media: existing, isDuplicate: true };
+    }
+
+    // Se for marcada como primária, desmarca mídias primárias anteriores desta entidade
+    if (data.is_primary) {
+      this.media.forEach((m) => {
+        if (m.entity_type === data.entity_type && m.entity_id === data.entity_id) {
+          m.is_primary = false;
+        }
+      });
     }
 
     const id = '20000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
@@ -1511,6 +1545,9 @@ class MagiaStore {
         'Insert Media'
       );
     }
+
+    this.saveToLocalStorage();
+    this.notifyListeners();
 
     return { media: newMedia, isDuplicate: false };
   }
