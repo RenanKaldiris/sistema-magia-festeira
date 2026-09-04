@@ -641,6 +641,11 @@ class MagiaStore {
   public saveToLocalStorage() {
     if (typeof window === 'undefined') return;
     try {
+      // Poda preventiva de arrays para evitar estourar a cota de 5MB do LocalStorage
+      const trimmedMedia = this.media.slice(-35);
+      const trimmedImportAssets = this.importAssets.slice(-25);
+      const trimmedAuditLogs = this.auditLogs.slice(0, 20);
+
       const state = {
         themes: this.themes,
         customers: this.customers,
@@ -650,14 +655,42 @@ class MagiaStore {
         kits: this.kits,
         kitItems: this.kitItems,
         payments: this.payments,
-        media: this.media,
+        media: trimmedMedia,
         imports: this.imports,
-        importAssets: this.importAssets,
-        auditLogs: this.auditLogs,
+        importAssets: trimmedImportAssets,
+        auditLogs: trimmedAuditLogs,
       };
-      localStorage.setItem('magia_festeira_local_store', JSON.stringify(state));
 
-      // Dispara atualização em tempo real para outras abas
+      try {
+        localStorage.setItem('magia_festeira_local_store', JSON.stringify(state));
+      } catch (storageErr) {
+        console.warn('[LocalStorage Quota Exceeded, aplicando compressão de emergência]', storageErr);
+        // Fallback de emergência: salva dados críticos com mídias ultra-enxutas
+        const minimalState = {
+          themes: this.themes,
+          customers: this.customers,
+          rentals: this.rentals,
+          items: this.items,
+          themeVariants: this.themeVariants,
+          kits: this.kits,
+          kitItems: this.kitItems,
+          payments: this.payments,
+          media: this.media.slice(-15),
+          imports: this.imports.slice(-10),
+          importAssets: this.importAssets.slice(-10),
+          auditLogs: [],
+        };
+        try {
+          localStorage.setItem('magia_festeira_local_store', JSON.stringify(minimalState));
+        } catch {
+          // Ignora se o browser restringir totalmente o storage (ex: navegação privada restrita)
+        }
+      }
+    } catch (e) {
+      console.warn('[LocalStorage Save Error]', e);
+    } finally {
+      // CRÍTICO: Sempre notifica os ouvintes e emite no BroadcastChannel, mesmo se localStorage falhar!
+      // O estado em memória no JS nunca é perdido e os componentes React da interface precisam renderizar imediatamente!
       if (this.broadcastChannel) {
         try {
           this.broadcastChannel.postMessage({ type: 'STATE_UPDATED', timestamp: Date.now() });
@@ -666,10 +699,7 @@ class MagiaStore {
         }
       }
 
-      // Notifica inscritos locais
       this.notifyListeners();
-    } catch (e) {
-      console.warn('[LocalStorage Save Error]', e);
     }
   }
 

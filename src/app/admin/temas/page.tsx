@@ -36,7 +36,7 @@ import { DeleteConfirmationModal } from '@/components/temas/DeleteConfirmationMo
 import { OrcamentoModal } from '@/components/temas/OrcamentoModal';
 import { ItensTabContent } from '@/components/temas/ItensTabContent';
 import { ImportacoesTabContent } from '@/components/temas/ImportacoesTabContent';
-import { fileToDataUrl, detectEntityFromFilename } from '@/lib/imageUtils';
+import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg } from '@/lib/imageUtils';
 
 type TabType = 'temas' | 'itens' | 'importacoes';
 type SortField = 'name' | 'price' | 'status';
@@ -232,8 +232,9 @@ function TemasManagementContent() {
       e.target.value = '';
     }
 
-    files.forEach(async (file, idx) => {
-      // 1. Prévia instantânea imediata (0ms)
+    files.forEach(async (rawFile, idx) => {
+      // 1. Converte HEIC/HEIF para JPEG se necessário (essencial para navegadores Chrome/Android exibirem miniatura)
+      const file = await convertHeicToJpeg(rawFile);
       const instantPreview = URL.createObjectURL(file);
       const tempId = `temp-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`;
 
@@ -313,7 +314,15 @@ function TemasManagementContent() {
   // Create Theme
   const handleCreateTheme = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+
+    // Se o usuário não digitou o nome, infere a partir do primeiro arquivo carregado ou gera fallback seguro
+    let finalName = name.trim();
+    if (!finalName && uploadedFiles.length > 0) {
+      finalName = detectEntityFromFilename(uploadedFiles[0].name, themes);
+    }
+    if (!finalName) {
+      finalName = `Tema Decorativo (${new Date().toLocaleDateString('pt-BR')})`;
+    }
 
     const charsArray = characters
       .split(',')
@@ -323,10 +332,10 @@ function TemasManagementContent() {
     const primaryImageUrl = uploadedFiles[0]?.previewUrl;
 
     const created = store.createTheme({
-      name,
+      name: finalName,
       characters: charsArray,
-      base_price: Number(basePrice),
-      stock_quantity: Number(stockQuantity),
+      base_price: Number(basePrice) || 179.9,
+      stock_quantity: Number(stockQuantity) || 1,
       description,
       imageUrl: primaryImageUrl,
     });
@@ -653,6 +662,9 @@ function TemasManagementContent() {
                               src={details.primary_media.storage_path}
                               alt={theme.name}
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
                             />
                           ) : (
                             <Sparkles className="w-6 h-6 text-slate-300 dark:text-slate-600" />
@@ -883,6 +895,9 @@ function TemasManagementContent() {
                                     src={details.primary_media.storage_path}
                                     alt={theme.name}
                                     className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      (e.target as HTMLElement).style.display = 'none';
+                                    }}
                                   />
                                 ) : (
                                   <Sparkles className="w-5 h-5 text-slate-300 dark:text-slate-600" />
@@ -1078,7 +1093,6 @@ function TemasManagementContent() {
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Nome do Tema *</label>
                 <input
                   type="text"
-                  required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ex: Safari Baby, Barbie Princesa..."
@@ -1226,6 +1240,9 @@ function TemasManagementContent() {
                             src={fileItem.previewUrl}
                             alt={fileItem.name}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.opacity = '0';
+                            }}
                           />
                           {idx === 0 && (
                             <span className="absolute top-1 left-1 px-1 py-0.5 rounded bg-rose-600 text-white text-[8px] font-bold">

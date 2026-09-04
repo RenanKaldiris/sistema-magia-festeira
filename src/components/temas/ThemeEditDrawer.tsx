@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Theme, EntityStatus, Media } from '@/types/database';
 import { store } from '@/lib/store';
-import { fileToDataUrl } from '@/lib/imageUtils';
+import { fileToDataUrl, convertHeicToJpeg } from '@/lib/imageUtils';
 
 interface ThemeEditDrawerProps {
   theme: (Theme & { imageUrl?: string }) | null;
@@ -125,7 +125,8 @@ export function ThemeEditDrawer({
       e.target.value = '';
     }
 
-    files.forEach(async (file) => {
+    files.forEach(async (rawFile) => {
+      const file = await convertHeicToJpeg(rawFile);
       const instantPreview = URL.createObjectURL(file);
       const isFirst = mediaList.length === 0;
       const mediaId = '20000000-' + Math.random().toString(36).substring(2, 14);
@@ -487,6 +488,9 @@ export function ThemeEditDrawer({
                         src={media.storage_path}
                         alt={media.original_name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.opacity = '0';
+                        }}
                       />
 
                       {/* Capa Principal Badge */}

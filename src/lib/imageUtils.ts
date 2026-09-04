@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Utilitários de Imagem e Detecção de Entidades - Sistema Magia Festeira
  * Garante:
  * 1. Pré-visualização instantânea (0ms)
@@ -6,17 +6,58 @@
  * 3. Identificação inteligente do nome do tema a partir do arquivo e catálogo existente
  */
 
+export function isHeicFile(file: File | Blob, originalFileName?: string): boolean {
+  const fileName = (file as File).name || originalFileName || '';
+  const fileType = (file.type || '').toLowerCase();
+  return (
+    /\.(heic|heif)$/i.test(fileName) ||
+    fileType.includes('heic') ||
+    fileType.includes('heif')
+  );
+}
+
+export async function convertHeicToJpeg(file: File | Blob, originalFileName?: string): Promise<File> {
+  const fileName = (file as File).name || originalFileName || 'imagem.jpg';
+  
+  if (!isHeicFile(file, fileName)) {
+    if (file instanceof File) return file;
+    return new File([file], fileName, { type: file.type || 'image/jpeg' });
+  }
+
+  try {
+    if (typeof window !== 'undefined') {
+      const heic2anyModule = await import('heic2any');
+      const heic2any = (heic2anyModule as any).default || heic2anyModule;
+      const converted = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.85,
+      });
+      const singleBlob: Blob = Array.isArray(converted) ? converted[0] : converted;
+      const newName = fileName.replace(/\.(heic|heif)$/i, '.jpg');
+      return new File([singleBlob], newName, { type: 'image/jpeg' });
+    }
+  } catch (err) {
+    console.warn('Conversão de HEIC para JPEG não suportada neste ambiente ou falhou:', err);
+  }
+
+  if (file instanceof File) return file;
+  return new File([file], fileName, { type: file.type || 'image/jpeg' });
+}
+
 export async function fileToDataUrl(
-  file: File,
+  file: File | Blob,
   maxDimension = 1280,
   quality = 0.84
 ): Promise<string> {
+  const normalizedFile = await convertHeicToJpeg(file);
+
   return new Promise((resolve) => {
-    if (typeof window === 'undefined' || !file.type.startsWith('image/')) {
+    if (typeof window === 'undefined' || (normalizedFile.type && !normalizedFile.type.startsWith('image/'))) {
       const reader = new FileReader();
       reader.onload = () => resolve((reader.result as string) || '');
       reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(normalizedFile);
       return;
     }
 
@@ -64,7 +105,7 @@ export async function fileToDataUrl(
       img.src = result;
     };
     reader.onerror = () => resolve('');
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(normalizedFile);
   });
 }
 
@@ -76,7 +117,7 @@ export function detectEntityFromFilename(
 
   // Remove extensão e limpa caracteres especiais
   const clean = fileName
-    .replace(/\.[^/.]+$/, '') // remove extensão .jpg, .png, etc.
+    .replace(/\.[^/.]+$/, '') // remove extensão .jpg, .png, .heic, etc.
     .replace(/[-_]+/g, ' ')   // substitui traços e underlines por espaços
     .replace(/\s+/g, ' ')     // normaliza espaços
     .trim();
@@ -101,6 +142,16 @@ export function detectEntityFromFilename(
 
   // 2. Mapeamento de termos temáticos frequentes para títulos amigáveis
   const commonPatterns: Array<{ pattern: RegExp; name: string }> = [
+    { pattern: /naruto|sasuke|kakashi|shinobi|ninja/i, name: 'Naruto' },
+    { pattern: /bob\s*esponja|spongebob|patrick\s*estrela/i, name: 'Turma do Bob Esponja' },
+    { pattern: /mario|luigi|yoshi/i, name: 'Super Mario Bros' },
+    { pattern: /frozen|elsa|anna|olaf/i, name: 'Frozen Uma Aventura Congelante' },
+    { pattern: /moana|maui/i, name: 'Moana Baby' },
+    { pattern: /bolofofos/i, name: 'Bolofofos' },
+    { pattern: /mickey|minnie/i, name: 'Mickey & Minnie' },
+    { pattern: /sonic/i, name: 'Sonic the Hedgehog' },
+    { pattern: /pokemon|pikachu/i, name: 'Pokémon' },
+    { pattern: /dragon\s*ball|goku|vegeta/i, name: 'Dragon Ball Z' },
     { pattern: /vingador|avenger|marvel/i, name: 'Vingadores' },
     { pattern: /hulk/i, name: 'Vingadores (Hulk)' },
     { pattern: /homem\s*aranha|spider/i, name: 'Homem-Aranha' },

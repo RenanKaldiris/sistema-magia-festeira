@@ -16,6 +16,8 @@ const testCases = [
   { file: 'patrulha_canina_chao.png', expected: 'Patrulha Canina' },
   { file: 'festa_fazendinha_menino.jpg', expected: 'Fazendinha' },
   { file: 'decoracao_bosque_encantado.png', expected: 'Decoracao Bosque Encantado' },
+  { file: 'Naruto.HEIC', expected: 'Naruto' },
+  { file: 'Bob_Esponja_painel.jpeg', expected: 'Turma do Bob Esponja' },
 ];
 
 for (const tc of testCases) {

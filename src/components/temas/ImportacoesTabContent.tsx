@@ -21,7 +21,7 @@ import { store } from '@/lib/store';
 import { Import, ImportAsset, Theme } from '@/types/database';
 import { formatDateBR } from '@/lib/dateUtils';
 import { ThemeEditDrawer } from './ThemeEditDrawer';
-import { fileToDataUrl, detectEntityFromFilename } from '@/lib/imageUtils';
+import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg } from '@/lib/imageUtils';
 
 interface StagedFile {
   id: string;
@@ -80,8 +80,9 @@ export function ImportacoesTabContent() {
 
     const fileList = Array.from(files);
 
-    fileList.forEach(async (file, idx) => {
-      // 1. Prévia instantânea imediata (0ms)
+    fileList.forEach(async (rawFile, idx) => {
+      // 1. Converte HEIC/HEIF para JPEG (assegura renderização nativa de miniaturas em qualquer navegador)
+      const file = await convertHeicToJpeg(rawFile);
       const instantPreview = URL.createObjectURL(file);
       const stageId = 'stg-' + Date.now() + '-' + idx + '-' + Math.random().toString(36).substring(2, 7);
 
@@ -426,6 +427,9 @@ export function ImportacoesTabContent() {
                         src={file.previewUrl}
                         alt={file.name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.opacity = '0';
+                        }}
                       />
                       <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] truncate px-1 py-0.5 font-mono">
                         {file.name}
@@ -562,6 +566,9 @@ export function ImportacoesTabContent() {
                         src={asset.storage_path}
                         alt={asset.source_file}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.opacity = '0';
+                        }}
                       />
                     ) : (
                       <ImageIcon className="w-8 h-8 text-slate-400" />
