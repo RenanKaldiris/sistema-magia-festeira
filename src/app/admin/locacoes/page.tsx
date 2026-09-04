@@ -12,9 +12,12 @@ import {
   XCircle,
   Clock,
   User,
+  Phone,
+  MessageCircle,
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { RentalWithDetails, RentalStatus, Payment } from '@/types/database';
+import { formatDateBR } from '@/lib/dateUtils';
 
 export default function AdminLocacoesPage() {
   const [rentals, setRentals] = useState<RentalWithDetails[]>(store.getRentals());
@@ -57,7 +60,7 @@ export default function AdminLocacoesPage() {
     setRentals(store.getRentals());
     setSelectedRentalForPayment(null);
     setPayNote('');
-    showNotification(`Pagamento de R$ ${Number(payAmount).toFixed(2)} registrado com sucesso!`);
+    showNotification(`Pagamento de R$ ${Number(payAmount).toFixed(2).replace('.', ',')} registrado com sucesso!`);
   };
 
   return (
@@ -65,8 +68,10 @@ export default function AdminLocacoesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Locações & Contratos</h1>
-          <p className="text-xs sm:text-sm text-slate-500">
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Locações & Contratos
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             Acompanhe o status operacional das reservas, pagamentos parciais, saldo devedor e devoluções.
           </p>
         </div>
@@ -80,15 +85,15 @@ export default function AdminLocacoesPage() {
       )}
 
       {/* Filters & Search */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2 w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400" />
+          <Search className="w-4 h-4 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por cliente ou tema..."
-            className="w-full text-xs sm:text-sm focus:outline-none"
+            className="w-full text-xs sm:text-sm bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
           />
         </div>
 
@@ -98,7 +103,9 @@ export default function AdminLocacoesPage() {
               key={st}
               onClick={() => setStatusFilter(st)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap capitalize transition-colors ${
-                statusFilter === st ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                statusFilter === st
+                  ? 'bg-slate-900 dark:bg-rose-600 text-white'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               {st === 'all' ? 'Todos os Status' : st}
@@ -107,28 +114,141 @@ export default function AdminLocacoesPage() {
         </div>
       </div>
 
-      {/* Rentals Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+      {/* Mobile Rentals View (Cards touch-friendly) */}
+      <div className="md:hidden space-y-4">
+        {filteredRentals.map((rental) => {
+          const rawPhone = rental.customer?.phone?.replace(/\D/g, '') || '';
+          const waPhone = rawPhone.startsWith('55') ? rawPhone : `55${rawPhone}`;
+          return (
+            <div
+              key={rental.id}
+              className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3"
+            >
+              {/* Header do Card */}
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">{rental.customer?.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    {rental.customer?.phone && (
+                      <>
+                        <a
+                          href={`tel:${rental.customer.phone}`}
+                          className="inline-flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-300 hover:text-rose-600 font-medium"
+                        >
+                          <Phone className="w-3 h-3 text-slate-400" />
+                          <span>{rental.customer.phone}</span>
+                        </a>
+                        <a
+                          href={`https://wa.me/${waPhone}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                          <span>WhatsApp</span>
+                        </a>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <select
+                  value={rental.status}
+                  onChange={(e) => handleStatusChange(rental.id, e.target.value as RentalStatus)}
+                  className={`px-2 py-1 rounded-lg text-xs font-bold capitalize border focus:outline-none ${
+                    rental.status === 'reservado'
+                      ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300'
+                      : rental.status === 'alugado'
+                      ? 'bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-900/60 text-amber-700 dark:text-amber-300'
+                      : rental.status === 'devolvido'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  <option value="reservado">Reservado</option>
+                  <option value="alugado">Alugado</option>
+                  <option value="devolvido">Devolvido</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </div>
+
+              {/* Tema e Detalhes */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900 dark:text-white">{rental.theme?.name}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-mono font-bold">
+                    {rental.theme?.code}
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
+                  {rental.theme_variant?.name || 'Padrão'} {rental.kit ? `• ${rental.kit.name}` : ''}
+                </span>
+                <div className="pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-[11px] space-y-0.5">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 dark:text-slate-400">📅 Festa:</span>
+                    <span className="font-bold text-rose-600 dark:text-rose-400">{formatDateBR(rental.event_date)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                    <span>📦 Retirada: {formatDateBR(rental.pickup_date)}</span>
+                    <span>🔄 Devolução: {formatDateBR(rental.return_date)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Financeiro e Ação */}
+              <div className="flex items-center justify-between pt-1">
+                <div>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-semibold block">Total / Saldo</span>
+                  <span className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    R$ {rental.total.toFixed(2).replace('.', ',')}
+                  </span>
+                  <span
+                    className={`ml-1.5 text-[11px] font-semibold ${
+                      rental.balance === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                    }`}
+                  >
+                    ({rental.balance === 0 ? 'Quitado' : `Saldo: R$ ${rental.balance.toFixed(2).replace('.', ',')}`})
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setSelectedRentalForPayment(rental);
+                    setPayAmount(rental.balance > 0 ? rental.balance : 50);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 border border-emerald-200 dark:border-emerald-800 transition-colors"
+                >
+                  <DollarSign className="w-3.5 h-3.5" />
+                  <span>Pagar</span>
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop Rentals Table (hidden on mobile, visible on md+) */}
+      <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs sm:text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[11px] font-bold">
+            <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold">
               <tr>
                 <th className="py-3.5 px-6">Cliente / Contato</th>
                 <th className="py-3.5 px-6">Tema / Variação</th>
-                <th className="py-3.5 px-6">Intervalo Completo</th>
+                <th className="py-3.5 px-6">Intervalo Completo (DD/MM/AAAA)</th>
                 <th className="py-3.5 px-6">Financeiro</th>
                 <th className="py-3.5 px-6">Status</th>
                 <th className="py-3.5 px-6 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {filteredRentals.map((rental) => (
-                <tr key={rental.id} className="hover:bg-slate-50/60 transition-colors">
+                <tr key={rental.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
                   <td className="py-4 px-6">
-                    <span className="font-bold text-slate-900 block">{rental.customer?.name}</span>
-                    <span className="text-[11px] text-slate-500 block">{rental.customer?.phone}</span>
+                    <span className="font-bold text-slate-900 dark:text-white block">{rental.customer?.name}</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 block">{rental.customer?.phone}</span>
                     {rental.delivery_location && (
-                      <span className="text-[10px] text-slate-400 block mt-0.5 truncate max-w-xs">
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate max-w-xs">
                         📍 {rental.delivery_location}
                       </span>
                     )}
@@ -136,30 +256,32 @@ export default function AdminLocacoesPage() {
 
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-slate-900">{rental.theme?.name}</span>
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-bold">
+                      <span className="font-bold text-slate-900 dark:text-white">{rental.theme?.name}</span>
+                      <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold">
                         {rental.theme?.code}
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
                       {rental.theme_variant?.name || 'Padrão'} {rental.kit ? `• ${rental.kit.name}` : ''}
                     </span>
                   </td>
 
                   <td className="py-4 px-6 text-xs">
-                    <span className="font-semibold text-rose-600 block">Festa: {rental.event_date}</span>
-                    <span className="text-[11px] text-slate-500 block mt-0.5">
-                      Retirada: {rental.pickup_date} ➔ Devolução: {rental.return_date}
+                    <span className="font-semibold text-rose-600 dark:text-rose-400 block">
+                      Festa: {formatDateBR(rental.event_date)}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                      Retirada: {formatDateBR(rental.pickup_date)} ➔ Devolução: {formatDateBR(rental.return_date)}
                     </span>
                   </td>
 
                   <td className="py-4 px-6">
-                    <span className="font-bold text-slate-900 block">
+                    <span className="font-bold text-slate-900 dark:text-white block">
                       Total: R$ {rental.total.toFixed(2).replace('.', ',')}
                     </span>
                     <span
                       className={`text-[11px] font-semibold block mt-0.5 ${
-                        rental.balance === 0 ? 'text-emerald-600' : 'text-amber-600'
+                        rental.balance === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
                       }`}
                     >
                       {rental.balance === 0
@@ -174,12 +296,12 @@ export default function AdminLocacoesPage() {
                       onChange={(e) => handleStatusChange(rental.id, e.target.value as RentalStatus)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold capitalize border focus:outline-none ${
                         rental.status === 'reservado'
-                          ? 'bg-blue-50 border-blue-200 text-blue-700'
+                          ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300'
                           : rental.status === 'alugado'
-                          ? 'bg-amber-50 border-amber-200 text-amber-700'
+                          ? 'bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-900/60 text-amber-700 dark:text-amber-300'
                           : rental.status === 'devolvido'
-                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                          : 'bg-slate-100 border-slate-200 text-slate-500'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
                       }`}
                     >
                       <option value="reservado">Reservado</option>
@@ -195,7 +317,7 @@ export default function AdminLocacoesPage() {
                         setSelectedRentalForPayment(rental);
                         setPayAmount(rental.balance > 0 ? rental.balance : 50);
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                      className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-semibold inline-flex items-center gap-1 transition-colors border border-emerald-200 dark:border-emerald-800/50"
                     >
                       <DollarSign className="w-3.5 h-3.5" />
                       <span>Registrar Pagamento</span>
@@ -211,19 +333,19 @@ export default function AdminLocacoesPage() {
       {/* Modal: Registrar Pagamento */}
       {selectedRentalForPayment && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <h3 className="text-lg font-bold text-slate-900">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 max-h-[85dvh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
               Registrar Pagamento para {selectedRentalForPayment.customer?.name}
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Tema: <strong>{selectedRentalForPayment.theme?.name}</strong> • Saldo Atual: R${' '}
-              {selectedRentalForPayment.balance.toFixed(2)}
+              {selectedRentalForPayment.balance.toFixed(2).replace('.', ',')}
             </p>
 
             <form onSubmit={handleRecordPayment} className="space-y-4 text-xs sm:text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Valor Pago (R$) *</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Valor Pago (R$) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -231,15 +353,15 @@ export default function AdminLocacoesPage() {
                     required
                     value={payAmount}
                     onChange={(e) => setPayAmount(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Forma de Pagamento *</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Forma de Pagamento *</label>
                   <select
                     value={payMethod}
                     onChange={(e) => setPayMethod(e.target.value as Payment['method'])}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   >
                     <option value="pix">PIX</option>
                     <option value="dinheiro">Dinheiro</option>
@@ -250,21 +372,21 @@ export default function AdminLocacoesPage() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Comprovante / Observação</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Comprovante / Observação</label>
                 <input
                   type="text"
                   value={payNote}
                   onChange={(e) => setPayNote(e.target.value)}
                   placeholder="Ex: Quitação final na retirada, Sinal PIX..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setSelectedRentalForPayment(null)}
-                  className="px-4 py-2 border border-slate-200 rounded-xl font-medium text-slate-600"
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Cancelar
                 </button>

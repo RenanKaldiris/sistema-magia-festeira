@@ -25,6 +25,7 @@ import {
   ThemeWithDetails,
   RentalWithDetails,
 } from '@/types/database';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 
 export interface StockCheckResult {
   available: boolean;
@@ -41,6 +42,17 @@ export interface StockCheckResult {
   conflictingRentals: Rental[];
 }
 
+async function safeSupabaseOperation(op: PromiseLike<any>, label: string) {
+  try {
+    const res = await op;
+    if (res && res.error) {
+      console.error(`[Supabase Error: ${label}]`, res.error);
+    }
+  } catch (err) {
+    console.error(`[Supabase Exception: ${label}]`, err);
+  }
+}
+
 // Seed Inicial Conforme 003_seed_data.sql
 const DEFAULT_TENANT_ID = 'a0000000-0000-0000-0000-000000000001';
 
@@ -50,7 +62,7 @@ class MagiaStore {
       id: DEFAULT_TENANT_ID,
       name: 'Magia Festeira Decorações',
       slug: 'magia-festeira',
-      logo_url: null,
+      logo_url: '/logo/logo-dark.png',
       contact_phone: '(11) 99999-8888',
       contact_email: 'contato@magiafesteira.com.br',
       status: 'active',
@@ -573,6 +585,103 @@ class MagiaStore {
   ];
 
   // ============================================================================
+  // CONSTRUTOR E SINCRONIZAÇÃO AUTOMÁTICA COM SUPABASE NA NUVEM
+  // ============================================================================
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      this.loadFromLocalStorage();
+      this.syncWithSupabase();
+    }
+  }
+
+  public saveToLocalStorage() {
+    if (typeof window === 'undefined') return;
+    try {
+      const state = {
+        themes: this.themes,
+        customers: this.customers,
+        rentals: this.rentals,
+        items: this.items,
+        themeVariants: this.themeVariants,
+        kits: this.kits,
+        kitItems: this.kitItems,
+        payments: this.payments,
+        media: this.media,
+        imports: this.imports,
+        importAssets: this.importAssets,
+        auditLogs: this.auditLogs,
+      };
+      localStorage.setItem('magia_festeira_local_store', JSON.stringify(state));
+    } catch (e) {
+      console.warn('[LocalStorage Save Error]', e);
+    }
+  }
+
+  public loadFromLocalStorage() {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem('magia_festeira_local_store');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed.themes && parsed.themes.length > 0) this.themes = parsed.themes;
+      if (parsed.customers && parsed.customers.length > 0) this.customers = parsed.customers;
+      if (parsed.rentals && parsed.rentals.length > 0) this.rentals = parsed.rentals;
+      if (parsed.items && parsed.items.length > 0) this.items = parsed.items;
+      if (parsed.themeVariants && parsed.themeVariants.length > 0) this.themeVariants = parsed.themeVariants;
+      if (parsed.kits && parsed.kits.length > 0) this.kits = parsed.kits;
+      if (parsed.kitItems && parsed.kitItems.length > 0) this.kitItems = parsed.kitItems;
+      if (parsed.payments && parsed.payments.length > 0) this.payments = parsed.payments;
+      if (parsed.media && parsed.media.length > 0) this.media = parsed.media;
+      if (parsed.imports && parsed.imports.length > 0) this.imports = parsed.imports;
+      if (parsed.importAssets && parsed.importAssets.length > 0) this.importAssets = parsed.importAssets;
+      if (parsed.auditLogs && parsed.auditLogs.length > 0) this.auditLogs = parsed.auditLogs;
+    } catch (e) {
+      console.warn('[LocalStorage Load Error]', e);
+    }
+  }
+
+  public async syncWithSupabase() {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const [themesRes, customersRes, rentalsRes, itemsRes, variantsRes, kitsRes, mediaRes] = await Promise.all([
+        supabase.from('themes').select('*'),
+        supabase.from('customers').select('*'),
+        supabase.from('rentals').select('*'),
+        supabase.from('items').select('*'),
+        supabase.from('theme_variants').select('*'),
+        supabase.from('kits').select('*'),
+        supabase.from('media').select('*'),
+      ]);
+
+      if (themesRes.data && themesRes.data.length > 0) {
+        this.themes = themesRes.data;
+      }
+      if (customersRes.data && customersRes.data.length > 0) {
+        this.customers = customersRes.data;
+      }
+      if (rentalsRes.data && rentalsRes.data.length > 0) {
+        this.rentals = rentalsRes.data;
+      }
+      if (itemsRes.data && itemsRes.data.length > 0) {
+        this.items = itemsRes.data;
+      }
+      if (variantsRes.data && variantsRes.data.length > 0) {
+        this.themeVariants = variantsRes.data;
+      }
+      if (kitsRes.data && kitsRes.data.length > 0) {
+        this.kits = kitsRes.data;
+      }
+      if (mediaRes.data && mediaRes.data.length > 0) {
+        this.media = mediaRes.data;
+      }
+      this.saveToLocalStorage();
+    } catch (err) {
+      console.warn('[Supabase Sync Warning]', err);
+    }
+  }
+
+  // ============================================================================
   // MÉTODOS DE CONSULTA (QUERIES)
   // ============================================================================
 
@@ -807,6 +916,30 @@ class MagiaStore {
       overrideUsed: !check.available && forceAdminOverride,
     });
 
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('rentals').insert({
+          id: newRental.id,
+          tenant_id: newRental.tenant_id,
+          customer_id: newRental.customer_id,
+          theme_id: newRental.theme_id,
+          theme_variant_id: newRental.theme_variant_id,
+          kit_id: newRental.kit_id,
+          event_date: newRental.event_date,
+          pickup_date: newRental.pickup_date,
+          return_date: newRental.return_date,
+          status: newRental.status,
+          total: newRental.total,
+          paid: newRental.paid,
+          balance: newRental.balance,
+          delivery_location: newRental.delivery_location,
+          notes: newRental.notes,
+        }),
+        'Insert Rental'
+      );
+    }
+
+    this.saveToLocalStorage();
     return { success: true, rental: newRental };
   }
 
@@ -837,8 +970,52 @@ class MagiaStore {
       sync.last_sync_at = new Date().toISOString();
     }
 
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('rentals').update({
+          ...updates,
+          updated_at: updated.updated_at,
+        }).eq('id', rentalId),
+        'Update Rental'
+      );
+    }
+
     this.logAudit('UPDATE_RENTAL', 'rentals', rentalId, updates);
+    this.saveToLocalStorage();
     return { success: true, rental: updated };
+  }
+
+  public createCustomer(data: Omit<Customer, 'id' | 'created_at' | 'updated_at' | 'tenant_id'>): Customer {
+    const id = '30000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
+    const now = new Date().toISOString();
+
+    const customer: Customer = {
+      ...data,
+      id,
+      tenant_id: DEFAULT_TENANT_ID,
+      created_at: now,
+      updated_at: now,
+    };
+
+    this.customers.push(customer);
+    this.logAudit('CREATE_CUSTOMER', 'customers', id, customer);
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('customers').insert({
+          id: customer.id,
+          tenant_id: customer.tenant_id,
+          name: customer.name,
+          phone: customer.phone,
+          email: customer.email,
+          notes: customer.notes,
+        }),
+        'Insert Customer'
+      );
+    }
+
+    this.saveToLocalStorage();
+    return customer;
   }
 
   public recordPayment(rentalId: string, amount: number, method: Payment['method'], note?: string) {
@@ -861,6 +1038,7 @@ class MagiaStore {
     rental.updated_at = new Date().toISOString();
 
     this.logAudit('RECORD_PAYMENT', 'payments', payment.id, { rentalId, amount, method });
+    this.saveToLocalStorage();
     return payment;
   }
 
@@ -916,22 +1094,126 @@ class MagiaStore {
     }
 
     this.logAudit('CREATE_THEME', 'themes', id, newTheme);
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('themes').insert({
+          id: newTheme.id,
+          tenant_id: newTheme.tenant_id,
+          code: newTheme.code,
+          name: newTheme.name,
+          slug: newTheme.slug,
+          category_id: newTheme.category_id,
+          characters: newTheme.characters,
+          piece_count: newTheme.piece_count,
+          base_price: newTheme.base_price,
+          description: newTheme.description,
+          status: newTheme.status,
+          stock_quantity: newTheme.stock_quantity,
+          featured: newTheme.featured,
+        }),
+        'Insert Theme'
+      );
+    }
+
+    this.saveToLocalStorage();
     return newTheme;
   }
 
-  public updateTheme(id: string, updates: Partial<Theme>): Theme {
+  public updateTheme(id: string, updates: Partial<Theme> & { imageUrl?: string }): Theme {
     const idx = this.themes.findIndex((t) => t.id === id);
     if (idx === -1) throw new Error('Tema não encontrado');
 
+    const { imageUrl, ...themeUpdates } = updates;
+
     const updated = {
       ...this.themes[idx],
-      ...updates,
+      ...themeUpdates,
       updated_at: new Date().toISOString(),
     };
     this.themes[idx] = updated;
 
+    if (imageUrl && imageUrl.trim()) {
+      const existingMedia = this.media.find((m) => m.entity_type === 'theme' && m.entity_id === id && m.is_primary);
+      if (existingMedia) {
+        existingMedia.storage_path = imageUrl.trim();
+        existingMedia.thumbnail_path = imageUrl.trim();
+      } else {
+        this.addMediaToEntity({
+          entity_type: 'theme',
+          entity_id: id,
+          storage_path: imageUrl.trim(),
+          original_name: `${updated.slug}_capa.jpg`,
+          mime_type: 'image/jpeg',
+          file_size: 500000,
+          fingerprint: `sha256-${id.substring(0, 8)}-${Date.now()}`,
+          is_primary: true,
+          ai_tags: updated.characters || [],
+        });
+      }
+    }
+
     this.logAudit('UPDATE_THEME', 'themes', id, updates);
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('themes').update({
+          ...themeUpdates,
+          updated_at: updated.updated_at,
+        }).eq('id', id),
+        'Update Theme'
+      );
+    }
+
+    this.saveToLocalStorage();
     return updated;
+  }
+
+  public deleteTheme(id: string): boolean {
+    const theme = this.themes.find((t) => t.id === id);
+    if (!theme) return false;
+
+    this.themes = this.themes.filter((t) => t.id !== id);
+    this.themeVariants = this.themeVariants.filter((v) => v.theme_id !== id);
+    this.kits = this.kits.filter((k) => k.theme_id !== id);
+    this.media = this.media.filter((m) => !(m.entity_type === 'theme' && m.entity_id === id));
+
+    this.logAudit('DELETE_THEME', 'themes', id, { name: theme.name, code: theme.code });
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('themes').delete().eq('id', id),
+        'Delete Theme'
+      );
+    }
+
+    this.saveToLocalStorage();
+    return true;
+  }
+
+  public deleteThemes(ids: string[]): number {
+    const toDelete = this.themes.filter((t) => ids.includes(t.id));
+    if (toDelete.length === 0) return 0;
+
+    const idsSet = new Set(ids);
+    this.themes = this.themes.filter((t) => !idsSet.has(t.id));
+    this.themeVariants = this.themeVariants.filter((v) => !idsSet.has(v.theme_id));
+    this.kits = this.kits.filter((k) => !idsSet.has(k.theme_id));
+    this.media = this.media.filter((m) => !(m.entity_type === 'theme' && idsSet.has(m.entity_id)));
+
+    for (const theme of toDelete) {
+      this.logAudit('DELETE_THEME', 'themes', theme.id, { name: theme.name, code: theme.code });
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('themes').delete().in('id', ids),
+        'Delete Themes Batch'
+      );
+    }
+
+    this.saveToLocalStorage();
+    return toDelete.length;
   }
 
   public createThemeVariant(themeId: string, name: string, description?: string): ThemeVariant {
@@ -951,6 +1233,22 @@ class MagiaStore {
 
     this.themeVariants.push(variant);
     this.logAudit('CREATE_VARIANT', 'theme_variants', id, { themeId, name });
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('theme_variants').insert({
+          id: variant.id,
+          theme_id: variant.theme_id,
+          name: variant.name,
+          description: variant.description,
+          ai_confidence: variant.ai_confidence,
+          active: variant.active,
+        }),
+        'Insert Variant'
+      );
+    }
+
+    this.saveToLocalStorage();
     return variant;
   }
 
@@ -971,6 +1269,22 @@ class MagiaStore {
 
     this.kits.push(kit);
     this.logAudit('CREATE_KIT', 'kits', id, { themeId, name, price });
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('kits').insert({
+          id: kit.id,
+          theme_id: kit.theme_id,
+          name: kit.name,
+          description: kit.description,
+          price: kit.price,
+          active: kit.active,
+        }),
+        'Insert Kit'
+      );
+    }
+
+    this.saveToLocalStorage();
     return kit;
   }
 
@@ -978,6 +1292,7 @@ class MagiaStore {
     const existing = this.kitItems.find((ki) => ki.kit_id === kitId && ki.item_id === itemId);
     if (existing) {
       existing.quantity += quantity;
+      this.saveToLocalStorage();
       return existing;
     }
 
@@ -988,6 +1303,7 @@ class MagiaStore {
       quantity,
     };
     this.kitItems.push(kitItem);
+    this.saveToLocalStorage();
     return kitItem;
   }
 
@@ -1005,6 +1321,25 @@ class MagiaStore {
 
     this.items.push(item);
     this.logAudit('CREATE_ITEM', 'items', id, item);
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('items').insert({
+          id: item.id,
+          tenant_id: item.tenant_id,
+          code: item.code,
+          name: item.name,
+          category: item.category,
+          description: item.description,
+          quantity_total: item.quantity_total,
+          quantity_available: item.quantity_available,
+          unit_price: item.unit_price,
+        }),
+        'Insert Item'
+      );
+    }
+
+    this.saveToLocalStorage();
     return item;
   }
 
@@ -1034,7 +1369,62 @@ class MagiaStore {
       fingerprint: data.fingerprint,
     });
 
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('media').insert({
+          id: newMedia.id,
+          tenant_id: newMedia.tenant_id,
+          entity_type: newMedia.entity_type,
+          entity_id: newMedia.entity_id,
+          storage_path: newMedia.storage_path,
+          thumbnail_path: newMedia.thumbnail_path,
+          original_name: newMedia.original_name,
+          mime_type: newMedia.mime_type,
+          file_size: newMedia.file_size,
+          fingerprint: newMedia.fingerprint,
+          sort_order: newMedia.sort_order,
+          is_primary: newMedia.is_primary,
+          ai_tags: newMedia.ai_tags,
+        }),
+        'Insert Media'
+      );
+    }
+
     return { media: newMedia, isDuplicate: false };
+  }
+
+  public getMediaByEntity(entityType: string, entityId: string): Media[] {
+    return this.media.filter((m) => m.entity_type === entityType && m.entity_id === entityId);
+  }
+
+  public deleteMedia(id: string): boolean {
+    const idx = this.media.findIndex((m) => m.id === id);
+    if (idx === -1) return false;
+    const [deleted] = this.media.splice(idx, 1);
+    this.logAudit('DELETE_MEDIA', 'media', id, { entityType: deleted.entity_type, entityId: deleted.entity_id });
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(supabase.from('media').delete().eq('id', id), 'Delete Media');
+    }
+    this.saveToLocalStorage();
+    return true;
+  }
+
+  public setPrimaryMedia(entityType: string, entityId: string, mediaId: string): boolean {
+    let found = false;
+    this.media.forEach((m) => {
+      if (m.entity_type === entityType && m.entity_id === entityId) {
+        if (m.id === mediaId) {
+          m.is_primary = true;
+          found = true;
+        } else {
+          m.is_primary = false;
+        }
+      }
+    });
+    if (found) {
+      this.saveToLocalStorage();
+    }
+    return found;
   }
 
   public registerAIRun(run: Omit<AIRun, 'id' | 'tenant_id' | 'created_at'>): AIRun {
@@ -1064,7 +1454,29 @@ class MagiaStore {
     };
     this.imports.unshift(imp);
     this.logAudit('QUEUE_IMPORT', 'imports', id, { sourceType, sourceRef, fileCount });
+    this.saveToLocalStorage();
     return imp;
+  }
+
+  public addImportAsset(asset: Omit<ImportAsset, 'id' | 'created_at'>): ImportAsset {
+    const id = '80000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
+    const newAsset: ImportAsset = {
+      ...asset,
+      id,
+      created_at: new Date().toISOString(),
+    };
+    this.importAssets.unshift(newAsset);
+    this.saveToLocalStorage();
+    return newAsset;
+  }
+
+  public approveImportAsset(assetId: string): boolean {
+    const asset = this.importAssets.find((a) => a.id === assetId);
+    if (!asset) return false;
+    asset.status = 'published';
+    this.logAudit('APPROVE_IMPORT_ASSET', 'import_assets', assetId, { file: asset.source_file, entity: asset.detected_entity });
+    this.saveToLocalStorage();
+    return true;
   }
 
   public logAudit(action: string, entity: string, entityId?: string, payload?: Record<string, unknown> | object) {

@@ -6,8 +6,9 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "db:setup": "node scripts/setup-hostgator.mjs"
   },
   "keywords": [
     "magia-festeira",
@@ -29,6 +30,7 @@
     "date-fns": "^4.4.0",
     "lucide-react": "^1.39.0",
     "next": "^16.3.4",
+    "pg": "^8.23.0",
     "postcss": "^8.5.26",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -36,5 +38,10 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.4"
   }
 }

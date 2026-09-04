@@ -14,3 +14,5 @@ build/
 # typescript / cache
 *.tsbuildinfo
 npm-debug.log*
+.vercel
+.env*

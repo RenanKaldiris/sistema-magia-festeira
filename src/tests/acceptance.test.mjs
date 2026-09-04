@@ -3,9 +3,9 @@
  * Validação rigorosa de regras de negócio, estoque, conflito, deduplicação, IA e relatórios.
  */
 
-import { store } from './src/lib/store.ts';
-import { aiOrchestrator } from './src/services/ai/orchestrator.ts';
-import { agentTools } from './src/services/ai/tools.ts';
+import { store } from '../lib/store.ts';
+import { aiOrchestrator } from '../services/ai/orchestrator.ts';
+import { agentTools } from '../services/ai/tools.ts';
 
 let passed = 0;
 let failed = 0;

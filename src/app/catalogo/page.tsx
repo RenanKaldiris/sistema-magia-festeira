@@ -3,9 +3,10 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, Filter, Sparkles, MessageCircle, ArrowRight, Tag } from 'lucide-react';
+import { Search, Filter, MessageCircle, ArrowRight, Tag } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { store } from '@/lib/store';
+import { getWhatsAppUrl } from '@/lib/whatsapp';
 
 export default function CatalogoPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,32 +29,46 @@ export default function CatalogoPage() {
   }, [allThemes, selectedCategory, searchQuery]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
       <Navbar />
 
       {/* Catalog Header */}
-      <section className="bg-gradient-to-r from-rose-50 via-pink-50 to-amber-50 border-b border-rose-100/60 py-10 sm:py-14">
+      <section className="bg-gradient-to-r from-rose-50 via-pink-50 to-amber-50 dark:from-rose-950/20 dark:via-slate-900 dark:to-slate-950 border-b border-rose-100/60 dark:border-slate-800 py-8 sm:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-semibold mb-3">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Portfólio Exclusivo</span>
+          <div className="flex justify-center mb-3">
+            <Image
+              src="/logo/logo-dark.png"
+              alt="Magia Festeira"
+              width={190}
+              height={52}
+              className="h-10 sm:h-12 w-auto object-contain block dark:hidden"
+              priority
+            />
+            <Image
+              src="/logo/logo-light.png"
+              alt="Magia Festeira"
+              width={190}
+              height={52}
+              className="h-10 sm:h-12 w-auto object-contain hidden dark:block"
+              priority
+            />
           </div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Catálogo de Temas & Decorações
           </h1>
-          <p className="mt-3 text-slate-600 max-w-xl mx-auto text-sm sm:text-base">
+          <p className="mt-2 text-slate-600 dark:text-slate-300 max-w-xl mx-auto text-xs sm:text-sm">
             Explore cenários encantadores, variações exclusivas e kits prontos para comemorar momentos inesquecíveis.
           </p>
 
           {/* Search Bar */}
           <div className="mt-8 max-w-xl mx-auto relative">
-            <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+            <Search className="w-5 h-5 text-slate-400 dark:text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar por tema, personagem (ex: Hulk, Solzinho) ou código..."
-              className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white border border-slate-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-sm placeholder:text-slate-400"
+              className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
         </div>
@@ -67,7 +82,7 @@ export default function CatalogoPage() {
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all ${
               selectedCategory === 'all'
                 ? 'bg-rose-600 text-white shadow-xs'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
             Todos os Temas ({allThemes.length})
@@ -79,7 +94,7 @@ export default function CatalogoPage() {
               className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all ${
                 selectedCategory === cat.id
                   ? 'bg-rose-600 text-white shadow-xs'
-                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               {cat.name}
@@ -91,16 +106,16 @@ export default function CatalogoPage() {
       {/* Themes Grid */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 flex-1 w-full">
         {filteredThemes.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-slate-200 p-8">
-            <Filter className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-slate-800">Nenhum tema encontrado</h3>
-            <p className="text-sm text-slate-500 mt-1">Tente ajustar seus termos de busca ou mudar a categoria.</p>
+          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8">
+            <Filter className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Nenhum tema encontrado</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Tente ajustar seus termos de busca ou mudar a categoria.</p>
             <button
               onClick={() => {
                 setSearchQuery('');
                 setSelectedCategory('all');
               }}
-              className="mt-4 px-4 py-2 bg-rose-50 text-rose-700 text-xs font-semibold rounded-lg hover:bg-rose-100 transition-colors"
+              className="mt-4 px-4 py-2 bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 text-xs font-semibold rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors"
             >
               Limpar Filtros
             </button>
@@ -111,17 +126,19 @@ export default function CatalogoPage() {
               const details = store.getThemeById(theme.id);
               const primaryImg = details?.primary_media?.storage_path || 'https://images.unsplash.com/photo-1513151233558-d860c5398176?w=800';
               const categoryName = details?.category?.name || 'Decoração';
+              const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+              const themeUrl = currentOrigin ? `${currentOrigin}/catalogo/${theme.slug}` : '';
               const whatsappMessage = encodeURIComponent(
-                `Olá! Tenho interesse no tema ${theme.name} (${theme.code}): http://localhost:3000/catalogo/${theme.slug}`
+                `Olá! Tenho interesse no tema ${theme.name} (${theme.code})${themeUrl ? ` no catálogo: ${themeUrl}` : ''}. Gostaria de consultar datas!`
               );
 
               return (
                 <div
                   key={theme.id}
-                  className="bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-xs hover:shadow-xl transition-all group flex flex-col"
+                  className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-xl transition-all group flex flex-col"
                 >
                   {/* Image Container */}
-                  <div className="relative aspect-4/3 w-full bg-slate-100 overflow-hidden">
+                  <div className="relative aspect-4/3 w-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                     <img
                       src={primaryImg}
                       alt={theme.name}
@@ -131,7 +148,7 @@ export default function CatalogoPage() {
                       <span className="px-2.5 py-1 rounded-full bg-slate-900/85 backdrop-blur text-white text-[11px] font-bold tracking-wide">
                         {theme.code}
                       </span>
-                      <span className="px-2.5 py-1 rounded-full bg-white/90 backdrop-blur text-rose-700 text-[11px] font-semibold">
+                      <span className="px-2.5 py-1 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur text-rose-700 dark:text-rose-300 text-[11px] font-semibold">
                         {categoryName}
                       </span>
                     </div>
@@ -140,10 +157,10 @@ export default function CatalogoPage() {
                   {/* Body Content */}
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="text-xl font-bold text-slate-900 group-hover:text-rose-600 transition-colors">
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
                         {theme.name}
                       </h3>
-                      <p className="mt-2 text-xs sm:text-sm text-slate-500 line-clamp-2 leading-relaxed">
+                      <p className="mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
                         {theme.description || 'Decoração completa com painel, cilindros e detalhes temáticos de alta qualidade.'}
                       </p>
 
@@ -153,14 +170,14 @@ export default function CatalogoPage() {
                           {theme.characters.slice(0, 3).map((char, idx) => (
                             <span
                               key={idx}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-medium"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-medium border border-slate-200 dark:border-slate-700"
                             >
                               <Tag className="w-2.5 h-2.5" />
                               {char}
                             </span>
                           ))}
                           {theme.characters.length > 3 && (
-                            <span className="text-[10px] text-slate-400 self-center">
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 self-center">
                               +{theme.characters.length - 3}
                             </span>
                           )}
@@ -169,21 +186,23 @@ export default function CatalogoPage() {
                     </div>
 
                     {/* Footer with Price & Actions */}
-                    <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                       <div>
-                        <span className="block text-[10px] uppercase font-semibold text-slate-400">A partir de</span>
-                        <span className="text-lg font-extrabold text-slate-900">
+                        <span className="block text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">A partir de</span>
+                        <span className="text-lg font-extrabold text-slate-900 dark:text-white">
                           R$ {theme.base_price.toFixed(2).replace('.', ',')}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <a
-                          href={`https://wa.me/5511999998888?text=${whatsappMessage}`}
+                          href={getWhatsAppUrl(
+                            `Olá! Tenho interesse no tema ${theme.name} (${theme.code})${themeUrl ? ` no catálogo: ${themeUrl}` : ''}. Gostaria de consultar datas!`
+                          )}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Falar no WhatsApp"
-                          className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all shadow-xs"
+                          className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all shadow-xs border border-emerald-200 dark:border-emerald-850"
                         >
                           <MessageCircle className="w-4 h-4" />
                         </a>
@@ -204,8 +223,24 @@ export default function CatalogoPage() {
         )}
       </main>
 
-      <footer className="bg-white border-t border-slate-200 py-8 text-center text-xs text-slate-500">
-        <p>© 2026 Magia Festeira. Fotos reais de decorações do nosso acervo.</p>
+      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-10 text-center text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col items-center gap-3">
+          <Image
+            src="/logo/logo-dark.png"
+            alt="Magia Festeira"
+            width={160}
+            height={44}
+            className="h-9 w-auto object-contain block dark:hidden opacity-85"
+          />
+          <Image
+            src="/logo/logo-light.png"
+            alt="Magia Festeira"
+            width={160}
+            height={44}
+            className="h-9 w-auto object-contain hidden dark:block opacity-85"
+          />
+          <p>© 2026 Magia Festeira. Fotos reais de decorações do nosso acervo.</p>
+        </div>
       </footer>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import React, { useState, use } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import {
   ArrowLeft,
@@ -16,19 +17,22 @@ import {
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { store } from '@/lib/store';
+import { getWhatsAppUrl } from '@/lib/whatsapp';
 
 export default function ThemeDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = use(params);
   const theme = store.getThemeBySlug(resolvedParams.slug);
 
-  if (!theme) {
+  if (!theme || theme.status !== 'active') {
     return (
-      <div className="min-h-screen flex flex-col bg-slate-50">
+      <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
         <Navbar />
         <div className="max-w-md mx-auto my-auto text-center p-8">
           <ShieldAlert className="w-12 h-12 text-rose-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-slate-800">Tema não encontrado</h2>
-          <p className="text-sm text-slate-500 mt-2">O tema solicitado não existe ou foi arquivado.</p>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">Tema Indisponível no Momento</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+            O tema solicitado não está disponível no catálogo público no momento.
+          </p>
           <Link
             href="/catalogo"
             className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-semibold hover:bg-rose-700 transition-colors"
@@ -48,12 +52,25 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
 
   const [copied, setCopied] = useState(false);
 
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : `http://localhost:3000/catalogo/${theme.slug}`;
-  const whatsappUrl = `https://wa.me/5511999998888?text=${encodeURIComponent(
-    `Olá! Tenho interesse no tema ${theme.name} (${theme.code}): ${currentUrl}`
-  )}`;
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  // Formata o link oficial wa.me com mensagem contextualizada do tema
+  const whatsappUrl = getWhatsAppUrl(
+    `Olá! Tenho interesse no tema ${theme.name} (${theme.code})${currentUrl ? `: ${currentUrl}` : ''}. Gostaria de consultar datas e valores!`
+  );
 
-  const handleShare = () => {
+  const handleShare = async () => {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: `${theme.name} - Magia Festeira`,
+          text: `Confira a decoração do tema ${theme.name} na Magia Festeira:`,
+          url: window.location.href,
+        });
+        return;
+      } catch {
+        // Usuário cancelou o share nativo, fallback para clipboard
+      }
+    }
     if (navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
       setCopied(true);
@@ -62,15 +79,15 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
       <Navbar />
 
       {/* Breadcrumb Header */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
           <Link
             href="/catalogo"
-            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-rose-600 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Voltar para Todos os Temas</span>
@@ -78,7 +95,7 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
 
           <button
             onClick={handleShare}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors"
           >
             <Share2 className="w-3.5 h-3.5" />
             <span>{copied ? 'Link Copiado!' : 'Compartilhar Tema'}</span>
@@ -92,7 +109,7 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
           
           {/* Left Column: Image Showcase & Gallery (7 cols) */}
           <div className="lg:col-span-7 space-y-4">
-            <div className="aspect-4/3 sm:aspect-16/10 w-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-200 shadow-sm relative group">
+            <div className="aspect-4/3 sm:aspect-16/10 w-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm relative group">
               <img
                 src={activeImage}
                 alt={theme.name}
@@ -119,7 +136,7 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
                     onClick={() => setActiveImage(img.storage_path)}
                     className={`relative w-20 h-20 rounded-2xl overflow-hidden shrink-0 border-2 transition-all ${
                       activeImage === img.storage_path
-                        ? 'border-rose-600 ring-2 ring-rose-200 scale-95'
+                        ? 'border-rose-600 ring-2 ring-rose-200 dark:ring-rose-900 scale-95'
                         : 'border-transparent opacity-75 hover:opacity-100'
                     }`}
                   >
@@ -131,19 +148,19 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
 
             {/* Variações Disponíveis */}
             {theme.variants && theme.variants.length > 0 && (
-              <div className="mt-8 p-6 rounded-3xl bg-white border border-slate-200">
+              <div className="mt-8 p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                 <div className="flex items-center gap-2 mb-4">
-                  <Layers className="w-5 h-5 text-rose-600" />
-                  <h3 className="text-base font-bold text-slate-900">Variações Deste Tema</h3>
+                  <Layers className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Variações Deste Tema</h3>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {theme.variants.map((variant) => (
                     <div
                       key={variant.id}
-                      className="p-3.5 rounded-2xl bg-rose-50/50 border border-rose-100 hover:border-rose-300 transition-colors"
+                      className="p-3.5 rounded-2xl bg-rose-50/50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 hover:border-rose-300 dark:hover:border-rose-700 transition-colors"
                     >
-                      <span className="block text-sm font-bold text-slate-900">{variant.name}</span>
-                      <span className="text-xs text-slate-500 mt-0.5 block">{variant.description}</span>
+                      <span className="block text-sm font-bold text-slate-900 dark:text-white">{variant.name}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 block">{variant.description}</span>
                     </div>
                   ))}
                 </div>
@@ -154,22 +171,23 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
           {/* Right Column: Information, Kits & WhatsApp CTA (5 cols) */}
           <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
             <div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-rose-600 uppercase tracking-wider mb-1">
+              <div className="flex items-center gap-2 text-xs font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider mb-1">
                 <Sparkles className="w-4 h-4" />
                 <span>Decoração Temática Oficial</span>
               </div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 {theme.name}
               </h1>
 
               <div className="mt-3 flex items-baseline gap-2">
-                <span className="text-xs text-slate-400 font-medium">Kits a partir de</span>
-                <span className="text-3xl font-extrabold text-slate-900">
+                <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">Kits a partir de</span>
+                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
                   R$ {theme.base_price.toFixed(2).replace('.', ',')}
                 </span>
               </div>
 
-              <p className="mt-4 text-sm text-slate-600 leading-relaxed">
+              <p className="mt-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                 {theme.description ||
                   'Cenografia completa com painel temático de altíssima qualidade, cilindros, suportes e acabamento impecável.'}
               </p>
@@ -177,12 +195,12 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
               {/* Characters */}
               {theme.characters && theme.characters.length > 0 && (
                 <div className="mt-5">
-                  <span className="block text-xs font-bold text-slate-700 mb-2">Personagens e Elementos:</span>
+                  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Personagens e Elementos:</span>
                   <div className="flex flex-wrap gap-1.5">
                     {theme.characters.map((char, idx) => (
                       <span
                         key={idx}
-                        className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200"
+                        className="px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium border border-slate-200 dark:border-slate-700"
                       >
                         {char}
                       </span>
@@ -194,8 +212,8 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
               {/* Kits Disponíveis */}
               <div className="mt-8 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                    <Package className="w-4 h-4 text-rose-600" />
+                  <span className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <Package className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                     <span>Escolha a Composição do Kit:</span>
                   </span>
                 </div>
@@ -204,20 +222,20 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
                   theme.kits.map((kit) => (
                     <div
                       key={kit.id}
-                      className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-rose-300 transition-colors"
+                      className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-rose-300 dark:hover:border-rose-700 transition-colors"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-slate-900">{kit.name}</span>
-                        <span className="text-base font-extrabold text-rose-600">
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">{kit.name}</span>
+                        <span className="text-base font-extrabold text-rose-600 dark:text-rose-400">
                           R$ {kit.price.toFixed(2).replace('.', ',')}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">{kit.description}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{kit.description}</p>
                       
                       {kit.items && kit.items.length > 0 && (
-                        <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-1">
+                        <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1">
                           {kit.items.map((ki) => (
-                            <div key={ki.item_id} className="flex items-center gap-1.5 text-[11px] text-slate-600">
+                            <div key={ki.item_id} className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                               <span>{ki.quantity}x {ki.item?.name || 'Item'}</span>
                             </div>
@@ -254,9 +272,44 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
         </div>
       </main>
 
-      <footer className="bg-white border-t border-slate-200 py-8 text-center text-xs text-slate-500">
-        <p>© 2026 Magia Festeira. Todos os direitos reservados.</p>
+      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-10 pb-24 sm:pb-10 text-center text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col items-center gap-3">
+          <Image
+            src="/logo/logo-dark.png"
+            alt="Magia Festeira"
+            width={160}
+            height={44}
+            className="h-9 w-auto object-contain block dark:hidden opacity-85"
+          />
+          <Image
+            src="/logo/logo-light.png"
+            alt="Magia Festeira"
+            width={160}
+            height={44}
+            className="h-9 w-auto object-contain hidden dark:block opacity-85"
+          />
+          <p>© 2026 Magia Festeira. Todos os direitos reservados.</p>
+        </div>
       </footer>
+
+      {/* Sticky Mobile WhatsApp CTA Bar */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3 px-4 flex items-center justify-between gap-3 shadow-xl">
+        <div className="min-w-0">
+          <span className="block text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">A partir de</span>
+          <span className="text-base font-extrabold text-slate-900 dark:text-white truncate">
+            R$ {theme.base_price.toFixed(2).replace('.', ',')}
+          </span>
+        </div>
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 max-w-[220px] py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition-transform active:scale-95"
+        >
+          <MessageCircle className="w-4 h-4" />
+          <span>Falar no WhatsApp</span>
+        </a>
+      </div>
     </div>
   );
 }

@@ -1,21 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
+import NextImage from 'next/image';
 import {
   Bot,
   Send,
   Camera,
-  Sparkles,
+  Image as ImageIcon,
   CheckCircle2,
   AlertTriangle,
-  Code2,
+  Sparkles,
   Terminal,
-  HelpCircle,
-  Clock,
+  Code2,
+  Calendar,
   Layers,
+  ArrowRight,
 } from 'lucide-react';
 import { aiOrchestrator, AIProcessResponse } from '@/services/ai/orchestrator';
-import { store } from '@/lib/store';
 
 interface ChatMessage {
   id: string;
@@ -29,23 +30,23 @@ interface ChatMessage {
 export default function AdminIAPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      id: 'm-1',
+      id: 'init-1',
       sender: 'ai',
-      text: '🤖 Olá! Sou o Agente de Operações da Magia Festeira. Você pode me enviar fotos pelo WhatsApp, consultar disponibilidade de estoque, cadastrar temas, kits e variações usando comandos em linguagem natural.',
-      timestamp: '14:00',
+      text: 'Olá! Sou o Agente de IA da Magia Festeira. Posso consultar temas, checar datas disponíveis na agenda, cadastrar decorações por foto ou criar kits comerciais. Como posso te ajudar hoje?',
+      timestamp: '10:00',
     },
   ]);
-
   const [input, setInput] = useState('');
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [lastMeta, setLastMeta] = useState<AIProcessResponse | null>(null);
 
+  // Amostras de fotos de cenários para teste de upload
   const samplePhotos = [
     {
-      label: 'Foto Vingadores Baby',
+      label: 'Foto Vingadores',
       url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600',
-      fingerprint: 'sha256-sample-vingadores-baby',
+      fingerprint: 'sha256-sample-vingadores',
     },
     {
       label: 'Foto Volta ao Sol',
@@ -107,10 +108,10 @@ export default function AdminIAPage() {
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+        <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
           Agente de IA Multimodal (WhatsApp Cloud API)
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500">
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
           Simulador oficial de WhatsApp conectado ao orquestrador de inteligência e às 23 ferramentas internas de banco, estoque e calendário.
         </p>
       </div>
@@ -119,12 +120,18 @@ export default function AdminIAPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* WhatsApp Simulator Frame */}
-        <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200 shadow-lg overflow-hidden flex flex-col h-[700px]">
+        <div className="lg:col-span-7 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col h-[700px]">
           {/* WhatsApp Header */}
-          <div className="bg-emerald-700 text-white px-5 py-3.5 flex items-center justify-between shrink-0 shadow-xs">
+          <div className="bg-emerald-700 dark:bg-emerald-800 text-white px-5 py-3.5 flex items-center justify-between shrink-0 shadow-xs">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-800 flex items-center justify-center text-white font-bold text-sm">
-                MF
+              <div className="w-10 h-10 rounded-full bg-emerald-800 dark:bg-emerald-900 flex items-center justify-center p-1.5 overflow-hidden shadow-xs border border-emerald-600/60">
+                <NextImage
+                  src="/logo/logo-icon-light.png"
+                  alt="Magia Festeira"
+                  width={28}
+                  height={28}
+                  className="object-contain"
+                />
               </div>
               <div>
                 <h3 className="font-bold text-sm tracking-wide">Magia Festeira Agente IA</h3>
@@ -133,13 +140,13 @@ export default function AdminIAPage() {
                 </span>
               </div>
             </div>
-            <span className="text-[10px] bg-emerald-800/80 px-2 py-0.5 rounded-full font-mono">
+            <span className="text-[10px] bg-emerald-800/80 dark:bg-emerald-950/80 px-2 py-0.5 rounded-full font-mono">
               v2.5-flash
             </span>
           </div>
 
           {/* Messages Feed */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-100/70">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-100/70 dark:bg-slate-950/50">
             {messages.map((m) => (
               <div
                 key={m.id}
@@ -149,7 +156,7 @@ export default function AdminIAPage() {
                   className={`max-w-[85%] rounded-2xl p-3.5 shadow-xs text-xs sm:text-sm leading-relaxed space-y-2 ${
                     m.sender === 'user'
                       ? 'bg-emerald-600 text-white rounded-br-none'
-                      : 'bg-white text-slate-800 border border-slate-200/80 rounded-bl-none'
+                      : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/80 dark:border-slate-700 rounded-bl-none'
                   }`}
                 >
                   {m.imageUrl && (
@@ -167,7 +174,7 @@ export default function AdminIAPage() {
                         <button
                           key={idx}
                           onClick={() => handleSendMessage(`${idx + 1}`)}
-                          className="text-left px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold text-xs border border-emerald-200 transition-colors"
+                          className="text-left px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-semibold text-xs border border-emerald-200 dark:border-emerald-800 transition-colors"
                         >
                           {opt}
                         </button>
@@ -177,7 +184,7 @@ export default function AdminIAPage() {
 
                   <span
                     className={`block text-[10px] text-right font-medium ${
-                      m.sender === 'user' ? 'text-emerald-100' : 'text-slate-400'
+                      m.sender === 'user' ? 'text-emerald-100' : 'text-slate-400 dark:text-slate-400'
                     }`}
                   >
                     {m.timestamp}
@@ -188,7 +195,7 @@ export default function AdminIAPage() {
 
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-white text-slate-500 rounded-2xl p-3 border border-slate-200 text-xs flex items-center gap-2">
+                <div className="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-300 rounded-2xl p-3 border border-slate-200 dark:border-slate-700 text-xs flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span>Agente digitando e processando ferramentas...</span>
                 </div>
@@ -197,22 +204,22 @@ export default function AdminIAPage() {
           </div>
 
           {/* Quick Prompts Bar */}
-          <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex gap-2 overflow-x-auto scrollbar-none shrink-0">
+          <div className="px-4 py-2 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 flex gap-2 overflow-x-auto scrollbar-none shrink-0">
             <button
               onClick={() => handleSendMessage('Esse tema está disponível dia 15?')}
-              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-700 font-medium hover:bg-slate-100 whitespace-nowrap"
+              className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap"
             >
               📅 Checar Vingadores dia 15
             </button>
             <button
               onClick={() => handleSendMessage('Quais temas são de super-heróis?')}
-              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-700 font-medium hover:bg-slate-100 whitespace-nowrap"
+              className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap"
             >
               🔍 Temas de Super-heróis
             </button>
             <button
               onClick={() => handleSendMessage('Crie o kit prata desse tema por 169,90')}
-              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-700 font-medium hover:bg-slate-100 whitespace-nowrap"
+              className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap"
             >
               🏷️ Criar Kit Prata
             </button>
@@ -220,14 +227,14 @@ export default function AdminIAPage() {
 
           {/* Photo Attachment Drawer */}
           {selectedPhoto && (
-            <div className="p-3 bg-slate-200 border-t border-slate-300 flex items-center justify-between">
+            <div className="p-3 bg-slate-200 dark:bg-slate-800 border-t border-slate-300 dark:border-slate-700 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <img src={selectedPhoto} alt="Thumb" className="w-10 h-10 rounded-lg object-cover" />
-                <span className="text-xs text-slate-700 font-semibold">Foto anexada pronta para análise</span>
+                <span className="text-xs text-slate-700 dark:text-slate-200 font-semibold">Foto anexada pronta para análise</span>
               </div>
               <button
                 onClick={() => setSelectedPhoto(null)}
-                className="text-xs text-rose-600 font-bold hover:underline"
+                className="text-xs text-rose-600 dark:text-rose-400 font-bold hover:underline"
               >
                 Remover
               </button>
@@ -235,19 +242,19 @@ export default function AdminIAPage() {
           )}
 
           {/* Input Box */}
-          <div className="p-3 bg-white border-t border-slate-200 flex items-center gap-2 shrink-0">
+          <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2 shrink-0">
             {/* Camera / Photo Presets Popover */}
             <div className="relative group">
               <button
                 type="button"
-                className="p-2.5 rounded-full hover:bg-slate-100 text-slate-600 transition-colors"
+                className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
                 title="Anexar foto"
               >
                 <Camera className="w-5 h-5" />
               </button>
 
-              <div className="absolute bottom-12 left-0 hidden group-hover:block bg-white p-2 rounded-2xl shadow-xl border border-slate-200 w-56 z-20 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase px-2">Fotos de Demonstração:</span>
+              <div className="absolute bottom-12 left-0 hidden group-hover:block bg-white dark:bg-slate-800 p-2 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-56 z-20 space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase px-2">Fotos de Demonstração:</span>
                 {samplePhotos.map((p, idx) => (
                   <button
                     key={idx}
@@ -256,7 +263,7 @@ export default function AdminIAPage() {
                       setSelectedPhoto(p.url);
                       setInput('Cadastre esse tema');
                     }}
-                    className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-600 transition-colors flex items-center gap-2"
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-rose-50 dark:hover:bg-slate-700 hover:text-rose-600 dark:hover:text-rose-400 transition-colors flex items-center gap-2"
                   >
                     <img src={p.url} alt="p" className="w-6 h-6 rounded object-cover" />
                     <span>{p.label}</span>
@@ -271,7 +278,7 @@ export default function AdminIAPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder="Digite uma mensagem ou comando para o agente..."
-              className="flex-1 px-4 py-2.5 border border-slate-300 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
 
             <button
@@ -285,7 +292,7 @@ export default function AdminIAPage() {
         </div>
 
         {/* Tool Calling Inspector & Observability (Right 5 cols) */}
-        <div className="lg:col-span-5 bg-slate-900 text-slate-200 rounded-3xl p-6 shadow-xl space-y-6 h-[700px] overflow-y-auto">
+        <div className="lg:col-span-5 bg-slate-900 dark:bg-slate-950 text-slate-200 rounded-3xl p-6 shadow-xl space-y-6 h-[700px] overflow-y-auto border border-slate-800">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div className="flex items-center gap-2">
               <Terminal className="w-5 h-5 text-rose-400" />
