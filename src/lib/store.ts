@@ -868,6 +868,10 @@ class MagiaStore {
     return [...this.customers];
   }
 
+  public getCustomerById(id: string): Customer | undefined {
+    return this.customers.find((c) => c.id === id);
+  }
+
   public getRentals(): RentalWithDetails[] {
     return this.rentals.map((r) => {
       const customer = this.customers.find((c) => c.id === r.customer_id);
@@ -1112,6 +1116,8 @@ class MagiaStore {
           name: customer.name,
           phone: customer.phone,
           email: customer.email,
+          document: customer.document,
+          address: customer.address,
           notes: customer.notes,
         }),
         'Insert Customer'
@@ -1120,6 +1126,80 @@ class MagiaStore {
 
     this.saveToLocalStorage();
     return customer;
+  }
+
+  public updateCustomer(id: string, updates: Partial<Customer>): Customer {
+    const idx = this.customers.findIndex((c) => c.id === id);
+    if (idx === -1) {
+      throw new Error(`Cliente com ID ${id} não encontrado.`);
+    }
+
+    const updated: Customer = {
+      ...this.customers[idx],
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+
+    this.customers[idx] = updated;
+    this.logAudit('UPDATE_CUSTOMER', 'customers', id, updates);
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('customers').update({
+          name: updated.name,
+          phone: updated.phone,
+          email: updated.email,
+          document: updated.document,
+          address: updated.address,
+          notes: updated.notes,
+          updated_at: updated.updated_at,
+        }).eq('id', id),
+        'Update Customer'
+      );
+    }
+
+    this.saveToLocalStorage();
+    return updated;
+  }
+
+  public deleteCustomer(id: string): boolean {
+    const customer = this.customers.find((c) => c.id === id);
+    if (!customer) return false;
+
+    this.customers = this.customers.filter((c) => c.id !== id);
+    this.logAudit('DELETE_CUSTOMER', 'customers', id, { name: customer.name });
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('customers').delete().eq('id', id),
+        'Delete Customer'
+      );
+    }
+
+    this.saveToLocalStorage();
+    return true;
+  }
+
+  public deleteCustomers(ids: string[]): number {
+    const toDelete = this.customers.filter((c) => ids.includes(c.id));
+    if (toDelete.length === 0) return 0;
+
+    const idsSet = new Set(ids);
+    this.customers = this.customers.filter((c) => !idsSet.has(c.id));
+
+    for (const c of toDelete) {
+      this.logAudit('DELETE_CUSTOMER', 'customers', c.id, { name: c.name });
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('customers').delete().in('id', ids),
+        'Delete Customers Batch'
+      );
+    }
+
+    this.saveToLocalStorage();
+    return toDelete.length;
   }
 
   public recordPayment(rentalId: string, amount: number, method: Payment['method'], note?: string) {
