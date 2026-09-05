@@ -47,13 +47,13 @@ export default function AdminDashboardPage() {
             Visão Geral da Operação
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Indicadores de estoque, locações, agenda e observabilidade em tempo real.
+            Indicadores de estoque, locações, faturamento e observabilidade em tempo real.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Link
-            href="/admin/agenda"
+            href="/admin/locacoes"
             className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
           >
             + Nova Reserva
@@ -78,10 +78,10 @@ export default function AdminDashboardPage() {
             </p>
           </div>
           <Link
-            href="/admin/agenda"
+            href="/admin/locacoes"
             className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg shrink-0"
           >
-            Ver na Agenda
+            Ver em Locações
           </Link>
         </div>
       )}

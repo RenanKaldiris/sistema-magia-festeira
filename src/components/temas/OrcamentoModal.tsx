@@ -39,6 +39,10 @@ interface OrcamentoModalProps {
   onClose: () => void;
   initialThemeIds?: string[];
   initialItemIds?: string[];
+  initialCustomerName?: string;
+  initialCustomerPhone?: string;
+  initialLocation?: string;
+  initialNotes?: string;
 }
 
 export function OrcamentoModal({
@@ -46,6 +50,10 @@ export function OrcamentoModal({
   onClose,
   initialThemeIds = [],
   initialItemIds = [],
+  initialCustomerName = '',
+  initialCustomerPhone = '',
+  initialLocation = '',
+  initialNotes = '',
 }: OrcamentoModalProps) {
   // Client & Event Details
   const [customerName, setCustomerName] = useState('');
@@ -101,8 +109,13 @@ export function OrcamentoModal({
 
       setItems([...themeItems, ...itemItems]);
       setIsShareMenuOpen(false);
+
+      if (initialCustomerName) setCustomerName(initialCustomerName);
+      if (initialCustomerPhone) setCustomerPhone(initialCustomerPhone);
+      if (initialLocation) setEventLocation(initialLocation);
+      if (initialNotes) setNotes(initialNotes);
     }
-  }, [isOpen, initialThemeIds, initialItemIds]);
+  }, [isOpen, initialThemeIds, initialItemIds, initialCustomerName, initialCustomerPhone, initialLocation, initialNotes]);
 
   // Calculations
   const subtotal = useMemo(() => {
@@ -247,23 +260,23 @@ export function OrcamentoModal({
       aria-modal="true"
       className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
     >
-      <div className="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+      <div className="bg-slate-900 w-full max-w-5xl rounded-3xl border border-slate-800 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-slate-100">
         {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-850">
+        <div className="p-4 sm:p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
               <FileText className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
                   Montagem de Orçamento
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-950/60 text-rose-300 border border-rose-900/40">
                   {items.length} itens cotados
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-400">
                 Adicione temas e peças avulsas, personalize valores e compartilhe diretamente com o cliente.
               </p>
             </div>
@@ -272,7 +285,7 @@ export function OrcamentoModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
             aria-label="Fechar janela de orçamento"
           >
             <X className="w-5 h-5" />
@@ -290,14 +303,14 @@ export function OrcamentoModal({
           )}
 
           {/* Dados do Cliente e Evento */}
-          <div className="bg-slate-50 dark:bg-slate-800/50 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <div className="bg-slate-950/60 p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Dados da Reserva & Cliente
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs sm:text-sm">
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                <label className="block font-semibold text-slate-300 mb-1 flex items-center gap-1">
                   <User className="w-3.5 h-3.5 text-rose-500" />
                   <span>Nome do Cliente</span>
                 </label>
@@ -306,12 +319,12 @@ export function OrcamentoModal({
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   placeholder="Ex: Mariana Silva"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-white rounded-xl text-xs placeholder:text-slate-500 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                <label className="block font-semibold text-slate-300 mb-1 flex items-center gap-1">
                   <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
                   <span>WhatsApp do Cliente</span>
                 </label>
@@ -320,12 +333,12 @@ export function OrcamentoModal({
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
                   placeholder="(11) 99999-9999"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-white rounded-xl text-xs placeholder:text-slate-500 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                <label className="block font-semibold text-slate-300 mb-1 flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5 text-blue-500" />
                   <span>Data da Festa</span>
                 </label>
@@ -333,12 +346,12 @@ export function OrcamentoModal({
                   type="date"
                   value={eventDate}
                   onChange={(e) => setEventDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-white rounded-xl text-xs focus:ring-2 focus:ring-rose-500 focus:border-rose-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                <label className="block font-semibold text-slate-300 mb-1 flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5 text-amber-500" />
                   <span>Local / Buffet</span>
                 </label>
@@ -347,7 +360,7 @@ export function OrcamentoModal({
                   value={eventLocation}
                   onChange={(e) => setEventLocation(e.target.value)}
                   placeholder="Buffet Estrela, Salão do Prédio..."
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-white rounded-xl text-xs placeholder:text-slate-500 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -356,14 +369,14 @@ export function OrcamentoModal({
           {/* Tabela de Itens Selecionados */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              <h3 className="text-sm font-bold text-white">
                 Composição do Orçamento ({items.length} itens)
               </h3>
 
               <button
                 type="button"
                 onClick={() => setIsAddingItem(!isAddingItem)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Adicionar Mais Itens</span>
@@ -374,28 +387,28 @@ export function OrcamentoModal({
             {isAddingItem && (
               <form
                 onSubmit={handleAddItem}
-                className="p-4 rounded-2xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 flex flex-col sm:flex-row gap-3 items-end"
+                className="p-4 rounded-2xl bg-rose-950/30 border border-rose-900/60 flex flex-col sm:flex-row gap-3 items-end"
               >
                 <div className="flex-1 w-full">
-                  <label className="block text-xs font-semibold text-rose-900 dark:text-rose-200 mb-1">
+                  <label className="block text-xs font-semibold text-rose-200 mb-1">
                     Selecione um tema ou peça avulsa do acervo:
                   </label>
                   <select
                     value={selectedEntityToAdd}
                     onChange={(e) => setSelectedEntityToAdd(e.target.value)}
-                    className="w-full px-3 py-2 border border-rose-300 dark:border-rose-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                    className="w-full px-3 py-2 border border-rose-800 bg-slate-900 text-white rounded-xl text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
                   >
-                    <option value="">Selecione um item...</option>
-                    <optgroup label="Temas de Decoração">
+                    <option value="" className="bg-slate-900 text-slate-400">Selecione um item...</option>
+                    <optgroup label="Temas de Decoração" className="bg-slate-900 text-white font-bold">
                       {allThemesList.map((t) => (
-                        <option key={t.id} value={`theme:${t.id}`}>
+                        <option key={t.id} value={`theme:${t.id}`} className="bg-slate-900 text-white font-normal">
                           {t.name} ({t.code}) - R$ {t.base_price.toFixed(2).replace('.', ',')}
                         </option>
                       ))}
                     </optgroup>
-                    <optgroup label="Peças Avulsas & Mobília">
+                    <optgroup label="Peças Avulsas & Mobília" className="bg-slate-900 text-white font-bold">
                       {allItemsList.map((i) => (
-                        <option key={i.id} value={`item:${i.id}`}>
+                        <option key={i.id} value={`item:${i.id}`} className="bg-slate-900 text-white font-normal">
                           {i.name} ({i.code}) - R$ {i.unit_price.toFixed(2).replace('.', ',')}
                         </option>
                       ))}
@@ -407,14 +420,14 @@ export function OrcamentoModal({
                   <button
                     type="submit"
                     disabled={!selectedEntityToAdd}
-                    className="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
+                    className="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                   >
                     Inserir no Orçamento
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsAddingItem(false)}
-                    className="px-3 py-2 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                    className="px-3 py-2 text-xs text-slate-400 hover:text-white cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -424,13 +437,13 @@ export function OrcamentoModal({
 
             {/* Listagem de Itens */}
             {items.length === 0 ? (
-              <div className="p-8 text-center bg-slate-50 dark:bg-slate-850 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+              <div className="p-8 text-center bg-slate-950/40 rounded-2xl border border-dashed border-slate-800 text-xs text-slate-400">
                 Nenhum item inserido no orçamento. Clique em "Adicionar Mais Itens" acima para começar.
               </div>
             ) : (
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <div className="rounded-2xl border border-slate-800 overflow-hidden bg-slate-900">
                 <table className="w-full text-left text-xs sm:text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+                  <thead className="bg-slate-950/80 border-b border-slate-800 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
                     <tr>
                       <th className="py-3 px-4">Item / Tema</th>
                       <th className="py-3 px-4">Tipo</th>
@@ -440,25 +453,25 @@ export function OrcamentoModal({
                       <th className="py-3 px-4 text-right">Ação</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                  <tbody className="divide-y divide-slate-800 text-slate-300">
                     {items.map((item, idx) => (
-                      <tr key={`${item.id}-${idx}`} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
+                      <tr key={`${item.id}-${idx}`} className="hover:bg-slate-800/40">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2.5">
                             {item.imageUrl ? (
                               <img
                                 src={item.imageUrl}
                                 alt={item.name}
-                                className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-700"
+                                className="w-10 h-10 rounded-lg object-cover border border-slate-700"
                               />
                             ) : (
-                              <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                              <div className="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
                                 <Package className="w-5 h-5" />
                               </div>
                             )}
                             <div>
-                              <span className="font-bold text-slate-900 dark:text-white block">{item.name}</span>
-                              <span className="text-[10px] text-slate-400 dark:text-slate-500 block font-mono">
+                              <span className="font-bold text-white block">{item.name}</span>
+                              <span className="text-[10px] text-slate-400 block font-mono">
                                 {item.code}
                               </span>
                             </div>
@@ -469,8 +482,8 @@ export function OrcamentoModal({
                           <span
                             className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
                               item.type === 'theme'
-                                ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'
-                                : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
+                                ? 'bg-rose-950/60 text-rose-300 border border-rose-900/50'
+                                : 'bg-blue-950/60 text-blue-300 border border-blue-900/50'
                             }`}
                           >
                             {item.type === 'theme' ? 'Tema Completo' : 'Peça Avulsa'}
@@ -478,30 +491,30 @@ export function OrcamentoModal({
                         </td>
 
                         <td className="py-3 px-4 text-center">
-                          <div className="inline-flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-0.5 bg-white dark:bg-slate-900">
+                          <div className="inline-flex items-center gap-1.5 border border-slate-700 rounded-lg px-2 py-0.5 bg-slate-950 text-white">
                             <button
                               type="button"
                               onClick={() => handleUpdateQuantity(idx, item.quantity - 1)}
-                              className="text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold px-1"
+                              className="text-slate-400 hover:text-white font-bold px-1 cursor-pointer"
                             >
                               -
                             </button>
-                            <span className="font-bold text-xs w-5 text-center">{item.quantity}</span>
+                            <span className="font-bold text-xs w-5 text-center text-white">{item.quantity}</span>
                             <button
                               type="button"
                               onClick={() => handleUpdateQuantity(idx, item.quantity + 1)}
-                              className="text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold px-1"
+                              className="text-slate-400 hover:text-white font-bold px-1 cursor-pointer"
                             >
                               +
                             </button>
                           </div>
                         </td>
 
-                        <td className="py-3 px-4 text-right font-medium">
+                        <td className="py-3 px-4 text-right font-medium text-slate-300">
                           R$ {item.price.toFixed(2).replace('.', ',')}
                         </td>
 
-                        <td className="py-3 px-4 text-right font-extrabold text-slate-900 dark:text-white">
+                        <td className="py-3 px-4 text-right font-extrabold text-white">
                           R$ {(item.price * item.quantity).toFixed(2).replace('.', ',')}
                         </td>
 
@@ -509,7 +522,7 @@ export function OrcamentoModal({
                           <button
                             type="button"
                             onClick={() => handleRemoveItem(idx)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-950/40 transition-colors cursor-pointer"
                             title="Remover item da proposta"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -527,7 +540,7 @@ export function OrcamentoModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             {/* Observações da Proposta */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
                 Observações / Condições Comerciais
               </label>
               <textarea
@@ -535,48 +548,48 @@ export function OrcamentoModal({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Ex: Incluso montagem e desmontagem. Pagamento: 50% na reserva + 50% na entrega..."
-                className="w-full p-3 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-2xl text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                className="w-full p-3 border border-slate-700 bg-slate-950 text-white placeholder:text-slate-500 rounded-2xl text-xs focus:ring-2 focus:ring-rose-500 focus:border-rose-500 focus:outline-none"
               />
             </div>
 
             {/* Cálculo Financeiro */}
-            <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs sm:text-sm">
-              <div className="flex justify-between text-slate-600 dark:text-slate-400">
+            <div className="p-4 sm:p-5 bg-slate-950/70 rounded-2xl border border-slate-800 space-y-2.5 text-xs sm:text-sm">
+              <div className="flex justify-between text-slate-400">
                 <span>Subtotal dos Itens:</span>
-                <span className="font-bold text-slate-900 dark:text-white">
+                <span className="font-bold text-white">
                   R$ {subtotal.toFixed(2).replace('.', ',')}
                 </span>
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-slate-600 dark:text-slate-400">Frete / Montagem (R$):</span>
+                <span className="text-slate-400">Frete / Montagem (R$):</span>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={freight}
                   onChange={(e) => setFreight(Number(e.target.value))}
-                  className="w-24 px-2 py-1 text-right border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-xs font-bold"
+                  className="w-24 px-2 py-1 text-right border border-slate-700 bg-slate-900 text-white rounded-lg text-xs font-bold focus:ring-2 focus:ring-rose-500 focus:outline-none"
                 />
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-slate-600 dark:text-slate-400">Desconto Especial (R$):</span>
+                <span className="text-slate-400">Desconto Especial (R$):</span>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={discount}
                   onChange={(e) => setDiscount(Number(e.target.value))}
-                  className="w-24 px-2 py-1 text-right border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-xs font-bold text-emerald-600"
+                  className="w-24 px-2 py-1 text-right border border-slate-700 bg-slate-900 text-emerald-400 rounded-lg text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
 
-              <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                <span className="font-extrabold text-sm text-slate-900 dark:text-white">
+              <div className="pt-2 border-t border-slate-800 flex justify-between items-center">
+                <span className="font-extrabold text-sm text-white">
                   VALOR TOTAL DA PROPOSTA:
                 </span>
-                <span className="text-lg sm:text-xl font-black text-rose-600 dark:text-rose-400">
+                <span className="text-lg sm:text-xl font-black text-rose-400">
                   R$ {total.toFixed(2).replace('.', ',')}
                 </span>
               </div>
@@ -585,8 +598,8 @@ export function OrcamentoModal({
         </div>
 
         {/* Footer com Botões de Ação */}
-        <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-850 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-slate-500">
+        <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="text-xs text-slate-400">
             Dúvidas? Todos os preços e itens ficam registrados para consulta rápida.
           </div>
 
@@ -594,7 +607,7 @@ export function OrcamentoModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-200 transition-colors cursor-pointer"
             >
               Cancelar
             </button>
@@ -604,18 +617,18 @@ export function OrcamentoModal({
               <button
                 type="button"
                 onClick={() => setIsShareMenuOpen(!isShareMenuOpen)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs sm:text-sm font-bold shadow-md shadow-rose-600/20 transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs sm:text-sm font-bold shadow-md shadow-rose-600/20 transition-all cursor-pointer"
               >
                 <Share2 className="w-4 h-4" />
                 <span>Enviar Orçamento</span>
               </button>
 
               {isShareMenuOpen && (
-                <div className="absolute right-0 bottom-full mb-2 w-56 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-2 space-y-1 z-50 animate-in fade-in zoom-in-95">
+                <div className="absolute right-0 bottom-full mb-2 w-56 bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl p-2 space-y-1 z-50 animate-in fade-in zoom-in-95">
                   <button
                     type="button"
                     onClick={handleShareWhatsApp}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-xl transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-950/50 rounded-xl transition-colors text-left cursor-pointer"
                   >
                     <MessageSquare className="w-4 h-4" />
                     <span>Enviar via WhatsApp</span>
@@ -624,7 +637,7 @@ export function OrcamentoModal({
                   <button
                     type="button"
                     onClick={handleCopyProposal}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 rounded-xl transition-colors text-left cursor-pointer"
                   >
                     <Copy className="w-4 h-4" />
                     <span>Copiar Texto Formatado</span>
@@ -633,7 +646,7 @@ export function OrcamentoModal({
                   <button
                     type="button"
                     onClick={handleShareEmail}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 rounded-xl transition-colors text-left cursor-pointer"
                   >
                     <Mail className="w-4 h-4" />
                     <span>Enviar por E-mail</span>
@@ -642,7 +655,7 @@ export function OrcamentoModal({
                   <button
                     type="button"
                     onClick={handlePrint}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 rounded-xl transition-colors text-left cursor-pointer"
                   >
                     <Printer className="w-4 h-4" />
                     <span>Imprimir / Salvar PDF</span>

@@ -11,9 +11,20 @@ import { getWhatsAppUrl } from '@/lib/whatsapp';
 export default function CatalogoPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [categories, setCategories] = useState(store.getCategories());
+  const [allThemes, setAllThemes] = useState(store.getThemes({ status: 'active' }));
 
-  const categories = store.getCategories();
-  const allThemes = store.getThemes({ status: 'active' });
+  React.useEffect(() => {
+    setCategories(store.getCategories());
+    setAllThemes(store.getThemes({ status: 'active' }));
+
+    const unsubscribe = store.subscribe(() => {
+      setCategories(store.getCategories());
+      setAllThemes(store.getThemes({ status: 'active' }));
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const filteredThemes = useMemo(() => {
     return allThemes.filter((t) => {

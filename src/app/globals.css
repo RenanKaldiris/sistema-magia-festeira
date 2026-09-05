@@ -2,6 +2,11 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --color-slate-750: #243147;
+  --color-slate-850: #151e2e;
+}
+
 @layer base {
   :root {
     --background: 255 255 255;

@@ -8,6 +8,15 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/admin/agenda',
+        destination: '/admin/locacoes',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

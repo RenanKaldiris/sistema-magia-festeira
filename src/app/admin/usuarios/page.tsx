@@ -223,7 +223,7 @@ export default function AdminUsuariosPage() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   {r.permissions.agenda ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <X className="w-3.5 h-3.5 text-slate-400" />}
-                  <span>Agenda</span>
+                  <span>Locações</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   {r.permissions.financeiro ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <X className="w-3.5 h-3.5 text-slate-400" />}
@@ -242,7 +242,7 @@ export default function AdminUsuariosPage() {
                 <th className="py-3.5 px-6">Perfil</th>
                 <th className="py-3.5 px-4 text-center">Catálogo</th>
                 <th className="py-3.5 px-4 text-center">Estoque</th>
-                <th className="py-3.5 px-4 text-center">Agenda / Reservas</th>
+                <th className="py-3.5 px-4 text-center">Locações</th>
                 <th className="py-3.5 px-4 text-center">Financeiro</th>
                 <th className="py-3.5 px-4 text-center">Integrações</th>
                 <th className="py-3.5 px-4 text-center">Gestão Usuários</th>

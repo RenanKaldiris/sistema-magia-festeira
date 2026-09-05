@@ -21,7 +21,15 @@ import { getWhatsAppUrl } from '@/lib/whatsapp';
 
 export default function ThemeDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = use(params);
-  const theme = store.getThemeBySlug(resolvedParams.slug);
+  const [theme, setTheme] = useState(store.getThemeBySlug(resolvedParams.slug));
+
+  React.useEffect(() => {
+    setTheme(store.getThemeBySlug(resolvedParams.slug));
+    const unsubscribe = store.subscribe(() => {
+      setTheme(store.getThemeBySlug(resolvedParams.slug));
+    });
+    return () => unsubscribe();
+  }, [resolvedParams.slug]);
 
   if (!theme || theme.status !== 'active') {
     return (

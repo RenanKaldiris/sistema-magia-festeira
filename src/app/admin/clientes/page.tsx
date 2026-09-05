@@ -18,6 +18,8 @@ import {
   Edit3,
   MapPin,
   X,
+  UploadCloud,
+  Download,
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Customer, RentalWithDetails } from '@/types/database';
@@ -25,6 +27,9 @@ import { formatDateBR } from '@/lib/dateUtils';
 import { CustomerEditDrawer } from '@/components/clientes/CustomerEditDrawer';
 import { CustomerBatchActionBar } from '@/components/clientes/CustomerBatchActionBar';
 import { DeleteConfirmationModal } from '@/components/temas/DeleteConfirmationModal';
+import { ImportCustomersModal } from '@/components/clientes/ImportCustomersModal';
+import { ExportCustomersModal } from '@/components/clientes/ExportCustomersModal';
+import { OrcamentoModal } from '@/components/temas/OrcamentoModal';
 
 type SortField = 'name' | 'rentals' | 'date';
 type SortOrder = 'asc' | 'desc' | null;
@@ -52,6 +57,10 @@ export default function AdminClientesPage() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([]);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isOrcamentoModalOpen, setIsOrcamentoModalOpen] = useState(false);
+  const [selectedCustomerForOrcamento, setSelectedCustomerForOrcamento] = useState<Customer | null>(null);
 
   // Form novo cliente
   const [name, setName] = useState('');
@@ -236,6 +245,12 @@ export default function AdminClientesPage() {
     showNotification(`Cliente "${updated.name}" atualizado com sucesso!`);
   };
 
+  // Abrir modal de criação de orçamento para cliente específico
+  const handleOpenOrcamentoForCustomer = (customer: Customer) => {
+    setSelectedCustomerForOrcamento(customer);
+    setIsOrcamentoModalOpen(true);
+  };
+
   // Nomes dos clientes para confirmação de exclusão
   const deleteTargetNames = useMemo(() => {
     return customers
@@ -261,14 +276,39 @@ export default function AdminClientesPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs sm:text-sm font-bold shadow-xs transition-colors shrink-0 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Cadastrar Novo Cliente</span>
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Botão Escuro: Importar */}
+          <button
+            type="button"
+            onClick={() => setIsImportModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-950 dark:bg-slate-800 dark:hover:bg-slate-750 text-white text-xs sm:text-sm font-bold border border-slate-700/80 shadow-xs transition-colors shrink-0 cursor-pointer"
+            title="Importar lista de contatos (Excel, CSV, PDF ou anotações)"
+          >
+            <UploadCloud className="w-4 h-4 text-rose-400" />
+            <span>Importar</span>
+          </button>
+
+          {/* Botão Escuro: Exportar */}
+          <button
+            type="button"
+            onClick={() => setIsExportModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-950 dark:bg-slate-800 dark:hover:bg-slate-750 text-white text-xs sm:text-sm font-bold border border-slate-700/80 shadow-xs transition-colors shrink-0 cursor-pointer"
+            title="Exportar todos os contatos para Excel, PDF ou texto"
+          >
+            <Download className="w-4 h-4 text-rose-400" />
+            <span>Exportar</span>
+          </button>
+
+          {/* Botão Principal: Cadastrar Novo Cliente */}
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs sm:text-sm font-bold shadow-xs transition-colors shrink-0 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Cadastrar Novo Cliente</span>
+          </button>
+        </div>
       </div>
 
       {/* Notificação Toast */}
@@ -484,14 +524,17 @@ export default function AdminClientesPage() {
                     <span>WhatsApp</span>
                   </a>
 
-                  <a
-                    href={`tel:${c.phone}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="py-2 px-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center justify-center gap-1 transition-colors"
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenOrcamentoForCustomer(c);
+                    }}
+                    className="py-2 px-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center justify-center gap-1 border border-rose-100 dark:border-rose-900/40 transition-colors cursor-pointer"
                   >
-                    <Phone className="w-3.5 h-3.5" />
-                    <span>Ligar</span>
-                  </a>
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Orçamento</span>
+                  </button>
 
                   <button
                     type="button"
@@ -654,21 +697,7 @@ export default function AdminClientesPage() {
 
                       {/* Telefone / WhatsApp */}
                       <td className="py-4 px-6 font-medium text-slate-900 dark:text-white">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">{c.phone}</span>
-                          <a
-                            href={`https://wa.me/${waPhone}?text=${encodeURIComponent(
-                              `Olá, ${c.name}! Tudo bem? Falamos da Magia Festeira decorações.`
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            title="Conversar no WhatsApp"
-                            className="p-1 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 transition-colors"
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                          </a>
-                        </div>
+                        <span className="font-semibold font-mono">{c.phone}</span>
                       </td>
 
                       {/* E-mail */}
@@ -720,6 +749,18 @@ export default function AdminClientesPage() {
                       {/* Ações & Checkbox Individual */}
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenOrcamentoForCustomer(c);
+                            }}
+                            title="Criar Orçamento para este Cliente"
+                            className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors cursor-pointer"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                          </button>
+
                           <a
                             href={`https://wa.me/${waPhone}?text=${encodeURIComponent(
                               `Olá, ${c.name}! Tudo bem? Falamos da Magia Festeira decorações.`
@@ -731,15 +772,6 @@ export default function AdminClientesPage() {
                             className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 transition-colors"
                           >
                             <MessageCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                          </a>
-
-                          <a
-                            href={`tel:${c.phone}`}
-                            onClick={(e) => e.stopPropagation()}
-                            title="Ligar para o cliente"
-                            className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
-                          >
-                            <Phone className="w-3.5 h-3.5" />
                           </a>
 
                           <button
@@ -930,6 +962,38 @@ export default function AdminClientesPage() {
         onConfirm={handleConfirmDelete}
         itemNames={deleteTargetNames}
         entityLabel="Cliente"
+      />
+
+      {/* Modal de Importação de Contatos */}
+      <ImportCustomersModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImportComplete={(count) => {
+          setCustomers(store.getCustomers());
+          showNotification(`${count} cliente(s) importado(s) com sucesso para o cadastro!`);
+        }}
+      />
+
+      {/* Modal de Exportação de Contatos */}
+      <ExportCustomersModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        customers={customers}
+        rentals={rentals}
+        onNotify={showNotification}
+      />
+
+      {/* Modal de Criação de Orçamento para o Cliente */}
+      <OrcamentoModal
+        isOpen={isOrcamentoModalOpen}
+        onClose={() => {
+          setIsOrcamentoModalOpen(false);
+          setSelectedCustomerForOrcamento(null);
+        }}
+        initialCustomerName={selectedCustomerForOrcamento?.name || ''}
+        initialCustomerPhone={selectedCustomerForOrcamento?.phone || ''}
+        initialLocation={selectedCustomerForOrcamento?.address || ''}
+        initialNotes={selectedCustomerForOrcamento?.notes || ''}
       />
     </div>
   );

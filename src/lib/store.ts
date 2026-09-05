@@ -42,14 +42,28 @@ export interface StockCheckResult {
   conflictingRentals: Rental[];
 }
 
+
+export function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 async function safeSupabaseOperation(op: PromiseLike<any>, label: string) {
   try {
     const res = await op;
     if (res && res.error) {
       console.error(`[Supabase Error: ${label}]`, res.error);
     }
+    return res;
   } catch (err) {
     console.error(`[Supabase Exception: ${label}]`, err);
+    return null;
   }
 }
 
@@ -461,6 +475,8 @@ class MagiaStore {
     },
   ];
 
+  private rentalLines: RentalLine[] = [];
+
   private payments: Payment[] = [
     {
       id: '50000000-0000-0000-0000-000000000001',
@@ -590,10 +606,15 @@ class MagiaStore {
 
   private listeners: Array<() => void> = [];
   private broadcastChannel: BroadcastChannel | null = null;
+  private realtimeChannel: any = null;
+  private isLoaded: boolean = false;
+  private isLoading: boolean = false;
+  private isRealtimeConnected: boolean = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
       this.loadFromLocalStorage();
+      this.initRealtimeSubscription();
       this.syncWithSupabase();
 
       // BroadcastChannel para sincronização instantânea entre abas sem reload
@@ -619,6 +640,119 @@ class MagiaStore {
         }
       });
     }
+  }
+
+  public getIsLoaded(): boolean {
+    return this.isLoaded;
+  }
+
+  public getIsLoading(): boolean {
+    return this.isLoading;
+  }
+
+  public getIsRealtimeConnected(): boolean {
+    return this.isRealtimeConnected;
+  }
+
+  public initRealtimeSubscription() {
+    if (!isSupabaseConfigured || !supabase) return;
+    if (this.realtimeChannel) return;
+
+    try {
+      this.realtimeChannel = supabase
+        .channel('magia_festeira_cloud_sync')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public' },
+          (payload: any) => {
+            console.log('[Supabase Realtime Received]', payload.table, payload.eventType);
+            this.handleRealtimeChange(payload);
+          }
+        )
+        .subscribe((status: string) => {
+          console.log('[Supabase Realtime Status]', status);
+          this.isRealtimeConnected = status === 'SUBSCRIBED';
+          this.notifyListeners();
+        });
+    } catch (err) {
+      console.warn('[Supabase Realtime Subscription Error]', err);
+    }
+  }
+
+  private handleRealtimeChange(payload: any) {
+    const { table, eventType, new: newRecord, old: oldRecord } = payload;
+    if (!table) return;
+
+    const updateCollection = (list: any[], key: string = 'id') => {
+      if (eventType === 'INSERT') {
+        const exists = list.some((item) => item[key] === newRecord[key]);
+        if (!exists) {
+          list.push(newRecord);
+        } else {
+          const idx = list.findIndex((item) => item[key] === newRecord[key]);
+          list[idx] = newRecord;
+        }
+      } else if (eventType === 'UPDATE') {
+        const idx = list.findIndex((item) => item[key] === newRecord[key]);
+        if (idx !== -1) {
+          list[idx] = { ...list[idx], ...newRecord };
+        } else {
+          list.push(newRecord);
+        }
+      } else if (eventType === 'DELETE') {
+        const targetId = oldRecord ? oldRecord[key] : null;
+        if (targetId) {
+          const idx = list.findIndex((item) => item[key] === targetId);
+          if (idx !== -1) {
+            list.splice(idx, 1);
+          }
+        }
+      }
+    };
+
+    switch (table) {
+      case 'themes':
+        updateCollection(this.themes);
+        break;
+      case 'customers':
+        updateCollection(this.customers);
+        break;
+      case 'rentals':
+        updateCollection(this.rentals);
+        break;
+      case 'items':
+        updateCollection(this.items);
+        break;
+      case 'categories':
+        updateCollection(this.categories);
+        break;
+      case 'theme_variants':
+        updateCollection(this.themeVariants);
+        break;
+      case 'kits':
+        updateCollection(this.kits);
+        break;
+      case 'kit_items':
+        updateCollection(this.kitItems);
+        break;
+      case 'rental_lines':
+        updateCollection(this.rentalLines);
+        break;
+      case 'payments':
+        updateCollection(this.payments);
+        break;
+      case 'media':
+        updateCollection(this.media);
+        break;
+      case 'calendar_sync':
+        updateCollection(this.calendarSync);
+        break;
+      default:
+        break;
+    }
+
+    this.saveToLocalStorage();
+    this.notifyListeners();
   }
 
   public subscribe(listener: () => void): () => void {
@@ -709,18 +843,18 @@ class MagiaStore {
       const raw = localStorage.getItem('magia_festeira_local_store');
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (parsed.themes && parsed.themes.length > 0) this.themes = parsed.themes;
-      if (parsed.customers && parsed.customers.length > 0) this.customers = parsed.customers;
-      if (parsed.rentals && parsed.rentals.length > 0) this.rentals = parsed.rentals;
-      if (parsed.items && parsed.items.length > 0) this.items = parsed.items;
-      if (parsed.themeVariants && parsed.themeVariants.length > 0) this.themeVariants = parsed.themeVariants;
-      if (parsed.kits && parsed.kits.length > 0) this.kits = parsed.kits;
-      if (parsed.kitItems && parsed.kitItems.length > 0) this.kitItems = parsed.kitItems;
-      if (parsed.payments && parsed.payments.length > 0) this.payments = parsed.payments;
-      if (parsed.media && parsed.media.length > 0) this.media = parsed.media;
-      if (parsed.imports && parsed.imports.length > 0) this.imports = parsed.imports;
-      if (parsed.importAssets && parsed.importAssets.length > 0) this.importAssets = parsed.importAssets;
-      if (parsed.auditLogs && parsed.auditLogs.length > 0) this.auditLogs = parsed.auditLogs;
+      if (parsed.themes && Array.isArray(parsed.themes)) this.themes = parsed.themes;
+      if (parsed.customers && Array.isArray(parsed.customers)) this.customers = parsed.customers;
+      if (parsed.rentals && Array.isArray(parsed.rentals)) this.rentals = parsed.rentals;
+      if (parsed.items && Array.isArray(parsed.items)) this.items = parsed.items;
+      if (parsed.themeVariants && Array.isArray(parsed.themeVariants)) this.themeVariants = parsed.themeVariants;
+      if (parsed.kits && Array.isArray(parsed.kits)) this.kits = parsed.kits;
+      if (parsed.kitItems && Array.isArray(parsed.kitItems)) this.kitItems = parsed.kitItems;
+      if (parsed.payments && Array.isArray(parsed.payments)) this.payments = parsed.payments;
+      if (parsed.media && Array.isArray(parsed.media)) this.media = parsed.media;
+      if (parsed.imports && Array.isArray(parsed.imports)) this.imports = parsed.imports;
+      if (parsed.importAssets && Array.isArray(parsed.importAssets)) this.importAssets = parsed.importAssets;
+      if (parsed.auditLogs && Array.isArray(parsed.auditLogs)) this.auditLogs = parsed.auditLogs;
     } catch (e) {
       console.warn('[LocalStorage Load Error]', e);
     }
@@ -728,41 +862,78 @@ class MagiaStore {
 
   public async syncWithSupabase() {
     if (!isSupabaseConfigured || !supabase) return;
+    this.isLoading = true;
+    this.notifyListeners();
+
     try {
-      const [themesRes, customersRes, rentalsRes, itemsRes, variantsRes, kitsRes, mediaRes] = await Promise.all([
+      const [
+        categoriesRes,
+        themesRes,
+        customersRes,
+        rentalsRes,
+        itemsRes,
+        variantsRes,
+        kitsRes,
+        kitItemsRes,
+        mediaRes,
+        paymentsRes,
+        calendarRes,
+      ] = await Promise.all([
+        supabase.from('categories').select('*').order('sort_order', { ascending: true }),
         supabase.from('themes').select('*'),
         supabase.from('customers').select('*'),
         supabase.from('rentals').select('*'),
         supabase.from('items').select('*'),
         supabase.from('theme_variants').select('*'),
         supabase.from('kits').select('*'),
+        supabase.from('kit_items').select('*'),
         supabase.from('media').select('*'),
+        supabase.from('payments').select('*'),
+        supabase.from('calendar_sync').select('*'),
       ]);
 
-      if (themesRes.data && themesRes.data.length > 0) {
+      if (categoriesRes.data) {
+        this.categories = categoriesRes.data;
+      }
+      if (themesRes.data) {
         this.themes = themesRes.data;
       }
-      if (customersRes.data && customersRes.data.length > 0) {
+      if (customersRes.data) {
         this.customers = customersRes.data;
       }
-      if (rentalsRes.data && rentalsRes.data.length > 0) {
+      if (rentalsRes.data) {
         this.rentals = rentalsRes.data;
       }
-      if (itemsRes.data && itemsRes.data.length > 0) {
+      if (itemsRes.data) {
         this.items = itemsRes.data;
       }
-      if (variantsRes.data && variantsRes.data.length > 0) {
+      if (variantsRes.data) {
         this.themeVariants = variantsRes.data;
       }
-      if (kitsRes.data && kitsRes.data.length > 0) {
+      if (kitsRes.data) {
         this.kits = kitsRes.data;
       }
-      if (mediaRes.data && mediaRes.data.length > 0) {
+      if (kitItemsRes.data) {
+        this.kitItems = kitItemsRes.data;
+      }
+      if (mediaRes.data) {
         this.media = mediaRes.data;
       }
+      if (paymentsRes.data) {
+        this.payments = paymentsRes.data;
+      }
+      if (calendarRes.data) {
+        this.calendarSync = calendarRes.data;
+      }
+
+      this.isLoaded = true;
+      this.isLoading = false;
       this.saveToLocalStorage();
+      this.notifyListeners();
     } catch (err) {
       console.warn('[Supabase Sync Warning]', err);
+      this.isLoading = false;
+      this.notifyListeners();
     }
   }
 
@@ -993,12 +1164,14 @@ class MagiaStore {
       };
     }
 
-    const id = '40000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
+    const id = generateUUID();
     const now = new Date().toISOString();
 
     const newRental: Rental = {
       ...data,
       id,
+      theme_variant_id: data.theme_variant_id || undefined,
+      kit_id: data.kit_id || undefined,
       balance: Math.max(0, data.total - data.paid),
       created_at: now,
       updated_at: now,
@@ -1007,8 +1180,9 @@ class MagiaStore {
     this.rentals.push(newRental);
 
     // Cria registro de espelho de calendário
-    this.calendarSync.push({
-      id: '60000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0'),
+    const calSyncId = generateUUID();
+    const newCalSync: CalendarSync = {
+      id: calSyncId,
       rental_id: id,
       provider: 'google',
       external_event_id: `gcal_evt_${id.substring(0, 8)}`,
@@ -1017,7 +1191,8 @@ class MagiaStore {
       error_message: null,
       created_at: now,
       updated_at: now,
-    });
+    };
+    this.calendarSync.push(newCalSync);
 
     this.logAudit('CREATE_RENTAL', 'rentals', id, {
       rental: newRental,
@@ -1031,8 +1206,8 @@ class MagiaStore {
           tenant_id: newRental.tenant_id,
           customer_id: newRental.customer_id,
           theme_id: newRental.theme_id,
-          theme_variant_id: newRental.theme_variant_id,
-          kit_id: newRental.kit_id,
+          theme_variant_id: newRental.theme_variant_id || null,
+          kit_id: newRental.kit_id || null,
           event_date: newRental.event_date,
           pickup_date: newRental.pickup_date,
           return_date: newRental.return_date,
@@ -1040,10 +1215,22 @@ class MagiaStore {
           total: newRental.total,
           paid: newRental.paid,
           balance: newRental.balance,
-          delivery_location: newRental.delivery_location,
-          notes: newRental.notes,
+          delivery_location: newRental.delivery_location || null,
+          notes: newRental.notes || null,
         }),
         'Insert Rental'
+      );
+      safeSupabaseOperation(
+        supabase.from('calendar_sync').insert({
+          id: newCalSync.id,
+          rental_id: newCalSync.rental_id,
+          provider: newCalSync.provider,
+          external_event_id: newCalSync.external_event_id,
+          sync_status: newCalSync.sync_status,
+          last_sync_at: newCalSync.last_sync_at,
+          error_message: newCalSync.error_message,
+        }),
+        'Insert Calendar Sync'
       );
     }
 
@@ -1082,6 +1269,8 @@ class MagiaStore {
       safeSupabaseOperation(
         supabase.from('rentals').update({
           ...updates,
+          theme_variant_id: updates.theme_variant_id !== undefined ? (updates.theme_variant_id || null) : undefined,
+          kit_id: updates.kit_id !== undefined ? (updates.kit_id || null) : undefined,
           updated_at: updated.updated_at,
         }).eq('id', rentalId),
         'Update Rental'
@@ -1093,8 +1282,69 @@ class MagiaStore {
     return { success: true, rental: updated };
   }
 
+  public deleteRental(id: string): boolean {
+    const rental = this.rentals.find((r) => r.id === id);
+    if (!rental) return false;
+
+    this.rentals = this.rentals.filter((r) => r.id !== id);
+    this.payments = this.payments.filter((p) => p.rental_id !== id);
+    this.calendarSync = this.calendarSync.filter((c) => c.rental_id !== id);
+
+    this.logAudit('DELETE_RENTAL', 'rentals', id, { id });
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('calendar_sync').delete().eq('rental_id', id),
+        'Delete Calendar Sync'
+      );
+      safeSupabaseOperation(
+        supabase.from('payments').delete().eq('rental_id', id),
+        'Delete Payments'
+      );
+      safeSupabaseOperation(
+        supabase.from('rentals').delete().eq('id', id),
+        'Delete Rental'
+      );
+    }
+
+    this.saveToLocalStorage();
+    return true;
+  }
+
+  public deleteRentals(ids: string[]): number {
+    const toDelete = this.rentals.filter((r) => ids.includes(r.id));
+    if (toDelete.length === 0) return 0;
+
+    const idsSet = new Set(ids);
+    this.rentals = this.rentals.filter((r) => !idsSet.has(r.id));
+    this.payments = this.payments.filter((p) => !idsSet.has(p.rental_id));
+    this.calendarSync = this.calendarSync.filter((c) => !idsSet.has(c.rental_id));
+
+    for (const r of toDelete) {
+      this.logAudit('DELETE_RENTAL', 'rentals', r.id, { id: r.id });
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('calendar_sync').delete().in('rental_id', ids),
+        'Delete Calendar Sync Batch'
+      );
+      safeSupabaseOperation(
+        supabase.from('payments').delete().in('rental_id', ids),
+        'Delete Payments Batch'
+      );
+      safeSupabaseOperation(
+        supabase.from('rentals').delete().in('id', ids),
+        'Delete Rentals Batch'
+      );
+    }
+
+    this.saveToLocalStorage();
+    return toDelete.length;
+  }
+
   public createCustomer(data: Omit<Customer, 'id' | 'created_at' | 'updated_at' | 'tenant_id'>): Customer {
-    const id = '30000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
+    const id = generateUUID();
     const now = new Date().toISOString();
 
     const customer: Customer = {
@@ -1115,10 +1365,10 @@ class MagiaStore {
           tenant_id: customer.tenant_id,
           name: customer.name,
           phone: customer.phone,
-          email: customer.email,
-          document: customer.document,
-          address: customer.address,
-          notes: customer.notes,
+          email: customer.email || null,
+          document: customer.document || null,
+          address: customer.address || null,
+          notes: customer.notes || null,
         }),
         'Insert Customer'
       );
@@ -1206,22 +1456,48 @@ class MagiaStore {
     const rental = this.rentals.find((r) => r.id === rentalId);
     if (!rental) throw new Error('Reserva não encontrada');
 
+    const id = generateUUID();
+    const now = new Date().toISOString();
+
     const payment: Payment = {
-      id: '50000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0'),
+      id,
       rental_id: rentalId,
       amount,
       method,
-      paid_at: new Date().toISOString(),
+      paid_at: now,
       note: note || null,
-      created_at: new Date().toISOString(),
+      created_at: now,
     };
 
     this.payments.push(payment);
     rental.paid += amount;
     rental.balance = Math.max(0, rental.total - rental.paid);
-    rental.updated_at = new Date().toISOString();
+    rental.updated_at = now;
 
     this.logAudit('RECORD_PAYMENT', 'payments', payment.id, { rentalId, amount, method });
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('payments').insert({
+          id: payment.id,
+          rental_id: payment.rental_id,
+          amount: payment.amount,
+          method: payment.method,
+          paid_at: payment.paid_at,
+          note: payment.note,
+        }),
+        'Insert Payment'
+      );
+      safeSupabaseOperation(
+        supabase.from('rentals').update({
+          paid: rental.paid,
+          balance: rental.balance,
+          updated_at: rental.updated_at,
+        }).eq('id', rentalId),
+        'Update Rental Balance'
+      );
+    }
+
     this.saveToLocalStorage();
     return payment;
   }
@@ -1238,7 +1514,7 @@ class MagiaStore {
     const count = this.themes.length + 127;
     const code = `MF-0${count}`;
     const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const id = 'e0000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
+    const id = generateUUID();
     const now = new Date().toISOString();
 
     const newTheme: Theme & { imageUrl?: string } = {
@@ -1272,7 +1548,7 @@ class MagiaStore {
         original_name: `${slug}_capa.jpg`,
         mime_type: 'image/jpeg',
         file_size: 500000,
-        fingerprint: `sha256-theme-${id}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+        fingerprint: `sha256-theme-${id}-${Date.now()}`,
         is_primary: true,
         ai_tags: data.characters || [],
       });
@@ -1402,7 +1678,7 @@ class MagiaStore {
   }
 
   public createThemeVariant(themeId: string, name: string, description?: string): ThemeVariant {
-    const id = 'f0000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
+    const id = generateUUID();
     const now = new Date().toISOString();
 
     const variant: ThemeVariant = {
@@ -1438,7 +1714,7 @@ class MagiaStore {
   }
 
   public createKit(themeId: string, name: string, price: number, description?: string): Kit {
-    const id = '10000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
+    const id = generateUUID();
     const now = new Date().toISOString();
 
     const kit: Kit = {
@@ -1477,23 +1753,42 @@ class MagiaStore {
     const existing = this.kitItems.find((ki) => ki.kit_id === kitId && ki.item_id === itemId);
     if (existing) {
       existing.quantity += quantity;
+      if (isSupabaseConfigured && supabase) {
+        safeSupabaseOperation(
+          supabase.from('kit_items').update({ quantity: existing.quantity }).eq('id', existing.id),
+          'Update Kit Item'
+        );
+      }
       this.saveToLocalStorage();
       return existing;
     }
 
     const kitItem: KitItem = {
-      id: 'ki-' + Math.random().toString(36).substring(2, 10),
+      id: generateUUID(),
       kit_id: kitId,
       item_id: itemId,
       quantity,
     };
     this.kitItems.push(kitItem);
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('kit_items').insert({
+          id: kitItem.id,
+          kit_id: kitItem.kit_id,
+          item_id: kitItem.item_id,
+          quantity: kitItem.quantity,
+        }),
+        'Insert Kit Item'
+      );
+    }
+
     this.saveToLocalStorage();
     return kitItem;
   }
 
   public createItem(data: Omit<Item, 'id' | 'created_at' | 'updated_at' | 'quantity_available'>): Item {
-    const id = 'd0000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
+    const id = generateUUID();
     const now = new Date().toISOString();
 
     const item: Item = {
@@ -1619,7 +1914,7 @@ class MagiaStore {
       });
     }
 
-    const id = '20000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
+    const id = generateUUID();
     const newMedia: Media = {
       ...data,
       id,
@@ -1697,7 +1992,7 @@ class MagiaStore {
   }
 
   public registerAIRun(run: Omit<AIRun, 'id' | 'tenant_id' | 'created_at'>): AIRun {
-    const id = '90000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
+    const id = generateUUID();
     const newRun: AIRun = {
       ...run,
       id,
@@ -1709,7 +2004,7 @@ class MagiaStore {
   }
 
   public queueImport(sourceType: Import['source_type'], sourceRef: string, fileCount: number = 0): Import {
-    const id = '70000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
+    const id = generateUUID();
     const imp: Import = {
       id,
       tenant_id: DEFAULT_TENANT_ID,
@@ -1728,7 +2023,7 @@ class MagiaStore {
   }
 
   public addImportAsset(asset: Omit<ImportAsset, 'id' | 'created_at'>): ImportAsset {
-    const id = '80000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0');
+    const id = generateUUID();
     const newAsset: ImportAsset = {
       ...asset,
       id,
@@ -1821,7 +2116,7 @@ class MagiaStore {
 
   public logAudit(action: string, entity: string, entityId?: string, payload?: Record<string, unknown> | object) {
     this.auditLogs.unshift({
-      id: 'a1000000-0000-0000-0000-' + Math.random().toString(36).substring(2, 14).padEnd(12, '0'),
+      id: generateUUID(),
       tenant_id: DEFAULT_TENANT_ID,
       user_id: 'b0000000-0000-0000-0000-000000000001',
       action,

@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { Database, CheckCircle2, AlertCircle, RefreshCw, X, Server, Cloud, ExternalLink } from 'lucide-react';
 
+import { store } from '@/lib/store';
+
 interface DBStatus {
   configured: boolean;
   connected: boolean;
@@ -21,6 +23,7 @@ export function DatabaseStatusBadge() {
   const [status, setStatus] = useState<DBStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRealtime, setIsRealtime] = useState(store.getIsRealtimeConnected());
 
   const fetchStatus = async () => {
     setLoading(true);
@@ -41,6 +44,11 @@ export function DatabaseStatusBadge() {
 
   useEffect(() => {
     fetchStatus();
+    setIsRealtime(store.getIsRealtimeConnected());
+    const unsub = store.subscribe(() => {
+      setIsRealtime(store.getIsRealtimeConnected());
+    });
+    return () => unsub();
   }, []);
 
   if (!status) {
@@ -57,7 +65,7 @@ export function DatabaseStatusBadge() {
       if (isSupabase && status.tablesReady === false) {
         return 'Supabase: Criar Tabelas';
       }
-      return isSupabase ? 'Supabase: Conectado' : 'Hostgator: Conectado';
+      return isSupabase ? (isRealtime ? 'Supabase: Tempo Real' : 'Supabase: Nuvem') : 'Hostgator: Conectado';
     }
     if (status.configured) {
       return isSupabase ? 'Supabase: Erro' : 'Hostgator: Erro';
