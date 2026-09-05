@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Search, Filter, MessageCircle, ArrowRight, Tag, Sparkles } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
-import { store } from '@/lib/store';
+import { store, DEFAULT_THEME_DESCRIPTION } from '@/lib/store';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
 
 export default function CatalogoPage() {
@@ -178,7 +178,7 @@ export default function CatalogoPage() {
                         {theme.name}
                       </h3>
                       <p className="mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                        {theme.description || 'Decoração completa com painel, cilindros e detalhes temáticos de alta qualidade.'}
+                        {theme.description || DEFAULT_THEME_DESCRIPTION}
                       </p>
 
                       {/* Characters tags */}

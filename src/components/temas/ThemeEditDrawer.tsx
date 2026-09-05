@@ -15,7 +15,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { Theme, EntityStatus, Media } from '@/types/database';
-import { store } from '@/lib/store';
+import { store, DEFAULT_THEME_DESCRIPTION } from '@/lib/store';
 import { fileToDataUrl, convertHeicToJpeg, convertImageToWebP, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
 
 interface ThemeEditDrawerProps {
@@ -71,7 +71,7 @@ export function ThemeEditDrawer({
       setBasePrice(theme.base_price !== undefined ? theme.base_price : 179.9);
       setStockQuantity(theme.stock_quantity || 1);
       setCharacters(theme.characters?.join(', ') || '');
-      setDescription(theme.description || '');
+      setDescription(theme.description || DEFAULT_THEME_DESCRIPTION);
       setStatus(theme.status || 'active');
       setFeatured(!!theme.featured);
 
@@ -289,7 +289,7 @@ export function ThemeEditDrawer({
           base_price: Number(basePrice) || 179.9,
           stock_quantity: Number(stockQuantity) || 1,
           characters: charsArray,
-          description: description.trim() || null,
+          description: description.trim() || DEFAULT_THEME_DESCRIPTION,
           status: status === 'inactive' ? 'inactive' : 'active',
           featured,
           imageUrl: primary?.storage_path || (theme as any).imageUrl,
@@ -304,7 +304,7 @@ export function ThemeEditDrawer({
         base_price: Number(basePrice),
         stock_quantity: Number(stockQuantity),
         characters: charsArray,
-        description: description.trim() || null,
+        description: description.trim() || DEFAULT_THEME_DESCRIPTION,
         status: status === 'inactive' ? 'inactive' : 'active',
         featured,
         imageUrl: primary?.storage_path,
@@ -334,7 +334,7 @@ export function ThemeEditDrawer({
         base_price: Number(basePrice) || 179.9,
         stock_quantity: Number(stockQuantity) || 1,
         characters: charsArray,
-        description: description.trim() || `Tema aprovado a partir da fila de revisão.`,
+        description: description.trim() || DEFAULT_THEME_DESCRIPTION,
         imageUrl: primary?.storage_path || (theme as any).imageUrl,
       });
     }
@@ -660,15 +660,18 @@ export function ThemeEditDrawer({
             {/* Descrição */}
             <div>
               <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Descrição do Tema
+                Legenda / Itens Inclusos
               </label>
               <textarea
-                rows={3}
+                rows={6}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Detalhes sobre a composição, peças inclusas e estilo do tema..."
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                placeholder={DEFAULT_THEME_DESCRIPTION}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none text-xs leading-relaxed"
               />
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 block mt-1">
+                Se não informado, será preenchido automaticamente com a lista padrão de itens inclusos.
+              </span>
             </div>
 
             {/* Footer Buttons inside drawer */}

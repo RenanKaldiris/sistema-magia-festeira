@@ -42,6 +42,17 @@ export interface StockCheckResult {
   conflictingRentals: Rental[];
 }
 
+export const DEFAULT_THEME_DESCRIPTION = `Itens inclusos
+1 arco de ferro desmontável 
+3 cilindros P,M,G
+Capas para o painel e cilindros no tema escolhido 
+1 kit Festeira composto de: 
+1 boleira
+2 doceiras redondas 
+1 doceira retangular 
+1 vaso
+1 buchinho
+1 porta balões de chão ( sem os balões)`;
 
 export function generateUUID(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -843,7 +854,12 @@ class MagiaStore {
       const raw = localStorage.getItem('magia_festeira_local_store');
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (parsed.themes && Array.isArray(parsed.themes)) this.themes = parsed.themes;
+      if (parsed.themes && Array.isArray(parsed.themes)) {
+        this.themes = parsed.themes.map((t: Theme) => ({
+          ...t,
+          description: t.description?.trim() ? t.description : DEFAULT_THEME_DESCRIPTION,
+        }));
+      }
       if (parsed.customers && Array.isArray(parsed.customers)) this.customers = parsed.customers;
       if (parsed.rentals && Array.isArray(parsed.rentals)) this.rentals = parsed.rentals;
       if (parsed.items && Array.isArray(parsed.items)) this.items = parsed.items;
@@ -1022,6 +1038,7 @@ class MagiaStore {
 
     return {
       ...theme,
+      description: theme.description?.trim() ? theme.description : DEFAULT_THEME_DESCRIPTION,
       category,
       variants,
       kits: themeKits,
@@ -1527,7 +1544,7 @@ class MagiaStore {
       characters: data.characters || [],
       piece_count: 15,
       base_price: data.base_price !== undefined ? data.base_price : 179.9,
-      description: data.description || null,
+      description: data.description?.trim() ? data.description.trim() : DEFAULT_THEME_DESCRIPTION,
       notes: null,
       status: 'active',
       stock_quantity: data.stock_quantity || 1,
@@ -1586,6 +1603,9 @@ class MagiaStore {
     if (idx === -1) throw new Error('Tema não encontrado');
 
     const { imageUrl, ...themeUpdates } = updates;
+    if (themeUpdates.description !== undefined) {
+      themeUpdates.description = themeUpdates.description?.trim() ? themeUpdates.description.trim() : DEFAULT_THEME_DESCRIPTION;
+    }
 
     const updated = {
       ...this.themes[idx],
@@ -2067,7 +2087,7 @@ class MagiaStore {
     const basePrice = customData?.base_price !== undefined ? customData.base_price : 179.9;
     const stockQuantity = customData?.stock_quantity !== undefined ? customData.stock_quantity : 1;
     const characters = customData?.characters || (asset.detected_entity ? [asset.detected_entity] : []);
-    const description = customData?.description || `Tema aprovado a partir da importação do arquivo ${asset.source_file}.`;
+    const description = customData?.description?.trim() ? customData.description.trim() : DEFAULT_THEME_DESCRIPTION;
     const imageUrl = customData?.imageUrl || asset.storage_path || undefined;
 
     // Cria o tema ativo no store com fallback de preço R$ 179,90 e foto primária

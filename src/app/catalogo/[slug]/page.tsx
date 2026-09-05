@@ -16,7 +16,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
-import { store } from '@/lib/store';
+import { store, DEFAULT_THEME_DESCRIPTION } from '@/lib/store';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
 
 export default function ThemeDetailPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -204,10 +204,14 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
                 </span>
               </div>
 
-              <p className="mt-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                {theme.description ||
-                  'Cenografia completa com painel temático de altíssima qualidade, cilindros, suportes e acabamento impecável.'}
-              </p>
+              <div className="mt-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-850/60 border border-slate-100 dark:border-slate-800">
+                <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider block mb-2">
+                  Legenda / Itens Inclusos:
+                </span>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line font-normal">
+                  {theme.description || DEFAULT_THEME_DESCRIPTION}
+                </p>
+              </div>
 
               {/* Characters */}
               {theme.characters && theme.characters.length > 0 && (

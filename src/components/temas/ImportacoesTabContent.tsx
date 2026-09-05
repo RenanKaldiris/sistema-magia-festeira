@@ -17,7 +17,7 @@ import {
   Plus,
   Image as ImageIcon,
 } from 'lucide-react';
-import { store } from '@/lib/store';
+import { store, DEFAULT_THEME_DESCRIPTION } from '@/lib/store';
 import { Import, ImportAsset, Theme } from '@/types/database';
 import { formatDateBR } from '@/lib/dateUtils';
 import { ThemeEditDrawer } from './ThemeEditDrawer';
@@ -237,7 +237,7 @@ export function ImportacoesTabContent() {
       characters: asset.detected_entity && asset.detected_entity !== 'Novo Lote Local' ? [asset.detected_entity] : [],
       piece_count: 15,
       base_price: 179.9,
-      description: `Tema decorativo importado do arquivo ${asset.source_file}.`,
+      description: DEFAULT_THEME_DESCRIPTION,
       notes: null,
       status: 'active',
       stock_quantity: 1,

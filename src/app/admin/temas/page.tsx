@@ -28,7 +28,7 @@ import {
   Image as ImageIcon,
   X,
 } from 'lucide-react';
-import { store } from '@/lib/store';
+import { store, DEFAULT_THEME_DESCRIPTION } from '@/lib/store';
 import { Theme, EntityStatus } from '@/types/database';
 import { ThemeEditDrawer } from '@/components/temas/ThemeEditDrawer';
 import { BatchActionBar } from '@/components/temas/BatchActionBar';
@@ -343,7 +343,7 @@ function TemasManagementContent() {
       characters: charsArray,
       base_price: Number(basePrice) || 179.9,
       stock_quantity: Number(stockQuantity) || 1,
-      description,
+      description: description.trim() || DEFAULT_THEME_DESCRIPTION,
       imageUrl: primaryImageUrl,
     });
 
@@ -1288,14 +1288,19 @@ function TemasManagementContent() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Descrição</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Legenda / Itens Inclusos
+                </label>
                 <textarea
-                  rows={3}
+                  rows={6}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Descrição acolhedora dos itens do cenário..."
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  placeholder={DEFAULT_THEME_DESCRIPTION}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none text-xs leading-relaxed"
                 />
+                <span className="text-[11px] text-slate-400 dark:text-slate-500 block mt-1">
+                  Se não informado, será preenchido automaticamente com a lista padrão de itens inclusos.
+                </span>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
