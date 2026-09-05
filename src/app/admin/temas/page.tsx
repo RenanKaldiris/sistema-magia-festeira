@@ -36,7 +36,7 @@ import { DeleteConfirmationModal } from '@/components/temas/DeleteConfirmationMo
 import { OrcamentoModal } from '@/components/temas/OrcamentoModal';
 import { ItensTabContent } from '@/components/temas/ItensTabContent';
 import { ImportacoesTabContent } from '@/components/temas/ImportacoesTabContent';
-import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
+import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg, convertImageToWebP, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
 
 type TabType = 'temas' | 'itens' | 'importacoes';
 type SortField = 'name' | 'price' | 'status';
@@ -253,28 +253,23 @@ function TemasManagementContent() {
         return prevName;
       });
 
-      // 1. Converte HEIC/HEIF para JPEG se necessário (garante JPEG nativo para Chrome/Windows/Android)
-      const file = await convertHeicToJpeg(rawFile);
-      const convertedPreview = URL.createObjectURL(file);
-
-      setUploadedFiles((prev) =>
-        prev.map((item) =>
-          item.id === tempId ? { ...item, file, previewUrl: convertedPreview, name: file.name } : item
-        )
-      );
-
-      // 2. Compressão assíncrona para Base64 leve via Canvas (protege cota do LocalStorage)
+      // 1. Converte mandatória e automaticamente qualquer foto para .WEBP com 70% de qualidade
       try {
-        const permanentDataUrl = await fileToDataUrl(file);
-        if (permanentDataUrl) {
-          setUploadedFiles((prev) =>
-            prev.map((item) =>
-              item.id === tempId ? { ...item, previewUrl: permanentDataUrl } : item
-            )
-          );
-        }
+        const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.70);
+        setUploadedFiles((prev) =>
+          prev.map((item) =>
+            item.id === tempId ? { ...item, file: webpFile, previewUrl: webpDataUrl, name: webpFile.name } : item
+          )
+        );
       } catch (err) {
-        console.warn('Compressão via Canvas ignorada, mantendo preview instantâneo:', err);
+        console.warn('Erro na conversão WebP 70%, aplicando fallback:', err);
+        const file = await convertHeicToJpeg(rawFile);
+        const permanentDataUrl = await fileToDataUrl(file);
+        setUploadedFiles((prev) =>
+          prev.map((item) =>
+            item.id === tempId ? { ...item, file, previewUrl: permanentDataUrl || URL.createObjectURL(file), name: file.name } : item
+          )
+        );
       }
     });
   };
@@ -360,7 +355,7 @@ function TemasManagementContent() {
           entity_id: created.id,
           storage_path: item.previewUrl,
           original_name: item.name,
-          mime_type: 'image/jpeg',
+          mime_type: 'image/webp',
           file_size: 500000,
           fingerprint: `sha256-${created.id.substring(0, 6)}-${idx}-${Date.now()}`,
           is_primary: false,
@@ -391,7 +386,7 @@ function TemasManagementContent() {
         entity_id: created.id,
         storage_path: kitPhoto.previewUrl,
         original_name: kitPhoto.name,
-        mime_type: 'image/jpeg',
+        mime_type: 'image/webp',
         file_size: kitPhoto.file?.size || 400000,
         fingerprint: `sha256-kit-${created.id.substring(0, 6)}-${Date.now()}`,
         is_primary: true,
@@ -418,7 +413,7 @@ function TemasManagementContent() {
         entity_id: created.id,
         storage_path: variantPhoto.previewUrl,
         original_name: variantPhoto.name,
-        mime_type: 'image/jpeg',
+        mime_type: 'image/webp',
         file_size: variantPhoto.file?.size || 400000,
         fingerprint: `sha256-var-${created.id.substring(0, 6)}-${Date.now()}`,
         is_primary: true,
@@ -1243,9 +1238,14 @@ function TemasManagementContent() {
                 {/* Prévia Visual (Thumbnails Grid) */}
                 {uploadedFiles.length > 0 && (
                   <div className="space-y-1.5 pt-2">
-                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
-                      Pré-visualização ({uploadedFiles.length} fotos carregadas):
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
+                        Pré-visualização ({uploadedFiles.length} fotos carregadas):
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
+                        <span>.WEBP • 70% de qualidade</span>
+                      </span>
+                    </div>
                     <div className="grid grid-cols-4 gap-2 max-h-36 overflow-y-auto p-1">
                       {uploadedFiles.map((fileItem, idx) => (
                         <div
@@ -1269,6 +1269,9 @@ function TemasManagementContent() {
                               Capa
                             </span>
                           )}
+                          <span className="absolute bottom-1 left-1 px-1 py-0.2 rounded bg-black/70 text-emerald-300 text-[8px] font-mono font-bold">
+                            WEBP
+                          </span>
                           <button
                             type="button"
                             onClick={() => handleRemoveUploadedFile(idx)}
@@ -1355,13 +1358,22 @@ function TemasManagementContent() {
                         previewUrl: initialPreview,
                         name: rawFile.name,
                       });
-                      const file = await convertHeicToJpeg(rawFile);
-                      const permanentUrl = await fileToDataUrl(file);
-                      setVariantPhoto({
-                        file,
-                        previewUrl: permanentUrl || URL.createObjectURL(file),
-                        name: file.name,
-                      });
+                      try {
+                        const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.70);
+                        setVariantPhoto({
+                          file: webpFile,
+                          previewUrl: webpDataUrl,
+                          name: webpFile.name,
+                        });
+                      } catch {
+                        const file = await convertHeicToJpeg(rawFile);
+                        const permanentUrl = await fileToDataUrl(file);
+                        setVariantPhoto({
+                          file,
+                          previewUrl: permanentUrl || URL.createObjectURL(file),
+                          name: file.name,
+                        });
+                      }
                     }
                   }}
                 />
@@ -1482,13 +1494,22 @@ function TemasManagementContent() {
                         previewUrl: initialPreview,
                         name: rawFile.name,
                       });
-                      const file = await convertHeicToJpeg(rawFile);
-                      const permanentUrl = await fileToDataUrl(file);
-                      setKitPhoto({
-                        file,
-                        previewUrl: permanentUrl || URL.createObjectURL(file),
-                        name: file.name,
-                      });
+                      try {
+                        const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.70);
+                        setKitPhoto({
+                          file: webpFile,
+                          previewUrl: webpDataUrl,
+                          name: webpFile.name,
+                        });
+                      } catch {
+                        const file = await convertHeicToJpeg(rawFile);
+                        const permanentUrl = await fileToDataUrl(file);
+                        setKitPhoto({
+                          file,
+                          previewUrl: permanentUrl || URL.createObjectURL(file),
+                          name: file.name,
+                        });
+                      }
                     }
                   }}
                 />

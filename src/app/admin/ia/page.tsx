@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import NextImage from 'next/image';
 import {
   Bot,
@@ -15,8 +15,11 @@ import {
   Calendar,
   Layers,
   ArrowRight,
+  Paperclip,
+  UploadCloud,
 } from 'lucide-react';
 import { aiOrchestrator, AIProcessResponse } from '@/services/ai/orchestrator';
+import { convertImageToWebP } from '@/lib/imageUtils';
 
 interface ChatMessage {
   id: string;
@@ -39,7 +42,27 @@ export default function AdminIAPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [photoInfo, setPhotoInfo] = useState<{ originalSize: number; newSize: number } | null>(null);
   const [lastMeta, setLastMeta] = useState<AIProcessResponse | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const converted = await convertImageToWebP(file, 0.70);
+      setSelectedPhoto(converted.dataUrl);
+      setPhotoInfo({
+        originalSize: converted.originalSize,
+        newSize: converted.newSize,
+      });
+      if (!input.trim()) {
+        setInput('Cadastre esse tema no acervo');
+      }
+    } catch (err) {
+      console.error('Erro ao converter imagem para WebP:', err);
+    }
+  };
 
   // Amostras de fotos de cenários para teste de upload
   const samplePhotos = [
@@ -227,13 +250,28 @@ export default function AdminIAPage() {
 
           {/* Photo Attachment Drawer */}
           {selectedPhoto && (
-            <div className="p-3 bg-slate-200 dark:bg-slate-800 border-t border-slate-300 dark:border-slate-700 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <img src={selectedPhoto} alt="Thumb" className="w-10 h-10 rounded-lg object-cover" />
-                <span className="text-xs text-slate-700 dark:text-slate-200 font-semibold">Foto anexada pronta para análise</span>
+            <div className="p-3 bg-slate-100 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img src={selectedPhoto} alt="Thumb" className="w-11 h-11 rounded-lg object-cover border border-emerald-500/40" />
+                <div>
+                  <span className="text-xs text-slate-800 dark:text-slate-100 font-bold block">
+                    Foto pronta para o Agente IA
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <Sparkles className="w-3 h-3" /> Convertida para .WEBP (70% de qualidade)
+                    {photoInfo && (
+                      <span className="text-slate-400 text-[9px] ml-1">
+                        ({(photoInfo.originalSize / 1024).toFixed(0)}KB → {(photoInfo.newSize / 1024).toFixed(0)}KB)
+                      </span>
+                    )}
+                  </span>
+                </div>
               </div>
               <button
-                onClick={() => setSelectedPhoto(null)}
+                onClick={() => {
+                  setSelectedPhoto(null);
+                  setPhotoInfo(null);
+                }}
                 className="text-xs text-rose-600 dark:text-rose-400 font-bold hover:underline"
               >
                 Remover
@@ -243,18 +281,45 @@ export default function AdminIAPage() {
 
           {/* Input Box */}
           <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2 shrink-0">
+            {/* Hidden Native File Input for Direct Local Uploads */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*,.heic,.heif"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+
+            {/* Direct Device Upload Button */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+              title="Carregar foto do dispositivo (conversão automática .WEBP 70%)"
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
+
             {/* Camera / Photo Presets Popover */}
             <div className="relative group">
               <button
                 type="button"
                 className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
-                title="Anexar foto"
+                title="Exemplos de Fotos / Modelos"
               >
                 <Camera className="w-5 h-5" />
               </button>
 
-              <div className="absolute bottom-12 left-0 hidden group-hover:block bg-white dark:bg-slate-800 p-2 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-56 z-20 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase px-2">Fotos de Demonstração:</span>
+              <div className="absolute bottom-12 left-0 hidden group-hover:block bg-white dark:bg-slate-800 p-2 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-64 z-20 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-2 mb-1"
+                >
+                  <UploadCloud className="w-4 h-4" />
+                  <span>Foto do dispositivo (.WEBP 70%)</span>
+                </button>
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase px-2 block pt-1">Fotos de Demonstração:</span>
                 {samplePhotos.map((p, idx) => (
                   <button
                     key={idx}

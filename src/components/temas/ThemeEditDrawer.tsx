@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Theme, EntityStatus, Media } from '@/types/database';
 import { store } from '@/lib/store';
-import { fileToDataUrl, convertHeicToJpeg, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
+import { fileToDataUrl, convertHeicToJpeg, convertImageToWebP, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
 
 interface ThemeEditDrawerProps {
   theme: (Theme & { imageUrl?: string }) | null;
@@ -147,7 +147,7 @@ export function ThemeEditDrawer({
         entity_id: theme.id,
         storage_path: instantPreview,
         original_name: rawFile.name,
-        mime_type: rawFile.type || 'image/jpeg',
+        mime_type: 'image/webp',
         file_size: rawFile.size,
         fingerprint: `sha256-${theme.id.substring(0, 6)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         sort_order: mediaList.length + 1,
@@ -160,44 +160,50 @@ export function ThemeEditDrawer({
         setMediaList((prev) => [...prev, tempMedia]);
       }
 
-      // 1. Converte HEIC/HEIF para JPEG se necessário
-      const file = await convertHeicToJpeg(rawFile);
-      const convertedPreview = URL.createObjectURL(file);
-
-      // Atualiza preview com JPEG nativo
-      setMediaList((prev) =>
-        prev.map((m) =>
-          m.id === mediaId ? { ...m, storage_path: convertedPreview, original_name: file.name } : m
-        )
-      );
-
-      // 2. Compressão leve para Base64
+      // Converte mandatória e automaticamente qualquer foto para .WEBP com 70% de qualidade
       try {
+        const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.70);
+        const webpMedia: Media = {
+          ...tempMedia,
+          storage_path: webpDataUrl,
+          original_name: webpFile.name,
+          mime_type: 'image/webp',
+          file_size: webpFile.size,
+        };
+
+        setMediaList((prev) =>
+          prev.map((m) => (m.id === mediaId ? webpMedia : m))
+        );
+
+        if (!isPreApproval) {
+          store.addMediaToEntity({
+            ...webpMedia,
+            storage_path: webpDataUrl,
+            original_name: webpFile.name,
+            mime_type: 'image/webp',
+          });
+          refreshMedia(theme.id);
+        }
+        showNotification(`Foto "${webpFile.name}" convertida para .WEBP (70%) e vinculada ao tema.`);
+      } catch (err) {
+        console.warn('Erro ao converter para WebP, aplicando fallback:', err);
+        const file = await convertHeicToJpeg(rawFile);
         const permanentUrl = await fileToDataUrl(file);
         if (permanentUrl) {
           setMediaList((prev) =>
-            prev.map((m) => (m.id === mediaId ? { ...m, storage_path: permanentUrl } : m))
+            prev.map((m) => (m.id === mediaId ? { ...m, storage_path: permanentUrl, mime_type: 'image/webp' } : m))
           );
           if (!isPreApproval) {
             store.addMediaToEntity({
               ...tempMedia,
               storage_path: permanentUrl,
               original_name: file.name,
+              mime_type: 'image/webp',
             });
             refreshMedia(theme.id);
           }
         }
-      } catch {
-        if (!isPreApproval) {
-          store.addMediaToEntity({
-            ...tempMedia,
-            storage_path: convertedPreview,
-            original_name: file.name,
-          });
-          refreshMedia(theme.id);
-        }
       }
-      showNotification(`Foto "${file.name}" adicionada ao tema.`);
     });
   };
 

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Item, Media } from '@/types/database';
 import { store } from '@/lib/store';
-import { fileToDataUrl, getFallbackImageDataUrl } from '@/lib/imageUtils';
+import { fileToDataUrl, convertImageToWebP, getFallbackImageDataUrl } from '@/lib/imageUtils';
 
 interface ItemEditDrawerProps {
   item: Item | null;
@@ -95,28 +95,38 @@ export function ItemEditDrawer({
     files.forEach(async (file) => {
       const instantPreview = URL.createObjectURL(file);
       const isFirst = mediaList.length === 0;
-      let finalStoragePath = instantPreview;
 
       try {
-        const permanent = await fileToDataUrl(file);
-        if (permanent) finalStoragePath = permanent;
+        const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(file, 0.70);
+        store.addMediaToEntity({
+          entity_type: 'item',
+          entity_id: item.id,
+          storage_path: webpDataUrl,
+          original_name: webpFile.name,
+          mime_type: 'image/webp',
+          file_size: webpFile.size,
+          fingerprint: `sha256-item-${item.id.substring(0, 6)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          is_primary: isFirst,
+          ai_tags: [item.name, category],
+        });
+        refreshMedia(item.id);
+        showNotification(`Foto "${webpFile.name}" convertida para .WEBP (70%) e anexada com sucesso!`);
       } catch {
-        // Usa instantPreview
+        const permanent = await fileToDataUrl(file);
+        store.addMediaToEntity({
+          entity_type: 'item',
+          entity_id: item.id,
+          storage_path: permanent || instantPreview,
+          original_name: file.name,
+          mime_type: 'image/webp',
+          file_size: file.size,
+          fingerprint: `sha256-item-${item.id.substring(0, 6)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          is_primary: isFirst,
+          ai_tags: [item.name, category],
+        });
+        refreshMedia(item.id);
+        showNotification('Foto anexada com sucesso!');
       }
-
-      store.addMediaToEntity({
-        entity_type: 'item',
-        entity_id: item.id,
-        storage_path: finalStoragePath,
-        original_name: file.name,
-        mime_type: file.type || 'image/jpeg',
-        file_size: file.size,
-        fingerprint: `sha256-item-${item.id.substring(0, 6)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        is_primary: isFirst,
-        ai_tags: [item.name, category],
-      });
-      refreshMedia(item.id);
-      showNotification('Foto anexada com sucesso!');
     });
   };
 

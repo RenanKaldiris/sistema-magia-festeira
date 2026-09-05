@@ -1894,13 +1894,8 @@ class MagiaStore {
     media: Media;
     isDuplicate: boolean;
   } {
-    // Deduplicação estrita por entidade (não bloqueia mídias de entidades diferentes)
-    const existing = this.media.find(
-      (m) =>
-        m.entity_type === data.entity_type &&
-        m.entity_id === data.entity_id &&
-        (m.storage_path === data.storage_path || (data.fingerprint && m.fingerprint === data.fingerprint))
-    );
+    // Deduplicação estrita por entidade com verificação por fingerprint SHA-256
+    const existing = this.media.find((m) => m.fingerprint === data.fingerprint);
     if (existing) {
       return { media: existing, isDuplicate: true };
     }

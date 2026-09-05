@@ -23,9 +23,9 @@ import { store } from '@/lib/store';
 import { Item } from '@/types/database';
 import { BatchActionBar } from '@/components/temas/BatchActionBar';
 import { DeleteConfirmationModal } from '@/components/temas/DeleteConfirmationModal';
-import { OrcamentoModal } from '@/components/temas/OrcamentoModal';
 import { ItemEditDrawer } from '@/components/temas/ItemEditDrawer';
-import { fileToDataUrl } from '@/lib/imageUtils';
+import { OrcamentoModal } from '@/components/temas/OrcamentoModal';
+import { fileToDataUrl, convertImageToWebP } from '@/lib/imageUtils';
 
 interface UploadedFileItem {
   id: string;
@@ -238,18 +238,21 @@ export function ItensTabContent() {
       setUploadedFiles((prev) => [...prev, newItem]);
 
       try {
+        const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(file, 0.70);
+        setUploadedFiles((prev) =>
+          prev.map((item) => (item.id === itemId ? { ...item, name: webpFile.name, previewUrl: webpDataUrl } : item))
+        );
+      } catch {
         const permanentUrl = await fileToDataUrl(file);
         if (permanentUrl) {
           setUploadedFiles((prev) =>
             prev.map((item) => (item.id === itemId ? { ...item, previewUrl: permanentUrl } : item))
           );
         }
-      } catch {
-        // Mantém instantPreview
       }
     });
 
-    showNotification(`${files.length} foto(s) carregada(s) com sucesso.`);
+    showNotification(`${files.length} foto(s) convertida(s) para .WEBP (70%) e carregada(s).`);
   };
 
   const handleAddDrive = (e: React.FormEvent) => {
@@ -294,7 +297,7 @@ export function ItensTabContent() {
         entity_id: created.id,
         storage_path: fileItem.previewUrl,
         original_name: fileItem.name,
-        mime_type: 'image/jpeg',
+        mime_type: 'image/webp',
         file_size: 350000,
         fingerprint: `sha256-item-${created.id.substring(0, 6)}-${idx}-${Date.now()}`,
         is_primary: idx === 0,

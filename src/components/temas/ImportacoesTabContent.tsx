@@ -21,7 +21,7 @@ import { store } from '@/lib/store';
 import { Import, ImportAsset, Theme } from '@/types/database';
 import { formatDateBR } from '@/lib/dateUtils';
 import { ThemeEditDrawer } from './ThemeEditDrawer';
-import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
+import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg, convertImageToWebP, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
 
 interface StagedFile {
   id: string;
@@ -97,32 +97,31 @@ export function ImportacoesTabContent() {
         },
       ]);
 
-      // 1. Converte HEIC/HEIF para JPEG (assegura renderização nativa de miniaturas em qualquer navegador)
-      const file = await convertHeicToJpeg(rawFile);
-      const instantPreview = URL.createObjectURL(file);
-
-      setStagedFiles((prev) =>
-        prev.map((item) =>
-          item.id === stageId ? { ...item, name: file.name, previewUrl: instantPreview } : item
-        )
-      );
-
-      // 2. Compressão assíncrona via Canvas para Base64 leve e persistente
+      // 1. Converte mandatória e automaticamente qualquer foto para .WEBP com 70% de qualidade
       try {
-        const permanentUrl = await fileToDataUrl(file);
-        if (permanentUrl) {
-          setStagedFiles((prev) =>
-            prev.map((item) =>
-              item.id === stageId ? { ...item, previewUrl: permanentUrl } : item
-            )
-          );
-        }
+        const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.70);
+        setStagedFiles((prev) =>
+          prev.map((item) =>
+            item.id === stageId
+              ? { ...item, name: webpFile.name, previewUrl: webpDataUrl, size: webpFile.size }
+              : item
+          )
+        );
       } catch (err) {
-        console.warn('Compressão via Canvas falhou para imagem em lote, mantendo preview:', err);
+        console.warn('Conversão WebP 70% falhou, usando fallback:', err);
+        const file = await convertHeicToJpeg(rawFile);
+        const permanentUrl = await fileToDataUrl(file);
+        setStagedFiles((prev) =>
+          prev.map((item) =>
+            item.id === stageId
+              ? { ...item, name: file.name, previewUrl: permanentUrl || URL.createObjectURL(file) }
+              : item
+          )
+        );
       }
     });
 
-    showNotification(`${fileList.length} foto(s) carregada(s) para visualização.`);
+    showNotification(`${fileList.length} foto(s) convertida(s) para .WEBP (70%) e carregada(s) para revisão.`);
   };
 
   const handleRemoveStagedFile = (id: string) => {

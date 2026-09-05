@@ -206,12 +206,15 @@ export const agentTools = {
       isPrimary: boolean;
       tags?: string[];
     }): Promise<ToolExecutionResult> => {
+      const webpName = args.originalName
+        ? (args.originalName.replace(/\.[^/.]+$/, '').trim() || 'foto') + '.webp'
+        : 'foto.webp';
       const result = store.addMediaToEntity({
         entity_type: 'theme',
         entity_id: args.themeId,
         storage_path: args.imageUrl,
-        original_name: args.originalName,
-        mime_type: 'image/jpeg',
+        original_name: webpName,
+        mime_type: 'image/webp',
         file_size: 750000,
         fingerprint: args.fingerprint,
         is_primary: args.isPrimary,
