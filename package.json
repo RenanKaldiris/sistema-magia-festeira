@@ -1,6 +1,6 @@
 {
   "name": "sistema-magia-festeira",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Sistema de gestão, orçamentos, estoque, agenda e catálogo da Magia Festeira.",
   "scripts": {
     "dev": "next dev",
