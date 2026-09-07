@@ -139,11 +139,11 @@ export default function CatalogoPage() {
           </div>
 
           {/* 3 Main Navigation Buttons (Todos os Produtos / Temas / Itens) */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2 max-w-md mx-auto">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto w-full">
             <button
               type="button"
               onClick={() => handleTabChange('all')}
-              className={`flex-1 min-w-[130px] px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer ${
+              className={`w-full h-12 flex items-center justify-center text-center px-4 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer ${
                 activeTab === 'all'
                   ? 'bg-rose-600 text-white shadow-md ring-2 ring-rose-300 dark:ring-rose-900'
                   : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -154,7 +154,7 @@ export default function CatalogoPage() {
             <button
               type="button"
               onClick={() => handleTabChange('themes')}
-              className={`flex-1 min-w-[130px] px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer ${
+              className={`w-full h-12 flex items-center justify-center text-center px-4 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer ${
                 activeTab === 'themes'
                   ? 'bg-rose-600 text-white shadow-md ring-2 ring-rose-300 dark:ring-rose-900'
                   : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -165,7 +165,7 @@ export default function CatalogoPage() {
             <button
               type="button"
               onClick={() => handleTabChange('items')}
-              className={`flex-1 min-w-[130px] px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer ${
+              className={`w-full h-12 flex items-center justify-center text-center px-4 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer ${
                 activeTab === 'items'
                   ? 'bg-rose-600 text-white shadow-md ring-2 ring-rose-300 dark:ring-rose-900'
                   : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'

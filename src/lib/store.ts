@@ -422,6 +422,81 @@ class MagiaStore {
       ai_tags: ['tardezinha', 'sunset', 'adulto'],
       created_at: '2026-09-01T10:00:00Z',
     },
+    {
+      id: '20000000-0000-0000-0000-000000000011',
+      tenant_id: DEFAULT_TENANT_ID,
+      entity_type: 'item',
+      entity_id: 'd0000000-0000-0000-0000-000000000001',
+      storage_path: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=800&auto=format&fit=crop&q=80',
+      original_name: 'comoda_fake_branca.jpg',
+      mime_type: 'image/jpeg',
+      file_size: 450000,
+      fingerprint: 'sha256-item-comoda-01',
+      sort_order: 1,
+      is_primary: true,
+      ai_tags: ['comoda', 'mobilia', 'branca'],
+      created_at: '2026-09-01T10:00:00Z',
+    },
+    {
+      id: '20000000-0000-0000-0000-000000000012',
+      tenant_id: DEFAULT_TENANT_ID,
+      entity_type: 'item',
+      entity_id: 'd0000000-0000-0000-0000-000000000002',
+      storage_path: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80',
+      original_name: 'display_vingadores.jpg',
+      mime_type: 'image/jpeg',
+      file_size: 520000,
+      fingerprint: 'sha256-item-vingadores-01',
+      sort_order: 1,
+      is_primary: true,
+      ai_tags: ['display', 'vingadores', 'chao'],
+      created_at: '2026-09-01T10:00:00Z',
+    },
+    {
+      id: '20000000-0000-0000-0000-000000000013',
+      tenant_id: DEFAULT_TENANT_ID,
+      entity_type: 'item',
+      entity_id: 'd0000000-0000-0000-0000-000000000003',
+      storage_path: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&auto=format&fit=crop&q=80',
+      original_name: 'painel_redondo_ripado.jpg',
+      mime_type: 'image/jpeg',
+      file_size: 610000,
+      fingerprint: 'sha256-item-painel-01',
+      sort_order: 1,
+      is_primary: true,
+      ai_tags: ['painel', 'ripado', 'madeira'],
+      created_at: '2026-09-01T10:00:00Z',
+    },
+    {
+      id: '20000000-0000-0000-0000-000000000014',
+      tenant_id: DEFAULT_TENANT_ID,
+      entity_type: 'item',
+      entity_id: 'd0000000-0000-0000-0000-000000000004',
+      storage_path: 'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=800&auto=format&fit=crop&q=80',
+      original_name: 'arco_baloes_organico.jpg',
+      mime_type: 'image/jpeg',
+      file_size: 580000,
+      fingerprint: 'sha256-item-baloes-01',
+      sort_order: 1,
+      is_primary: true,
+      ai_tags: ['arco', 'baloes', 'cenografia'],
+      created_at: '2026-09-01T10:00:00Z',
+    },
+    {
+      id: '20000000-0000-0000-0000-000000000015',
+      tenant_id: DEFAULT_TENANT_ID,
+      entity_type: 'item',
+      entity_id: 'd0000000-0000-0000-0000-000000000005',
+      storage_path: 'https://images.unsplash.com/photo-1588880331179-bc9b93a8cb5e?w=800&auto=format&fit=crop&q=80',
+      original_name: 'tapete_grama_sintetica.jpg',
+      mime_type: 'image/jpeg',
+      file_size: 490000,
+      fingerprint: 'sha256-item-tapete-01',
+      sort_order: 1,
+      is_primary: true,
+      ai_tags: ['tapete', 'grama', 'piso'],
+      created_at: '2026-09-01T10:00:00Z',
+    },
   ];
 
   private customers: Customer[] = [
@@ -866,14 +941,22 @@ class MagiaStore {
         }
       }
       if (parsed.themes && Array.isArray(parsed.themes)) {
-        this.themes = parsed.themes.map((t: Theme) => ({
+        this.themes = parsed.themes.map((t: any) => ({
           ...t,
           description: t.description?.trim() ? t.description : DEFAULT_THEME_DESCRIPTION,
+          base_price: Number(t.base_price || 0),
+          promotional_price: t.promotional_price !== null && t.promotional_price !== undefined ? Number(t.promotional_price) : null,
         }));
       }
       if (parsed.customers && Array.isArray(parsed.customers)) this.customers = parsed.customers;
       if (parsed.rentals && Array.isArray(parsed.rentals)) this.rentals = parsed.rentals;
-      if (parsed.items && Array.isArray(parsed.items)) this.items = parsed.items;
+      if (parsed.items && Array.isArray(parsed.items)) {
+        this.items = parsed.items.map((i: any) => ({
+          ...i,
+          unit_price: Number(i.unit_price || 0),
+          promotional_price: i.promotional_price !== null && i.promotional_price !== undefined ? Number(i.promotional_price) : null,
+        }));
+      }
       if (parsed.themeVariants && Array.isArray(parsed.themeVariants)) this.themeVariants = parsed.themeVariants;
       if (parsed.kits && Array.isArray(parsed.kits)) this.kits = parsed.kits;
       if (parsed.kitItems && Array.isArray(parsed.kitItems)) this.kitItems = parsed.kitItems;
@@ -923,7 +1006,18 @@ class MagiaStore {
         this.categories = categoriesRes.data;
       }
       if (themesRes.data) {
-        this.themes = themesRes.data;
+        const localThemePromoMap = new Map(this.themes.map((t) => [t.id, t.promotional_price]));
+        this.themes = themesRes.data.map((t: any) => {
+          const promo =
+            t.promotional_price !== null && t.promotional_price !== undefined
+              ? Number(t.promotional_price)
+              : (localThemePromoMap.get(t.id) ?? null);
+          return {
+            ...t,
+            base_price: Number(t.base_price || 0),
+            promotional_price: promo !== null && promo !== undefined ? Number(promo) : null,
+          };
+        });
       }
       if (customersRes.data) {
         this.customers = customersRes.data;
@@ -932,7 +1026,18 @@ class MagiaStore {
         this.rentals = rentalsRes.data;
       }
       if (itemsRes.data) {
-        this.items = itemsRes.data;
+        const localItemPromoMap = new Map(this.items.map((i) => [i.id, i.promotional_price]));
+        this.items = itemsRes.data.map((i: any) => {
+          const promo =
+            i.promotional_price !== null && i.promotional_price !== undefined
+              ? Number(i.promotional_price)
+              : (localItemPromoMap.get(i.id) ?? null);
+          return {
+            ...i,
+            unit_price: Number(i.unit_price || 0),
+            promotional_price: promo !== null && promo !== undefined ? Number(promo) : null,
+          };
+        });
       }
       if (variantsRes.data) {
         this.themeVariants = variantsRes.data;
@@ -1074,6 +1179,10 @@ class MagiaStore {
 
   public getItems() {
     return [...this.items];
+  }
+
+  public getKits(): Kit[] {
+    return [...this.kits];
   }
 
   public getCustomers() {
@@ -2136,6 +2245,7 @@ class MagiaStore {
       safeSupabaseOperation(supabase.from('media').delete().eq('id', id), 'Delete Media');
     }
     this.saveToLocalStorage();
+    this.notifyListeners();
     return true;
   }
 
@@ -2153,6 +2263,17 @@ class MagiaStore {
     });
     if (found) {
       this.saveToLocalStorage();
+      this.notifyListeners();
+      if (isSupabaseConfigured && supabase) {
+        safeSupabaseOperation(
+          supabase.from('media').update({ is_primary: false }).eq('entity_type', entityType).eq('entity_id', entityId),
+          'Reset Primary Media'
+        );
+        safeSupabaseOperation(
+          supabase.from('media').update({ is_primary: true }).eq('id', mediaId),
+          'Set Primary Media'
+        );
+      }
     }
     return found;
   }

@@ -41,12 +41,15 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
   const [activeImage, setActiveImage] = useState<string>(defaultImage);
   const [copied, setCopied] = useState(false);
 
-  // Sync activeImage if theme loads or changes
+  // Sync activeImage if theme loads or media updates
   useEffect(() => {
-    if (defaultImage && !activeImage) {
-      setActiveImage(defaultImage);
+    if (defaultImage) {
+      const belongsToTheme = theme?.media?.some((m) => m.storage_path === activeImage);
+      if (!activeImage || !belongsToTheme) {
+        setActiveImage(defaultImage);
+      }
     }
-  }, [defaultImage, activeImage]);
+  }, [defaultImage, theme?.media]);
 
   if (!theme || theme.status !== 'active') {
     return (

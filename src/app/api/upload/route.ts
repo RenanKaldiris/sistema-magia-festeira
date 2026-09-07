@@ -5,6 +5,7 @@ import path from 'path';
 // @ts-ignore
 import convert from 'heic-convert';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -15,8 +16,8 @@ export const runtime = 'nodejs';
  * - Rotação automática respeitando EXIF de câmeras de celular
  * - Redimensionamento inteligente (máx. 1600px de largura/altura)
  * - Compressão Sharp para .webp com quality: 70
- * - Salva em public/uploads/ (ou Supabase Storage se configurado)
- * - Retorna URL estática persistente de alta velocidade
+ * - Salva no Supabase Storage bucket 'photos' (persistente e de alta velocidade)
+ * - Retorna URL pública persistente do CDN Supabase
  */
 export async function POST(req: Request) {
   try {
@@ -91,25 +92,28 @@ export async function POST(req: Request) {
 
     let finalUrl = '';
 
-    // 1. Tentar upload no Supabase Storage se configurado
-    if (isSupabaseConfigured && supabase) {
+    // 1. Tentar upload no Supabase Storage via supabaseAdmin ou client
+    const storageClient = supabaseAdmin || supabase;
+    if (storageClient) {
       try {
         const bucket = 'photos';
-        const { data: uploadData, error: uploadErr } = await supabase.storage
+        const { data: uploadData, error: uploadErr } = await storageClient.storage
           .from(bucket)
           .upload(`uploads/${fileName}`, webpBuffer, {
             contentType: 'image/webp',
             cacheControl: '31536000',
-            upsert: false,
+            upsert: true,
           });
 
         if (!uploadErr && uploadData?.path) {
-          const { data: publicUrlData } = supabase.storage
+          const { data: publicUrlData } = storageClient.storage
             .from(bucket)
             .getPublicUrl(uploadData.path);
           if (publicUrlData?.publicUrl) {
             finalUrl = publicUrlData.publicUrl;
           }
+        } else if (uploadErr) {
+          console.warn('[upload] Erro Supabase storage:', uploadErr.message);
         }
       } catch (cloudErr) {
         console.warn('[upload] Supabase storage upload indisponível, usando fallback local:', cloudErr);

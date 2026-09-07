@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, ImageOff } from 'lucide-react';
 
 interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
@@ -27,9 +27,15 @@ export function OptimizedImage({
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
 
-  // Redefine o estado de carregamento quando a URL da imagem mudar
+  // Redefine o estado de carregamento quando a URL da imagem mudar e checa cache instantâneo
   useEffect(() => {
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setIsLoaded(true);
+      setHasError(false);
+      return;
+    }
     setIsLoaded(false);
     setHasError(false);
   }, [src]);
@@ -39,7 +45,7 @@ export function OptimizedImage({
     '4/3': 'aspect-[4/3]',
     '1/1': 'aspect-square',
     '16/9': 'aspect-video',
-    'auto': '',
+    'auto': 'w-full h-full min-h-[160px]',
   }[aspectRatio];
 
   const fitClass = objectFit === 'contain' ? 'object-contain' : 'object-cover';
@@ -74,6 +80,7 @@ export function OptimizedImage({
       )}
 
       <img
+        ref={imgRef}
         src={src}
         alt={alt}
         loading={priority ? 'eager' : 'lazy'}

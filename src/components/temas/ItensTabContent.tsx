@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import Link from 'next/link';
 import {
   Package2,
   Plus,
@@ -19,6 +20,9 @@ import {
   Layers,
   Edit3,
   Tag,
+  Package,
+  ExternalLink,
+  UploadCloud,
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Item } from '@/types/database';
@@ -61,6 +65,21 @@ export function ItensTabContent() {
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
   const [discountTargetItems, setDiscountTargetItems] = useState<Item[]>([]);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+
+  // Modais de Ação: Variação e Kit
+  const [selectedItemForVariant, setSelectedItemForVariant] = useState<Item | null>(null);
+  const [variantName, setVariantName] = useState('');
+  const [variantPrice, setVariantPrice] = useState<number>(0);
+  const [variantQty, setVariantQty] = useState<number>(1);
+  const [variantPhoto, setVariantPhoto] = useState<{ file?: File; previewUrl: string; name: string } | null>(null);
+  const variantFileInputRef = useRef<HTMLInputElement>(null);
+
+  const [selectedItemForKit, setSelectedItemForKit] = useState<Item | null>(null);
+  const [selectedKitId, setSelectedKitId] = useState<string>('');
+  const [kitItemQty, setKitItemQty] = useState<number>(1);
+  const [kitMode, setKitMode] = useState<'existing' | 'new'>('existing');
+  const [newKitName, setNewKitName] = useState('');
+  const [newKitPrice, setNewKitPrice] = useState<number>(0);
 
   // Form State for New Item
   const [code, setCode] = useState(`IT-00${items.length + 1}`);
@@ -249,6 +268,111 @@ export function ItensTabContent() {
     setItems(store.getItems());
     setIsDiscountModalOpen(false);
     showNotification(`Promoção removida de ${targetIds.length} item(ns).`);
+  };
+
+  const handleOpenItemVariant = (item: Item) => {
+    setSelectedItemForVariant(item);
+    setVariantName(`${item.name} - Variação`);
+    setVariantPrice(item.unit_price);
+    setVariantQty(1);
+    setVariantPhoto(null);
+  };
+
+  const handleCreateItemVariant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedItemForVariant || !variantName.trim()) return;
+
+    const codeSuffix = Math.floor(Math.random() * 90 + 10);
+    const newItem = store.createItem({
+      tenant_id: selectedItemForVariant.tenant_id,
+      code: `${selectedItemForVariant.code}-V${codeSuffix}`,
+      name: variantName.trim(),
+      category: selectedItemForVariant.category,
+      description: `Variação de ${selectedItemForVariant.name}: ${variantName.trim()}`,
+      quantity_total: Number(variantQty) || 1,
+      unit_price: Number(variantPrice) || selectedItemForVariant.unit_price,
+      status: 'active',
+    });
+
+    if (variantPhoto) {
+      if (variantPhoto.file) {
+        try {
+          const uploaded = await uploadImageToServer(variantPhoto.file);
+          store.addMediaToEntity({
+            entity_type: 'item',
+            entity_id: newItem.id,
+            storage_path: uploaded.url,
+            original_name: uploaded.fileName,
+            mime_type: 'image/webp',
+            file_size: uploaded.size,
+            fingerprint: `sha256-itemvar-${newItem.id.substring(0, 6)}-${Date.now()}`,
+            is_primary: true,
+            ai_tags: [newItem.name, selectedItemForVariant.name],
+          });
+        } catch {
+          store.addMediaToEntity({
+            entity_type: 'item',
+            entity_id: newItem.id,
+            storage_path: variantPhoto.previewUrl,
+            original_name: variantPhoto.name,
+            mime_type: 'image/webp',
+            file_size: 400000,
+            fingerprint: `sha256-itemvar-${newItem.id.substring(0, 6)}-${Date.now()}`,
+            is_primary: true,
+            ai_tags: [newItem.name, selectedItemForVariant.name],
+          });
+        }
+      }
+    }
+
+    setSelectedItemForVariant(null);
+    setVariantName('');
+    setVariantPhoto(null);
+    setItems(store.getItems());
+    showNotification(`Variação "${variantName}" criada com sucesso!`);
+  };
+
+  const handleOpenItemKit = (item: Item) => {
+    setSelectedItemForKit(item);
+    const existingKits = store.getKits();
+    setSelectedKitId(existingKits.length > 0 ? existingKits[0].id : '');
+    setKitItemQty(1);
+    setKitMode(existingKits.length > 0 ? 'existing' : 'new');
+    setNewKitName(`Kit ${item.name}`);
+    setNewKitPrice(item.unit_price * 2);
+  };
+
+  const handleSaveKitItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedItemForKit) return;
+
+    if (kitMode === 'existing') {
+      if (!selectedKitId) {
+        showNotification('Selecione um kit existente.');
+        return;
+      }
+      store.addItemToKit(selectedKitId, selectedItemForKit.id, Number(kitItemQty) || 1);
+      showNotification(`Item "${selectedItemForKit.name}" adicionado ao kit com sucesso!`);
+    } else {
+      if (!newKitName.trim()) {
+        showNotification('Informe o nome do novo kit.');
+        return;
+      }
+      const allThemes = store.getThemes();
+      const defaultThemeId = allThemes[0]?.id || 'e0000000-0000-0000-0000-000000000001';
+      const newKit = store.createKit(
+        defaultThemeId,
+        newKitName.trim(),
+        Number(newKitPrice) || selectedItemForKit.unit_price * 2,
+        `Kit contendo ${selectedItemForKit.name}`
+      );
+      store.addItemToKit(newKit.id, selectedItemForKit.id, Number(kitItemQty) || 1);
+      showNotification(`Novo kit "${newKit.name}" criado com sucesso!`);
+    }
+
+    setSelectedItemForKit(null);
+    setSelectedKitId('');
+    setNewKitName('');
   };
 
   // File Upload Handlers for New Item
@@ -565,6 +689,57 @@ export function ItensTabContent() {
                     )}
                   </div>
                 </div>
+
+                {/* Ações Rápidas Mobile */}
+                <div
+                  className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-1.5"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => handleOpenItemDiscount(item, e)}
+                    title="Aplicar/Gerenciar Promoção"
+                    className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                      item.promotional_price && item.promotional_price < item.unit_price
+                        ? 'bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <Tag className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenItemVariant(item)}
+                    title="Adicionar Variação"
+                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenItemKit(item)}
+                    title="Adicionar Kit"
+                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                  >
+                    <Package className="w-3.5 h-3.5" />
+                  </button>
+                  <Link
+                    href={`/catalogo?tab=items&search=${encodeURIComponent(item.code || item.name)}`}
+                    target="_blank"
+                    title="Ver no Catálogo"
+                    className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem(item)}
+                    title="Editar item"
+                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             );
           })
@@ -648,7 +823,7 @@ export function ItensTabContent() {
                 </div>
               </th>
 
-              <th className="py-3.5 px-4 text-right">Ação</th>
+              <th className="py-3.5 px-4 text-right">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
@@ -767,26 +942,64 @@ export function ItensTabContent() {
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
-                          onClick={(e) => handleOpenItemDiscount(item, e)}
-                          className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                            item.promotional_price
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenItemDiscount(item, e);
+                          }}
+                          className={`p-2 rounded-lg border transition-colors cursor-pointer ${
+                            item.promotional_price && item.promotional_price < item.unit_price
                               ? 'bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300'
                               : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
                           }`}
                           title="Aplicar/Gerenciar Promoção"
                         >
-                          <Tag className="w-4 h-4" />
+                          <Tag className="w-3.5 h-3.5" />
                         </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenItemVariant(item);
+                          }}
+                          title="Adicionar Variação"
+                          className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                        >
+                          <Layers className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenItemKit(item);
+                          }}
+                          title="Adicionar Kit"
+                          className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                        >
+                          <Package className="w-3.5 h-3.5" />
+                        </button>
+
+                        <Link
+                          href={`/catalogo?tab=items&search=${encodeURIComponent(item.code || item.name)}`}
+                          target="_blank"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Ver no Catálogo"
+                          className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </Link>
+
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingItem(item);
                           }}
-                          className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                          className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                           title="Editar item"
                         >
-                          <Edit3 className="w-4 h-4" />
+                          <Edit3 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -1113,6 +1326,300 @@ export function ItensTabContent() {
                   className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl font-bold shadow-xs transition-colors cursor-pointer"
                 >
                   Salvar Item
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Adicionar Variação para o Item */}
+      {selectedItemForVariant && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 max-h-[85dvh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Adicionar Variação
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {selectedItemForVariant.name} ({selectedItemForVariant.code})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedItemForVariant(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateItemVariant} className="space-y-4 text-xs sm:text-sm">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Nome da Variação *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={variantName}
+                  onChange={(e) => setVariantName(e.target.value)}
+                  placeholder="Ex: Cômoda Fake Rosa Claro, Display Hulk"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Preço Unitário (R$) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={variantPrice}
+                    onChange={(e) => setVariantPrice(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Estoque *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={variantQty}
+                    onChange={(e) => setVariantQty(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Upload de Foto da Variação */}
+              <div className="space-y-1.5">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300">
+                  Foto da Variação (Arquivo)
+                </label>
+                <input
+                  type="file"
+                  ref={variantFileInputRef}
+                  accept="image/*,.heic,.heif,.HEIC,.HEIF"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const rawFile = e.target.files?.[0];
+                    if (rawFile) {
+                      const initialPreview = URL.createObjectURL(rawFile);
+                      setVariantPhoto({
+                        file: rawFile,
+                        previewUrl: initialPreview,
+                        name: rawFile.name,
+                      });
+                      try {
+                        const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.70);
+                        setVariantPhoto({
+                          file: webpFile,
+                          previewUrl: webpDataUrl,
+                          name: webpFile.name,
+                        });
+                      } catch {
+                        // fallback
+                      }
+                    }
+                  }}
+                />
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => variantFileInputRef.current?.click()}
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <UploadCloud className="w-4 h-4 text-rose-500" />
+                    <span>{variantPhoto ? 'Trocar Foto' : 'Carregar Foto'}</span>
+                  </button>
+                  {variantPhoto && (
+                    <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700">
+                      <img
+                        src={variantPhoto.previewUrl}
+                        alt={variantPhoto.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setVariantPhoto(null)}
+                        className="absolute top-0.5 right-0.5 p-0.5 bg-black/70 text-white rounded hover:bg-rose-600 transition-colors cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setSelectedItemForVariant(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                >
+                  Salvar Variação
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Adicionar Item a um Kit */}
+      {selectedItemForKit && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 max-h-[85dvh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600">
+                  <Package className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Adicionar a Kit
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {selectedItemForKit.name} ({selectedItemForKit.code})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedItemForKit(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveKitItem} className="space-y-4 text-xs sm:text-sm">
+              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+                <button
+                  type="button"
+                  onClick={() => setKitMode('existing')}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    kitMode === 'existing'
+                      ? 'bg-white dark:bg-slate-900 text-rose-600 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  Kit Existente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setKitMode('new')}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    kitMode === 'new'
+                      ? 'bg-white dark:bg-slate-900 text-rose-600 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  Criar Novo Kit
+                </button>
+              </div>
+
+              {kitMode === 'existing' ? (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Selecionar Kit *
+                  </label>
+                  {store.getKits().length === 0 ? (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 p-3 rounded-xl border border-amber-200 dark:border-amber-800/60">
+                      Nenhum kit cadastrado ainda. Alterne para "Criar Novo Kit" acima.
+                    </p>
+                  ) : (
+                    <select
+                      required
+                      value={selectedKitId}
+                      onChange={(e) => setSelectedKitId(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                    >
+                      <option value="">Selecione um kit...</option>
+                      {store.getKits().map((k) => (
+                        <option key={k.id} value={k.id}>
+                          {k.name} - R$ {k.price.toFixed(2).replace('.', ',')}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Nome do Novo Kit *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newKitName}
+                      onChange={(e) => setNewKitName(e.target.value)}
+                      placeholder="Ex: Kit Cenografia Completo"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Preço do Kit (R$) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={newKitPrice}
+                      onChange={(e) => setNewKitPrice(Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Quantidade deste item no Kit *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={kitItemQty}
+                  onChange={(e) => setKitItemQty(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setSelectedItemForKit(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                >
+                  Salvar no Kit
                 </button>
               </div>
             </form>

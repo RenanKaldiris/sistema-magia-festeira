@@ -29,7 +29,14 @@ export function ApplyDiscountModal({
   onRemove,
 }: ApplyDiscountModalProps) {
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
-  const [discountValue, setDiscountValue] = useState<number>(20);
+  const [discountValueStr, setDiscountValueStr] = useState<string>('20');
+
+  const discountValue = useMemo(() => {
+    if (!discountValueStr || !discountValueStr.trim()) return 0;
+    const clean = discountValueStr.replace(',', '.');
+    const num = parseFloat(clean);
+    return isNaN(num) ? 0 : num;
+  }, [discountValueStr]);
 
   const hasAnyActivePromo = useMemo(() => {
     return items.some((i) => i.currentPromo !== null && i.currentPromo !== undefined);
@@ -114,7 +121,7 @@ export function ApplyDiscountModal({
                 type="button"
                 onClick={() => {
                   setDiscountType('percentage');
-                  if (discountValue > 100) setDiscountValue(20);
+                  if (discountValue > 100) setDiscountValueStr('20');
                 }}
                 className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   discountType === 'percentage'
@@ -148,15 +155,23 @@ export function ApplyDiscountModal({
             </label>
             <div className="relative">
               <input
-                type="number"
-                min="1"
-                max={discountType === 'percentage' ? 100 : 9999}
-                step={discountType === 'percentage' ? '1' : '0.50'}
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
                 required
-                value={discountValue}
-                onChange={(e) => setDiscountValue(Number(e.target.value))}
+                value={discountValueStr}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  let val = e.target.value;
+                  if (discountValueStr === '0' && val.length > 1 && !val.includes('.') && !val.includes(',')) {
+                    val = val.replace(/^0+/, '');
+                  }
+                  if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                    setDiscountValueStr(val);
+                  }
+                }}
                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 focus:outline-none"
-                placeholder={discountType === 'percentage' ? 'ex: 20' : 'ex: 25.00'}
+                placeholder={discountType === 'percentage' ? 'ex: 20 ou 39.48' : 'ex: 25.00'}
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">
                 {discountType === 'percentage' ? '%' : 'R$'}
@@ -170,7 +185,7 @@ export function ApplyDiscountModal({
                     <button
                       key={pct}
                       type="button"
-                      onClick={() => setDiscountValue(pct)}
+                      onClick={() => setDiscountValueStr(String(pct))}
                       className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                         discountValue === pct
                           ? 'bg-rose-600 text-white border-rose-600'
@@ -184,7 +199,7 @@ export function ApplyDiscountModal({
                     <button
                       key={val}
                       type="button"
-                      onClick={() => setDiscountValue(val)}
+                      onClick={() => setDiscountValueStr(String(val))}
                       className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                         discountValue === val
                           ? 'bg-rose-600 text-white border-rose-600'
