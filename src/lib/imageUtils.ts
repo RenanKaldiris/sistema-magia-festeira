@@ -32,6 +32,52 @@ export function isWebpFile(file: File | Blob, originalFileName?: string): boolea
 }
 
 /**
+ * Envia uma foto para a API /api/upload no backend, convertendo automaticamente
+ * com Sharp para .WEBP (70% qualidade) e salvando com alta performance sem sobrecarregar o LocalStorage.
+ */
+export async function uploadImageToServer(
+  file: File | Blob,
+  fileNameOverride?: string
+): Promise<{ url: string; fileName: string; size: number; originalSize: number }> {
+  const originalName = fileNameOverride || (file as File).name || 'foto.webp';
+
+  if (typeof window !== 'undefined') {
+    try {
+      const formData = new FormData();
+      formData.append('file', file, originalName);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          return {
+            url: data.url,
+            fileName: data.fileName || ensureWebpExtension(originalName),
+            size: data.size || 0,
+            originalSize: data.originalSize || file.size || 0,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('[uploadImageToServer] Falha no upload para /api/upload, usando fallback client:', e);
+    }
+  }
+
+  // Fallback seguro no cliente via canvas WebP
+  const converted = await convertImageToWebP(file);
+  return {
+    url: converted.dataUrl,
+    fileName: converted.file.name,
+    size: converted.newSize,
+    originalSize: converted.originalSize,
+  };
+}
+
+/**
  * Converte qualquer imagem (PNG, JPEG, HEIC, BMP, etc.) para formato .WEBP com 70% de qualidade
  */
 export async function convertImageToWebP(

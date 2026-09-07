@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   title: 'Sistema Magia Festeira - Catálogo & Gestão de Locação',
   description: 'Catálogo visual exclusivo de festas infantis, temas, kits e gestão de locações da Magia Festeira.',
   icons: {
-    icon: '/logo/logo-icon-dark.png',
-    shortcut: '/logo/logo-icon-dark.png',
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
     apple: '/logo/logo-icon-dark.png',
   },
 };

@@ -27,6 +27,9 @@ import {
   Star,
   Image as ImageIcon,
   X,
+  Eye,
+  EyeOff,
+  Tag,
 } from 'lucide-react';
 import { store, DEFAULT_THEME_DESCRIPTION } from '@/lib/store';
 import { Theme, EntityStatus } from '@/types/database';
@@ -36,7 +39,8 @@ import { DeleteConfirmationModal } from '@/components/temas/DeleteConfirmationMo
 import { OrcamentoModal } from '@/components/temas/OrcamentoModal';
 import { ItensTabContent } from '@/components/temas/ItensTabContent';
 import { ImportacoesTabContent } from '@/components/temas/ImportacoesTabContent';
-import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg, convertImageToWebP, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
+import { ApplyDiscountModal } from '@/components/temas/ApplyDiscountModal';
+import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg, convertImageToWebP, uploadImageToServer, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
 
 type TabType = 'temas' | 'itens' | 'importacoes';
 type SortField = 'name' | 'price' | 'status';
@@ -87,6 +91,11 @@ function TemasManagementContent() {
   // Bulk Selection State
   const [selectedThemeIds, setSelectedThemeIds] = useState<string[]>([]);
 
+  // Promoção e Visibilidade Global de Preços
+  const [showPrices, setShowPrices] = useState(true);
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+  const [discountTargetThemes, setDiscountTargetThemes] = useState<Theme[]>([]);
+
   // Modals & Drawers State
   const [editingTheme, setEditingTheme] = useState<Theme | null>(null);
   const [isNewThemeModalOpen, setIsNewThemeModalOpen] = useState(false);
@@ -128,14 +137,53 @@ function TemasManagementContent() {
 
   useEffect(() => {
     setThemes(store.getThemes());
+    setShowPrices(store.getShowPrices());
 
     // Inscrição reativa para atualizações instantâneas entre abas e mutações locais
     const unsubscribe = store.subscribe(() => {
       setThemes(store.getThemes());
+      setShowPrices(store.getShowPrices());
     });
 
     return () => unsubscribe();
   }, []);
+
+  const handleToggleShowPrices = () => {
+    const next = !showPrices;
+    store.setShowPrices(next);
+    setShowPrices(next);
+    showNotification(
+      next
+        ? 'Preços ativados no catálogo público (visíveis).'
+        : 'Preços ocultados no catálogo público (botão alterado para Consultar Disponibilidade).'
+    );
+  };
+
+  const handleOpenBatchDiscount = () => {
+    const targets = themes.filter((t) => selectedThemeIds.includes(t.id));
+    if (targets.length === 0) return;
+    setDiscountTargetThemes(targets);
+    setIsDiscountModalOpen(true);
+  };
+
+  const handleOpenSingleDiscount = (theme: Theme) => {
+    setDiscountTargetThemes([theme]);
+    setIsDiscountModalOpen(true);
+  };
+
+  const handleApplyDiscount = (type: 'percentage' | 'fixed', value: number) => {
+    const ids = discountTargetThemes.map((t) => t.id);
+    const count = store.applyDiscountToThemes(ids, type, value);
+    setThemes(store.getThemes());
+    showNotification(`Promoção aplicada a ${count} tema(s) com sucesso!`);
+  };
+
+  const handleRemoveDiscount = () => {
+    const ids = discountTargetThemes.map((t) => t.id);
+    const count = store.removeDiscountFromThemes(ids);
+    setThemes(store.getThemes());
+    showNotification(`Promoção removida de ${count} tema(s)!`);
+  };
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -253,23 +301,32 @@ function TemasManagementContent() {
         return prevName;
       });
 
-      // 1. Converte mandatória e automaticamente qualquer foto para .WEBP com 70% de qualidade
+      // 1. Converte e comprime obrigatoriamente para .WEBP (70%) no back-end via Sharp
       try {
-        const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.70);
+        const uploaded = await uploadImageToServer(rawFile);
         setUploadedFiles((prev) =>
           prev.map((item) =>
-            item.id === tempId ? { ...item, file: webpFile, previewUrl: webpDataUrl, name: webpFile.name } : item
+            item.id === tempId ? { ...item, previewUrl: uploaded.url, name: uploaded.fileName } : item
           )
         );
       } catch (err) {
-        console.warn('Erro na conversão WebP 70%, aplicando fallback:', err);
-        const file = await convertHeicToJpeg(rawFile);
-        const permanentDataUrl = await fileToDataUrl(file);
-        setUploadedFiles((prev) =>
-          prev.map((item) =>
-            item.id === tempId ? { ...item, file, previewUrl: permanentDataUrl || URL.createObjectURL(file), name: file.name } : item
-          )
-        );
+        console.warn('Erro no uploadImageToServer, aplicando fallback local:', err);
+        try {
+          const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.70);
+          setUploadedFiles((prev) =>
+            prev.map((item) =>
+              item.id === tempId ? { ...item, file: webpFile, previewUrl: webpDataUrl, name: webpFile.name } : item
+            )
+          );
+        } catch {
+          const file = await convertHeicToJpeg(rawFile);
+          const permanentDataUrl = await fileToDataUrl(file);
+          setUploadedFiles((prev) =>
+            prev.map((item) =>
+              item.id === tempId ? { ...item, file, previewUrl: permanentDataUrl || URL.createObjectURL(file), name: file.name } : item
+            )
+          );
+        }
       }
     });
   };
@@ -524,16 +581,42 @@ function TemasManagementContent() {
           </button>
         </div>
 
-        {activeTab === 'temas' && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Toggle Global de Visibilidade de Preços no Catálogo */}
           <button
             type="button"
-            onClick={() => setIsNewThemeModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs sm:text-sm font-bold shadow-xs transition-colors shrink-0 cursor-pointer"
+            onClick={handleToggleShowPrices}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all shadow-2xs cursor-pointer ${
+              showPrices
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100'
+                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 hover:bg-amber-100'
+            }`}
+            title="Determina se os valores monetários são exibidos no catálogo público"
           >
-            <Plus className="w-4 h-4" />
-            <span>Cadastrar Novo Tema</span>
+            {showPrices ? (
+              <>
+                <Eye className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Preços no Catálogo: Visíveis (ON)</span>
+              </>
+            ) : (
+              <>
+                <EyeOff className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span>Preços no Catálogo: Ocultos (OFF)</span>
+              </>
+            )}
           </button>
-        )}
+
+          {activeTab === 'temas' && (
+            <button
+              type="button"
+              onClick={() => setIsNewThemeModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs sm:text-sm font-bold shadow-xs transition-colors shrink-0 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Cadastrar Novo Tema</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Notification Toast */}
@@ -955,9 +1038,27 @@ function TemasManagementContent() {
                             </span>
                           </td>
 
-                          {/* Preço Base */}
-                          <td className="py-4 px-6 font-extrabold text-slate-900 dark:text-white">
-                            R$ {theme.base_price.toFixed(2).replace('.', ',')}
+                          {/* Preço Base & Promocional */}
+                          <td className="py-4 px-6">
+                            {theme.promotional_price && theme.promotional_price < theme.base_price ? (
+                              <div>
+                                <span className="line-through text-slate-400 text-xs block">
+                                  De R$ {theme.base_price.toFixed(2).replace('.', ',')}
+                                </span>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <span className="font-extrabold text-rose-600 dark:text-rose-400 text-sm">
+                                    Por R$ {theme.promotional_price.toFixed(2).replace('.', ',')}
+                                  </span>
+                                  <span className="px-1.5 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-[10px] font-extrabold uppercase">
+                                    Promoção
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="font-extrabold text-slate-900 dark:text-white">
+                                R$ {theme.base_price.toFixed(2).replace('.', ',')}
+                              </span>
+                            )}
                           </td>
 
                           {/* Status Operacional */}
@@ -990,6 +1091,22 @@ function TemasManagementContent() {
                           {/* Ações & Checkbox adjacente ao botão Ver no Catálogo */}
                           <td className="py-4 px-6 text-right">
                             <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenSingleDiscount(theme);
+                                }}
+                                title="Aplicar/Gerenciar Promoção"
+                                className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                                  theme.promotional_price && theme.promotional_price < theme.base_price
+                                    ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'
+                                    : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                                }`}
+                              >
+                                <Tag className="w-3.5 h-3.5" />
+                              </button>
+
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -1057,12 +1174,30 @@ function TemasManagementContent() {
       {/* TAB 3: HISTÓRICO E IMPORTAÇÕES */}
       {activeTab === 'importacoes' && <ImportacoesTabContent />}
 
-      {/* Floating Batch Action Bar com Gerar Orçamento */}
+      {/* Floating Batch Action Bar com Gerar Orçamento e Aplicar Promoção */}
       <BatchActionBar
         selectedCount={selectedThemeIds.length}
         onClearSelection={() => setSelectedThemeIds([])}
         onGenerateQuote={() => setIsOrcamentoOpen(true)}
         onDelete={() => setIsDeleteModalOpen(true)}
+        onApplyPromotion={handleOpenBatchDiscount}
+        itemTypeLabel={selectedThemeIds.length > 1 ? 'temas selecionados' : 'tema selecionado'}
+      />
+
+      {/* Modal de Promoção em Lote ou Individual */}
+      <ApplyDiscountModal
+        isOpen={isDiscountModalOpen}
+        onClose={() => setIsDiscountModalOpen(false)}
+        entityType="theme"
+        items={discountTargetThemes.map((t) => ({
+          id: t.id,
+          name: t.name,
+          code: t.code,
+          basePrice: t.base_price,
+          currentPromo: t.promotional_price,
+        }))}
+        onApply={handleApplyDiscount}
+        onRemove={handleRemoveDiscount}
       />
 
       {/* Orcamento Modal Expansivo */}

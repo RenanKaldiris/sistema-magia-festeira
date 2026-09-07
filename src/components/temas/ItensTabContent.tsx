@@ -18,6 +18,7 @@ import {
   Filter,
   Layers,
   Edit3,
+  Tag,
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Item } from '@/types/database';
@@ -25,7 +26,8 @@ import { BatchActionBar } from '@/components/temas/BatchActionBar';
 import { DeleteConfirmationModal } from '@/components/temas/DeleteConfirmationModal';
 import { ItemEditDrawer } from '@/components/temas/ItemEditDrawer';
 import { OrcamentoModal } from '@/components/temas/OrcamentoModal';
-import { fileToDataUrl, convertImageToWebP } from '@/lib/imageUtils';
+import { ApplyDiscountModal } from '@/components/temas/ApplyDiscountModal';
+import { fileToDataUrl, convertImageToWebP, uploadImageToServer } from '@/lib/imageUtils';
 
 interface UploadedFileItem {
   id: string;
@@ -56,6 +58,8 @@ export function ItensTabContent() {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isOrcamentoOpen, setIsOrcamentoOpen] = useState(false);
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+  const [discountTargetItems, setDiscountTargetItems] = useState<Item[]>([]);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
 
   // Form State for New Item
@@ -217,6 +221,36 @@ export function ItensTabContent() {
     showNotification(`${count} item(s) excluído(s) do acervo com sucesso.`);
   };
 
+  // Promotion / Discount Handlers
+  const handleOpenBatchDiscount = () => {
+    const targets = items.filter((i) => selectedItemIds.includes(i.id));
+    if (targets.length === 0) return;
+    setDiscountTargetItems(targets);
+    setIsDiscountModalOpen(true);
+  };
+
+  const handleOpenItemDiscount = (item: Item, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDiscountTargetItems([item]);
+    setIsDiscountModalOpen(true);
+  };
+
+  const handleApplyDiscount = (type: 'percentage' | 'fixed', value: number) => {
+    const targetIds = discountTargetItems.map((i) => i.id);
+    store.applyDiscountToItems(targetIds, type, value);
+    setItems(store.getItems());
+    setIsDiscountModalOpen(false);
+    showNotification(`Promoção aplicada a ${targetIds.length} item(ns) com sucesso!`);
+  };
+
+  const handleRemoveDiscount = () => {
+    const targetIds = discountTargetItems.map((i) => i.id);
+    store.removeDiscountFromItems(targetIds);
+    setItems(store.getItems());
+    setIsDiscountModalOpen(false);
+    showNotification(`Promoção removida de ${targetIds.length} item(ns).`);
+  };
+
   // File Upload Handlers for New Item
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
@@ -238,16 +272,23 @@ export function ItensTabContent() {
       setUploadedFiles((prev) => [...prev, newItem]);
 
       try {
-        const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(file, 0.70);
+        const uploaded = await uploadImageToServer(file);
         setUploadedFiles((prev) =>
-          prev.map((item) => (item.id === itemId ? { ...item, name: webpFile.name, previewUrl: webpDataUrl } : item))
+          prev.map((item) => (item.id === itemId ? { ...item, name: uploaded.fileName, previewUrl: uploaded.url } : item))
         );
       } catch {
-        const permanentUrl = await fileToDataUrl(file);
-        if (permanentUrl) {
+        try {
+          const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(file, 0.70);
           setUploadedFiles((prev) =>
-            prev.map((item) => (item.id === itemId ? { ...item, previewUrl: permanentUrl } : item))
+            prev.map((item) => (item.id === itemId ? { ...item, name: webpFile.name, previewUrl: webpDataUrl } : item))
           );
+        } catch {
+          const permanentUrl = await fileToDataUrl(file);
+          if (permanentUrl) {
+            setUploadedFiles((prev) =>
+              prev.map((item) => (item.id === itemId ? { ...item, previewUrl: permanentUrl } : item))
+            );
+          }
         }
       }
     });
@@ -508,9 +549,20 @@ export function ItensTabContent() {
                     <span className="text-slate-400 dark:text-slate-500 text-[10px] block">
                       Unitário
                     </span>
-                    <span className="font-extrabold text-slate-900 dark:text-white">
-                      R$ {item.unit_price.toFixed(2).replace('.', ',')}
-                    </span>
+                    {item.promotional_price ? (
+                      <div>
+                        <span className="text-[10px] line-through text-slate-400 block">
+                          De R$ {item.unit_price.toFixed(2).replace('.', ',')}
+                        </span>
+                        <span className="font-extrabold text-rose-600 dark:text-rose-400">
+                          Por R$ {item.promotional_price.toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="font-extrabold text-slate-900 dark:text-white">
+                        R$ {item.unit_price.toFixed(2).replace('.', ',')}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -676,8 +728,24 @@ export function ItensTabContent() {
                       </span>
                     </td>
 
-                    <td className="py-4 px-4 font-extrabold text-slate-900 dark:text-white">
-                      R$ {item.unit_price.toFixed(2).replace('.', ',')}
+                    <td className="py-4 px-4">
+                      {item.promotional_price ? (
+                        <div>
+                          <span className="text-[11px] line-through text-slate-400 block">
+                            De R$ {item.unit_price.toFixed(2).replace('.', ',')}
+                          </span>
+                          <span className="font-extrabold text-rose-600 dark:text-rose-400">
+                            Por R$ {item.promotional_price.toFixed(2).replace('.', ',')}
+                          </span>
+                          <span className="inline-block ml-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
+                            Promoção
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="font-extrabold text-slate-900 dark:text-white">
+                          R$ {item.unit_price.toFixed(2).replace('.', ',')}
+                        </span>
+                      )}
                     </td>
 
                     {/* Status Operacional */}
@@ -696,17 +764,31 @@ export function ItensTabContent() {
                     </td>
 
                     <td className="py-4 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingItem(item);
-                        }}
-                        className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-                        title="Editar item"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenItemDiscount(item, e)}
+                          className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                            item.promotional_price
+                              ? 'bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300'
+                              : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                          title="Aplicar/Gerenciar Promoção"
+                        >
+                          <Tag className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingItem(item);
+                          }}
+                          className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                          title="Editar item"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -719,9 +801,27 @@ export function ItensTabContent() {
       {/* Floating Batch Action Bar */}
       <BatchActionBar
         selectedCount={selectedItemIds.length}
+        itemTypeLabel="item(ns)"
         onClearSelection={() => setSelectedItemIds([])}
         onGenerateQuote={() => setIsOrcamentoOpen(true)}
+        onApplyPromotion={handleOpenBatchDiscount}
         onDelete={() => setIsDeleteModalOpen(true)}
+      />
+
+      {/* Modal de Promoção / Desconto em Lote ou Individual */}
+      <ApplyDiscountModal
+        isOpen={isDiscountModalOpen}
+        onClose={() => setIsDiscountModalOpen(false)}
+        entityType="item"
+        items={discountTargetItems.map((i) => ({
+          id: i.id,
+          name: i.name,
+          code: i.code,
+          basePrice: i.unit_price,
+          currentPromo: i.promotional_price,
+        }))}
+        onApply={handleApplyDiscount}
+        onRemove={handleRemoveDiscount}
       />
 
       {/* Orcamento Modal Expansivo para Itens */}

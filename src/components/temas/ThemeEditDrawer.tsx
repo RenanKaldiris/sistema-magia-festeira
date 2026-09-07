@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Theme, EntityStatus, Media } from '@/types/database';
 import { store, DEFAULT_THEME_DESCRIPTION } from '@/lib/store';
-import { fileToDataUrl, convertHeicToJpeg, convertImageToWebP, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
+import { fileToDataUrl, convertHeicToJpeg, convertImageToWebP, getFallbackImageDataUrl, isHeicFile, uploadImageToServer } from '@/lib/imageUtils';
 
 interface ThemeEditDrawerProps {
   theme: (Theme & { imageUrl?: string }) | null;
@@ -162,13 +162,13 @@ export function ThemeEditDrawer({
 
       // Converte mandatória e automaticamente qualquer foto para .WEBP com 70% de qualidade
       try {
-        const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.70);
+        const uploaded = await uploadImageToServer(rawFile);
         const webpMedia: Media = {
           ...tempMedia,
-          storage_path: webpDataUrl,
-          original_name: webpFile.name,
+          storage_path: uploaded.url,
+          original_name: uploaded.fileName,
           mime_type: 'image/webp',
-          file_size: webpFile.size,
+          file_size: uploaded.size,
         };
 
         setMediaList((prev) =>
@@ -178,29 +178,55 @@ export function ThemeEditDrawer({
         if (!isPreApproval) {
           store.addMediaToEntity({
             ...webpMedia,
-            storage_path: webpDataUrl,
-            original_name: webpFile.name,
+            storage_path: uploaded.url,
+            original_name: uploaded.fileName,
             mime_type: 'image/webp',
           });
           refreshMedia(theme.id);
         }
-        showNotification(`Foto "${webpFile.name}" convertida para .WEBP (70%) e vinculada ao tema.`);
+        showNotification(`Foto "${uploaded.fileName}" convertida para .WEBP (70%) e vinculada ao tema.`);
       } catch (err) {
-        console.warn('Erro ao converter para WebP, aplicando fallback:', err);
-        const file = await convertHeicToJpeg(rawFile);
-        const permanentUrl = await fileToDataUrl(file);
-        if (permanentUrl) {
+        console.warn('Erro ao usar uploadImageToServer, aplicando fallback local:', err);
+        try {
+          const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.70);
+          const webpMedia: Media = {
+            ...tempMedia,
+            storage_path: webpDataUrl,
+            original_name: webpFile.name,
+            mime_type: 'image/webp',
+            file_size: webpFile.size,
+          };
+
           setMediaList((prev) =>
-            prev.map((m) => (m.id === mediaId ? { ...m, storage_path: permanentUrl, mime_type: 'image/webp' } : m))
+            prev.map((m) => (m.id === mediaId ? webpMedia : m))
           );
+
           if (!isPreApproval) {
             store.addMediaToEntity({
-              ...tempMedia,
-              storage_path: permanentUrl,
-              original_name: file.name,
+              ...webpMedia,
+              storage_path: webpDataUrl,
+              original_name: webpFile.name,
               mime_type: 'image/webp',
             });
             refreshMedia(theme.id);
+          }
+          showNotification(`Foto "${webpFile.name}" convertida para .WEBP (70%) e vinculada ao tema.`);
+        } catch {
+          const file = await convertHeicToJpeg(rawFile);
+          const permanentUrl = await fileToDataUrl(file);
+          if (permanentUrl) {
+            setMediaList((prev) =>
+              prev.map((m) => (m.id === mediaId ? { ...m, storage_path: permanentUrl, mime_type: 'image/webp' } : m))
+            );
+            if (!isPreApproval) {
+              store.addMediaToEntity({
+                ...tempMedia,
+                storage_path: permanentUrl,
+                original_name: file.name,
+                mime_type: 'image/webp',
+              });
+              refreshMedia(theme.id);
+            }
           }
         }
       }

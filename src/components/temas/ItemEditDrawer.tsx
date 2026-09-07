@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Item, Media } from '@/types/database';
 import { store } from '@/lib/store';
-import { fileToDataUrl, convertImageToWebP, getFallbackImageDataUrl } from '@/lib/imageUtils';
+import { fileToDataUrl, convertImageToWebP, getFallbackImageDataUrl, uploadImageToServer } from '@/lib/imageUtils';
 
 interface ItemEditDrawerProps {
   item: Item | null;
@@ -97,35 +97,53 @@ export function ItemEditDrawer({
       const isFirst = mediaList.length === 0;
 
       try {
-        const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(file, 0.70);
+        const uploaded = await uploadImageToServer(file);
         store.addMediaToEntity({
           entity_type: 'item',
           entity_id: item.id,
-          storage_path: webpDataUrl,
-          original_name: webpFile.name,
+          storage_path: uploaded.url,
+          original_name: uploaded.fileName,
           mime_type: 'image/webp',
-          file_size: webpFile.size,
+          file_size: uploaded.size,
           fingerprint: `sha256-item-${item.id.substring(0, 6)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
           is_primary: isFirst,
           ai_tags: [item.name, category],
         });
         refreshMedia(item.id);
-        showNotification(`Foto "${webpFile.name}" convertida para .WEBP (70%) e anexada com sucesso!`);
-      } catch {
-        const permanent = await fileToDataUrl(file);
-        store.addMediaToEntity({
-          entity_type: 'item',
-          entity_id: item.id,
-          storage_path: permanent || instantPreview,
-          original_name: file.name,
-          mime_type: 'image/webp',
-          file_size: file.size,
-          fingerprint: `sha256-item-${item.id.substring(0, 6)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          is_primary: isFirst,
-          ai_tags: [item.name, category],
-        });
-        refreshMedia(item.id);
-        showNotification('Foto anexada com sucesso!');
+        showNotification(`Foto "${uploaded.fileName}" convertida para .WEBP (70%) e anexada com sucesso!`);
+      } catch (err) {
+        console.warn('Erro ao usar uploadImageToServer, aplicando fallback local:', err);
+        try {
+          const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(file, 0.70);
+          store.addMediaToEntity({
+            entity_type: 'item',
+            entity_id: item.id,
+            storage_path: webpDataUrl,
+            original_name: webpFile.name,
+            mime_type: 'image/webp',
+            file_size: webpFile.size,
+            fingerprint: `sha256-item-${item.id.substring(0, 6)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            is_primary: isFirst,
+            ai_tags: [item.name, category],
+          });
+          refreshMedia(item.id);
+          showNotification(`Foto "${webpFile.name}" convertida para .WEBP (70%) e anexada com sucesso!`);
+        } catch {
+          const permanent = await fileToDataUrl(file);
+          store.addMediaToEntity({
+            entity_type: 'item',
+            entity_id: item.id,
+            storage_path: permanent || instantPreview,
+            original_name: file.name,
+            mime_type: 'image/webp',
+            file_size: file.size,
+            fingerprint: `sha256-item-${item.id.substring(0, 6)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            is_primary: isFirst,
+            ai_tags: [item.name, category],
+          });
+          refreshMedia(item.id);
+          showNotification('Foto anexada com sucesso!');
+        }
       }
     });
   };

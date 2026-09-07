@@ -180,6 +180,78 @@ async function runAcceptanceTests() {
   assert(auditLogs.length > 0, `Total de registros de auditoria capturados: ${auditLogs.length}`);
   assert(aiRuns.length > 0, `Total de execuções de IA registradas: ${aiRuns.length}`);
 
+  // 23. Motor de Promoções em Lote para Temas (% e R$ fixo)
+  console.log('\n23. Motor de Promoções em Lote para Temas (% e R$ fixo)');
+  const baseThemePrice = vingadores.base_price;
+  store.applyDiscountToThemes([vingadores.id], 'percentage', 20);
+  const themeAfterPromo = store.getThemeById(vingadores.id);
+  const expectedPromo = Number((baseThemePrice * 0.8).toFixed(2));
+  assert(themeAfterPromo.promotional_price === expectedPromo, `Desconto percentual (20%) aplicado: De R$ ${themeAfterPromo.base_price} Por R$ ${themeAfterPromo.promotional_price}`);
+  store.applyDiscountToThemes([vingadores.id], 'fixed', 50);
+  const themeAfterFixed = store.getThemeById(vingadores.id);
+  const expectedFixed = Math.max(0, Number((baseThemePrice - 50).toFixed(2)));
+  assert(themeAfterFixed.promotional_price === expectedFixed, `Desconto fixo (R$ 50) aplicado: De R$ ${themeAfterFixed.base_price} Por R$ ${themeAfterFixed.promotional_price}`);
+
+  // 24. Motor de Promoções para Itens Avulsos
+  console.log('\n24. Motor de Promoções para Itens Avulsos');
+  const sampleItem = store.getItems()[0];
+  const originalItemPrice = sampleItem.unit_price;
+  store.applyDiscountToItems([sampleItem.id], 'percentage', 25);
+  const itemAfterPromo = store.getItems().find((i) => i.id === sampleItem.id);
+  const expectedItemPrice = Number((originalItemPrice * 0.75).toFixed(2));
+  assert(itemAfterPromo.promotional_price === expectedItemPrice, `Desconto em item aplicado: De R$ ${originalItemPrice} Por R$ ${itemAfterPromo.promotional_price}`);
+
+  // 25. Remoção de Descontos e Restauração de Preço
+  console.log('\n25. Remoção de Descontos e Restauração de Preço Base');
+  store.removeDiscountFromThemes([vingadores.id]);
+  const themeReset = store.getThemeById(vingadores.id);
+  assert(themeReset.promotional_price === null, 'Preço promocional do tema removido com sucesso');
+  store.removeDiscountFromItems([sampleItem.id]);
+  const itemReset = store.getItems().find((i) => i.id === sampleItem.id);
+  assert(itemReset.promotional_price === null, 'Preço promocional do item avulso removido com sucesso');
+
+  // 26. Controle Global de Visibilidade de Preços (show_prices)
+  console.log('\n26. Controle Global de Visibilidade de Preços (show_prices)');
+  store.setShowPrices(false);
+  assert(store.getShowPrices() === false, 'Preços desativados globalmente (show_prices = false)');
+  store.setShowPrices(true);
+  assert(store.getShowPrices() === true, 'Preços reativados globalmente (show_prices = true)');
+
+  // 27. Alternância Dinâmica de Fotos por Variável com Fallback
+  console.log('\n27. Alternância Dinâmica de Fotos por Variável com Fallback');
+  const defaultPhoto = vingadores.primary_media?.storage_path;
+  const varWithoutPhoto = { id: 'var-no-img', name: 'Baby' };
+  const photoFallback = varWithoutPhoto.image_url || defaultPhoto;
+  assert(photoFallback === defaultPhoto, 'Fallback imediato para foto original do tema quando a variável não possui foto');
+  const varWithPhoto = { id: 'var-with-img', name: 'Luxo', image_url: 'https://images.unsplash.com/custom-kit.webp' };
+  const photoCustom = varWithPhoto.image_url || defaultPhoto;
+  assert(photoCustom === 'https://images.unsplash.com/custom-kit.webp', 'Foto dedicada da variável exibida imediatamente ao ser clicada');
+
+  // 28. Otimização de Imagens no Servidor (Sharp WebP 70%)
+  console.log('\n28. Pipeline de Otimização de Imagens no Servidor (Sharp WebP 70%)');
+  try {
+    const sharpModule = await import('sharp');
+    const sharp = sharpModule.default;
+    const testBuffer = await sharp({
+      create: {
+        width: 1920,
+        height: 1080,
+        channels: 4,
+        background: { r: 230, g: 50, b: 80, alpha: 1 },
+      },
+    })
+      .resize({ width: 1600, withoutEnlargement: true })
+      .webp({ quality: 70 })
+      .toBuffer();
+
+    const meta = await sharp(testBuffer).metadata();
+    assert(meta.format === 'webp', `Buffer de imagem codificado em formato WebP: ${meta.format}`);
+    assert(meta.width === 1600, `Imagem redimensionada para largura máxima de 1600px: ${meta.width}px`);
+  } catch (err) {
+    console.error('Erro no teste Sharp:', err);
+    assert(false, 'Falha ao processar imagem com Sharp');
+  }
+
   console.log('\n=============================================================');
   console.log(`📊 RESULTADO FINAL: ${passed} PASSOU / ${failed} FALHOU`);
   console.log('=============================================================\n');

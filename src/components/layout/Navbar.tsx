@@ -19,17 +19,17 @@ export function Navbar() {
             <Image
               src="/logo/logo-dark.png"
               alt="Magia Festeira Decorações"
-              width={160}
-              height={44}
-              className="h-10 sm:h-11 w-auto object-contain block dark:hidden group-hover:opacity-90 transition-opacity"
+              width={220}
+              height={88}
+              className="h-10 sm:h-12 w-auto object-contain block dark:hidden group-hover:opacity-90 transition-opacity"
               priority
             />
             <Image
               src="/logo/logo-light.png"
               alt="Magia Festeira Decorações"
-              width={160}
-              height={44}
-              className="h-10 sm:h-11 w-auto object-contain hidden dark:block group-hover:opacity-90 transition-opacity"
+              width={220}
+              height={88}
+              className="h-10 sm:h-12 w-auto object-contain hidden dark:block group-hover:opacity-90 transition-opacity"
               priority
             />
           </div>

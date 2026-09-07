@@ -22,6 +22,7 @@ export interface Tenant {
   contact_phone?: string | null;
   contact_email?: string | null;
   status: EntityStatus;
+  show_prices?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -85,6 +86,7 @@ export interface Theme {
   characters: string[];
   piece_count: number;
   base_price: number;
+  promotional_price?: number | null;
   description?: string | null;
   notes?: string | null;
   status: EntityStatus;
@@ -100,6 +102,7 @@ export interface ThemeVariant {
   theme_id: string;
   name: string; // Vingadores Baby, Vingadores Clássico
   description?: string | null;
+  image_url?: string | null;
   ai_confidence?: number | null;
   active: boolean;
   created_at: string;
@@ -110,9 +113,11 @@ export interface ThemeVariant {
 export interface Kit {
   id: string;
   theme_id: string;
-  name: string; // Bronze, Prata, Ouro
+  name: string; // Bronze, Prata, Ouro / Kit Pocket, Kit Pegue e Monte
   description?: string | null;
   price: number;
+  promotional_price?: number | null;
+  image_url?: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -129,6 +134,7 @@ export interface Item {
   quantity_total: number;
   quantity_available: number;
   unit_price: number;
+  promotional_price?: number | null;
   status?: 'active' | 'inactive';
   created_at: string;
   updated_at: string;

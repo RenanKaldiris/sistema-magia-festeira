@@ -82,6 +82,8 @@ async function safeSupabaseOperation(op: PromiseLike<any>, label: string) {
 const DEFAULT_TENANT_ID = 'a0000000-0000-0000-0000-000000000001';
 
 class MagiaStore {
+  private show_prices: boolean = true;
+
   private tenants: Tenant[] = [
     {
       id: DEFAULT_TENANT_ID,
@@ -91,6 +93,7 @@ class MagiaStore {
       contact_phone: '(11) 99999-8888',
       contact_email: 'contato@magiafesteira.com.br',
       status: 'active',
+      show_prices: true,
       created_at: '2026-09-01T10:00:00Z',
       updated_at: '2026-09-01T10:00:00Z',
     },
@@ -804,6 +807,7 @@ class MagiaStore {
         imports: this.imports,
         importAssets: trimmedImportAssets,
         auditLogs: trimmedAuditLogs,
+        show_prices: this.show_prices,
       };
 
       try {
@@ -824,6 +828,7 @@ class MagiaStore {
           imports: this.imports.slice(-10),
           importAssets: this.importAssets.slice(-10),
           auditLogs: [],
+          show_prices: this.show_prices,
         };
         try {
           localStorage.setItem('magia_festeira_local_store', JSON.stringify(minimalState));
@@ -854,6 +859,12 @@ class MagiaStore {
       const raw = localStorage.getItem('magia_festeira_local_store');
       if (!raw) return;
       const parsed = JSON.parse(raw);
+      if (parsed.show_prices !== undefined) {
+        this.show_prices = Boolean(parsed.show_prices);
+        if (this.tenants[0]) {
+          this.tenants[0].show_prices = this.show_prices;
+        }
+      }
       if (parsed.themes && Array.isArray(parsed.themes)) {
         this.themes = parsed.themes.map((t: Theme) => ({
           ...t,
@@ -958,7 +969,20 @@ class MagiaStore {
   // ============================================================================
 
   public getTenant() {
-    return this.tenants[0];
+    return { ...this.tenants[0], show_prices: this.show_prices };
+  }
+
+  public getShowPrices(): boolean {
+    return this.show_prices;
+  }
+
+  public setShowPrices(show: boolean): void {
+    this.show_prices = Boolean(show);
+    if (this.tenants[0]) {
+      this.tenants[0].show_prices = this.show_prices;
+    }
+    this.logAudit('TOGGLE_SHOW_PRICES', 'tenant', this.tenants[0]?.id, { show_prices: this.show_prices });
+    this.saveToLocalStorage();
   }
 
   public getCategories() {
@@ -1650,6 +1674,69 @@ class MagiaStore {
     return updated;
   }
 
+  public applyDiscountToThemes(
+    themeIds: string[],
+    type: 'percentage' | 'fixed',
+    value: number
+  ): number {
+    let count = 0;
+    const now = new Date().toISOString();
+    const updatedThemes: { id: string; promotional_price: number }[] = [];
+
+    for (const t of this.themes) {
+      if (themeIds.includes(t.id)) {
+        let promo: number;
+        if (type === 'percentage') {
+          const discount = t.base_price * (Math.max(0, Math.min(100, value)) / 100);
+          promo = Math.max(0, Math.round((t.base_price - discount) * 100) / 100);
+        } else {
+          promo = Math.max(0, Math.round((t.base_price - Math.max(0, value)) * 100) / 100);
+        }
+        t.promotional_price = promo;
+        t.updated_at = now;
+        updatedThemes.push({ id: t.id, promotional_price: promo });
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      this.logAudit('APPLY_DISCOUNT_THEMES', 'themes', undefined, { count, themeIds, type, value });
+      if (isSupabaseConfigured && supabase) {
+        for (const item of updatedThemes) {
+          safeSupabaseOperation(
+            supabase.from('themes').update({ promotional_price: item.promotional_price, updated_at: now }).eq('id', item.id),
+            'Update Theme Promo'
+          );
+        }
+      }
+      this.saveToLocalStorage();
+    }
+    return count;
+  }
+
+  public removeDiscountFromThemes(themeIds: string[]): number {
+    let count = 0;
+    const now = new Date().toISOString();
+    for (const t of this.themes) {
+      if (themeIds.includes(t.id) && t.promotional_price !== null && t.promotional_price !== undefined) {
+        t.promotional_price = null;
+        t.updated_at = now;
+        count++;
+      }
+    }
+    if (count > 0) {
+      this.logAudit('REMOVE_DISCOUNT_THEMES', 'themes', undefined, { count, themeIds });
+      if (isSupabaseConfigured && supabase) {
+        safeSupabaseOperation(
+          supabase.from('themes').update({ promotional_price: null, updated_at: now }).in('id', themeIds),
+          'Remove Themes Promo'
+        );
+      }
+      this.saveToLocalStorage();
+    }
+    return count;
+  }
+
   public deleteTheme(id: string): boolean {
     const theme = this.themes.find((t) => t.id === id);
     if (!theme) return false;
@@ -1866,6 +1953,7 @@ class MagiaStore {
           quantity_total: updated.quantity_total,
           quantity_available: updated.quantity_available,
           unit_price: updated.unit_price,
+          promotional_price: updated.promotional_price !== undefined ? updated.promotional_price : null,
           status: updated.status,
         }).eq('id', id),
         'Update Item'
@@ -1874,6 +1962,69 @@ class MagiaStore {
 
     this.saveToLocalStorage();
     return updated;
+  }
+
+  public applyDiscountToItems(
+    itemIds: string[],
+    type: 'percentage' | 'fixed',
+    value: number
+  ): number {
+    let count = 0;
+    const now = new Date().toISOString();
+    const updatedItems: { id: string; promotional_price: number }[] = [];
+
+    for (const item of this.items) {
+      if (itemIds.includes(item.id)) {
+        let promo: number;
+        if (type === 'percentage') {
+          const discount = item.unit_price * (Math.max(0, Math.min(100, value)) / 100);
+          promo = Math.max(0, Math.round((item.unit_price - discount) * 100) / 100);
+        } else {
+          promo = Math.max(0, Math.round((item.unit_price - Math.max(0, value)) * 100) / 100);
+        }
+        item.promotional_price = promo;
+        item.updated_at = now;
+        updatedItems.push({ id: item.id, promotional_price: promo });
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      this.logAudit('APPLY_DISCOUNT_ITEMS', 'items', undefined, { count, itemIds, type, value });
+      if (isSupabaseConfigured && supabase) {
+        for (const item of updatedItems) {
+          safeSupabaseOperation(
+            supabase.from('items').update({ promotional_price: item.promotional_price, updated_at: now }).eq('id', item.id),
+            'Update Item Promo'
+          );
+        }
+      }
+      this.saveToLocalStorage();
+    }
+    return count;
+  }
+
+  public removeDiscountFromItems(itemIds: string[]): number {
+    let count = 0;
+    const now = new Date().toISOString();
+    for (const item of this.items) {
+      if (itemIds.includes(item.id) && item.promotional_price !== null && item.promotional_price !== undefined) {
+        item.promotional_price = null;
+        item.updated_at = now;
+        count++;
+      }
+    }
+    if (count > 0) {
+      this.logAudit('REMOVE_DISCOUNT_ITEMS', 'items', undefined, { count, itemIds });
+      if (isSupabaseConfigured && supabase) {
+        safeSupabaseOperation(
+          supabase.from('items').update({ promotional_price: null, updated_at: now }).in('id', itemIds),
+          'Remove Items Promo'
+        );
+      }
+      this.saveToLocalStorage();
+    }
+    return count;
   }
 
   public deleteItem(id: string): boolean {
