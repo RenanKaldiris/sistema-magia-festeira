@@ -48,7 +48,9 @@ export function OptimizedImage({
     'auto': '',
   }[aspectRatio];
 
-  const fitClass = objectFit === 'contain' ? 'object-contain' : 'object-cover';
+  const isContain = objectFit === 'contain' || className.includes('object-contain');
+  const fitClass = isContain ? 'object-contain' : 'object-cover';
+  const cleanClassName = className.replace(/object-(contain|cover)/g, '').trim();
 
   if (!src || hasError) {
     return (
@@ -93,7 +95,7 @@ export function OptimizedImage({
         }}
         className={`w-full ${aspectRatio === 'auto' ? 'h-auto' : 'h-full'} ${fitClass} transition-opacity duration-300 relative z-10 ${
           isLoaded ? 'opacity-100' : 'opacity-0'
-        } ${className}`}
+        } ${cleanClassName}`}
         {...props}
       />
     </div>

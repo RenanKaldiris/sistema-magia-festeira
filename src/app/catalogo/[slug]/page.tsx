@@ -12,6 +12,8 @@ import {
   Package,
   Layers,
   ShieldAlert,
+  Maximize2,
+  X,
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { store, DEFAULT_THEME_DESCRIPTION } from '@/lib/store';
@@ -23,6 +25,15 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
   const [theme, setTheme] = useState(store.getThemeBySlug(resolvedParams.slug));
   const [showPrices, setShowPrices] = useState<boolean>(store.getShowPrices());
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsLightboxOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     const sync = () => {
@@ -242,45 +253,68 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-1 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
-          {/* Left Column: Image Showcase & Gallery (7 cols) */}
-          <div className="lg:col-span-7 space-y-4">
-            {/* Main Photo Showcase - Formato Retrato / Proporção Natural da Foto */}
-            <div className="w-full rounded-3xl overflow-hidden bg-slate-100/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-sm relative group flex items-center justify-center aspect-[3/4] max-h-[640px]">
-              {activeImage ? (
-                <OptimizedImage
-                  src={activeImage}
-                  alt={theme.name}
-                  aspectRatio="auto"
-                  priority
-                  className="w-full h-full object-contain rounded-3xl mx-auto transition-all duration-300"
-                  containerClassName="w-full h-full flex items-center justify-center rounded-3xl bg-transparent"
-                />
-              ) : (
-                <div className="py-24 text-center text-slate-400 dark:text-slate-500">
-                  <Sparkles className="w-12 h-12 mx-auto mb-2 stroke-1 text-slate-500" />
-                  <span className="text-sm font-medium">Sem imagem cadastrada</span>
-                </div>
-              )}
-              <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-10">
-                <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur text-white text-xs font-bold">
-                  {theme.code}
-                </span>
-                {theme.category && (
-                  <span className="px-3 py-1 rounded-full bg-rose-600/90 backdrop-blur text-white text-xs font-semibold">
-                    {theme.category.name}
-                  </span>
+          {/* Left Column: Image Showcase & Gallery (6 cols) */}
+          <div className="lg:col-span-6 space-y-4">
+            {/* Main Photo Showcase - Formato Retrato / Proporção Natural da Foto Original */}
+            <div className="w-full flex justify-center">
+              <div
+                className="relative w-fit max-w-full rounded-3xl overflow-hidden bg-slate-900/5 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 shadow-md group transition-all duration-300 flex items-center justify-center cursor-pointer"
+                onClick={() => activeImage && setIsLightboxOpen(true)}
+                title="Clique para ver foto ampliada"
+              >
+                {activeImage ? (
+                  <div className="relative flex items-center justify-center">
+                    {/* Fundo ambiente sutil para preencher suavemente caso a imagem tenha proporções especiais */}
+                    <img
+                      src={activeImage}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-20 dark:opacity-35 scale-110 pointer-events-none select-none"
+                    />
+                    {/* Foto principal inteira sem corte, ajustada na proporção original retrato */}
+                    <img
+                      src={activeImage}
+                      alt={theme.name}
+                      className="relative z-10 w-auto h-auto max-h-[560px] sm:max-h-[660px] max-w-full object-contain rounded-3xl block mx-auto transition-transform duration-300 group-hover:scale-[1.01]"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-[300px] sm:w-[420px] aspect-[3/4] flex flex-col items-center justify-center text-center text-slate-400 dark:text-slate-500">
+                    <Sparkles className="w-12 h-12 mb-2 stroke-1 text-slate-500" />
+                    <span className="text-sm font-medium">Sem imagem cadastrada</span>
+                  </div>
                 )}
-                {hasPromo && (
-                  <span className="px-2.5 py-1 rounded-full bg-rose-600 text-white text-xs font-extrabold uppercase shadow-sm">
-                    Promoção
+
+                {/* Badges de Código e Categoria */}
+                <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-20 pointer-events-none">
+                  <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur text-white text-xs font-bold shadow-xs">
+                    {theme.code}
                   </span>
+                  {theme.category && (
+                    <span className="px-3 py-1 rounded-full bg-rose-600/90 backdrop-blur text-white text-xs font-semibold shadow-xs">
+                      {theme.category.name}
+                    </span>
+                  )}
+                  {hasPromo && (
+                    <span className="px-2.5 py-1 rounded-full bg-rose-600 text-white text-xs font-extrabold uppercase shadow-sm">
+                      Promoção
+                    </span>
+                  )}
+                </div>
+
+                {/* Botão de Zoom / Ampliar */}
+                {activeImage && (
+                  <div className="absolute bottom-4 right-4 z-20 opacity-90 group-hover:opacity-100 transition-opacity bg-slate-900/70 hover:bg-slate-900 backdrop-blur text-white px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md">
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    <span className="text-[11px] font-medium hidden sm:inline">Ampliar Foto</span>
+                  </div>
                 )}
               </div>
             </div>
 
             {/* Thumbnail Strip positioned below main photo - Sincronizado com Versão/Kit Selecionado */}
             {currentPhotos && currentPhotos.length > 0 && (
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none pt-1">
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none pt-1 justify-center sm:justify-start max-w-full">
                 {currentPhotos.map((img) => (
                   <button
                     key={img.id}
@@ -342,8 +376,8 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
             )}
           </div>
 
-          {/* Right Column: Information, Kits & WhatsApp CTA (5 cols) */}
-          <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
+          {/* Right Column: Information, Kits & WhatsApp CTA (6 cols) */}
+          <div className="lg:col-span-6 flex flex-col justify-between space-y-6">
             <div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 {theme.name}
@@ -649,6 +683,37 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
           <span>{showPrices ? 'Falar no WhatsApp' : 'Consultar'}</span>
         </a>
       </div>
+
+      {/* Lightbox Modal para visualização da foto na proporção 100% original */}
+      {isLightboxOpen && activeImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200 cursor-zoom-out"
+          onClick={() => setIsLightboxOpen(false)}
+        >
+          <button
+            onClick={() => setIsLightboxOpen(false)}
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition cursor-pointer z-50"
+            title="Fechar (Esc)"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          <div
+            className="relative max-w-[95vw] max-h-[88vh] flex items-center justify-center cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={activeImage}
+              alt={theme.name}
+              className="max-w-full max-h-[85vh] w-auto h-auto object-contain rounded-2xl shadow-2xl"
+            />
+          </div>
+
+          <div className="mt-3 text-center text-white/80 text-xs sm:text-sm font-medium">
+            <span>{theme.name}</span> • <span className="text-white/50">{theme.code}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
