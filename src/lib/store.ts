@@ -24,6 +24,9 @@ import {
   AuditLog,
   ThemeWithDetails,
   RentalWithDetails,
+  Orcamento,
+  OrcamentoItemData,
+  OrcamentoStatus,
 } from '@/types/database';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 
@@ -678,6 +681,95 @@ class MagiaStore {
     },
   ];
 
+  private orcamentos: Orcamento[] = [
+    {
+      id: 'orc-00000000-0000-0000-0000-000000000001',
+      tenant_id: DEFAULT_TENANT_ID,
+      code: 'ORC-2026-001',
+      customer_name: 'Juliana Mendes',
+      customer_phone: '(11) 98765-4321',
+      customer_email: 'juliana.mendes@email.com',
+      event_date: '2026-10-15',
+      event_location: 'Espaço Encantado, São Paulo - SP',
+      items: [
+        {
+          id: 'item-orc-1',
+          item_type: 'theme',
+          entity_id: 'e0000000-0000-0000-0000-000000000001',
+          title: 'Decoração Vingadores Completa',
+          description: 'Painel redondo, cilindros P, M, G, boleiras e displays dos heróis',
+          quantity: 1,
+          unit_price: 180.0,
+          discount: 0,
+          total: 180.0,
+        },
+        {
+          id: 'item-orc-2',
+          item_type: 'item',
+          entity_id: 'd0000000-0000-0000-0000-000000000001',
+          title: 'Cômoda Fake Branca',
+          description: 'MDF laqueado branco para suporte de lembrancinhas',
+          quantity: 1,
+          unit_price: 45.0,
+          discount: 0,
+          total: 45.0,
+        },
+      ],
+      subtotal: 225.0,
+      discount: 25.0,
+      shipping_fee: 50.0,
+      total: 250.0,
+      status: 'aprovado',
+      valid_until: '2026-09-30',
+      notes: 'Montagem às 10h e desmontagem às 19h no mesmo dia.',
+      created_at: '2026-09-02T14:00:00Z',
+      updated_at: '2026-09-02T14:00:00Z',
+    },
+    {
+      id: 'orc-00000000-0000-0000-0000-000000000002',
+      tenant_id: DEFAULT_TENANT_ID,
+      code: 'ORC-2026-002',
+      customer_name: 'Ricardo Oliveira',
+      customer_phone: '(11) 97123-9988',
+      customer_email: 'ricardo.oli@gmail.com',
+      event_date: '2026-11-08',
+      event_location: 'Salão de Festas Condomínio Jardins',
+      items: [
+        {
+          id: 'item-orc-3',
+          item_type: 'theme',
+          entity_id: 'e0000000-0000-0000-0000-000000000002',
+          title: 'Tema Minha Primeira Volta ao Sol',
+          description: 'Kit completo com painel e cilindros temáticos',
+          quantity: 1,
+          unit_price: 190.0,
+          discount: 0,
+          total: 190.0,
+        },
+        {
+          id: 'item-orc-4',
+          item_type: 'item',
+          entity_id: 'd0000000-0000-0000-0000-000000000005',
+          title: 'Tapete Grama Sintética 3x2m',
+          description: 'Tapete verde de alta densidade',
+          quantity: 1,
+          unit_price: 35.0,
+          discount: 0,
+          total: 35.0,
+        },
+      ],
+      subtotal: 225.0,
+      discount: 0,
+      shipping_fee: 40.0,
+      total: 265.0,
+      status: 'pendente',
+      valid_until: '2026-09-25',
+      notes: 'Cliente em fase de definição do horário do buffet.',
+      created_at: '2026-09-05T11:30:00Z',
+      updated_at: '2026-09-05T11:30:00Z',
+    },
+  ];
+
   private auditLogs: AuditLog[] = [
     {
       id: 'a1000000-0000-0000-0000-000000000001',
@@ -883,6 +975,8 @@ class MagiaStore {
         kits: this.kits,
         kitItems: this.kitItems,
         payments: this.payments,
+        categories: this.categories,
+        orcamentos: this.orcamentos,
         media: cleanMedia,
         imports: this.imports,
         importAssets: trimmedImportAssets,
@@ -903,6 +997,8 @@ class MagiaStore {
           kits: this.kits,
           kitItems: this.kitItems,
           payments: this.payments,
+          categories: this.categories,
+          orcamentos: this.orcamentos,
           media: cleanMedia,
           imports: this.imports.slice(-10),
           importAssets: this.importAssets.slice(-10),
@@ -943,6 +1039,12 @@ class MagiaStore {
         if (this.tenants[0]) {
           this.tenants[0].show_prices = this.show_prices;
         }
+      }
+      if (parsed.categories && Array.isArray(parsed.categories)) {
+        this.categories = parsed.categories;
+      }
+      if (parsed.orcamentos && Array.isArray(parsed.orcamentos)) {
+        this.orcamentos = parsed.orcamentos;
       }
       if (parsed.themes && Array.isArray(parsed.themes)) {
         this.themes = parsed.themes.map((t: any) => ({
@@ -1100,6 +1202,79 @@ class MagiaStore {
 
   public getCategories() {
     return [...this.categories].sort((a, b) => a.sort_order - b.sort_order);
+  }
+
+  public createCategory(name: string, description?: string): Category {
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const newCategory: Category = {
+      id: generateUUID(),
+      tenant_id: DEFAULT_TENANT_ID,
+      name: name.trim(),
+      slug: slug || `categoria-${Date.now()}`,
+      description: description?.trim() || null,
+      sort_order: this.categories.length + 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    this.categories.push(newCategory);
+    this.logAudit('CREATE_CATEGORY', 'categories', newCategory.id, newCategory);
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('categories').insert(newCategory),
+        'Insert Category'
+      );
+    }
+    this.saveToLocalStorage();
+    return newCategory;
+  }
+
+  public updateCategory(id: string, updates: Partial<Category>): Category | null {
+    const idx = this.categories.findIndex((c) => c.id === id);
+    if (idx === -1) return null;
+    const current = this.categories[idx];
+    const updated: Category = {
+      ...current,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+    if (updates.name && !updates.slug) {
+      updated.slug = updates.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    }
+    this.categories[idx] = updated;
+    this.logAudit('UPDATE_CATEGORY', 'categories', id, updates);
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('categories').update({
+          name: updated.name,
+          slug: updated.slug,
+          description: updated.description,
+          sort_order: updated.sort_order,
+        }).eq('id', id),
+        'Update Category'
+      );
+    }
+    this.saveToLocalStorage();
+    return updated;
+  }
+
+  public deleteCategory(id: string): boolean {
+    const idx = this.categories.findIndex((c) => c.id === id);
+    if (idx === -1) return false;
+    const removed = this.categories.splice(idx, 1)[0];
+    this.themes.forEach((t) => {
+      if (t.category_id === id) {
+        t.category_id = null;
+      }
+    });
+    this.logAudit('DELETE_CATEGORY', 'categories', id, removed);
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('categories').delete().eq('id', id),
+        'Delete Category'
+      );
+    }
+    this.saveToLocalStorage();
+    return true;
   }
 
   public getThemes(filters?: { categoryId?: string; search?: string; status?: string }): ThemeWithDetails[] {
@@ -1959,6 +2134,148 @@ class MagiaStore {
       return true;
     }
     return false;
+  }
+
+  public updateThemeVariant(id: string, updates: Partial<ThemeVariant>): ThemeVariant | null {
+    const idx = this.themeVariants.findIndex((v) => v.id === id);
+    if (idx === -1) return null;
+    const updated: ThemeVariant = {
+      ...this.themeVariants[idx],
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+    this.themeVariants[idx] = updated;
+    this.logAudit('UPDATE_THEME_VARIANT', 'theme_variants', id, updates);
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('theme_variants').update({
+          name: updated.name,
+          description: updated.description,
+          image_url: updated.image_url,
+          active: updated.active,
+        }).eq('id', id),
+        'Update Theme Variant'
+      );
+    }
+    this.saveToLocalStorage();
+    this.notifyListeners();
+    return updated;
+  }
+
+  public getKitsByTheme(themeId: string): Kit[] {
+    return this.kits.filter((k) => k.theme_id === themeId);
+  }
+
+  public updateKit(id: string, updates: Partial<Kit>): Kit | null {
+    const idx = this.kits.findIndex((k) => k.id === id);
+    if (idx === -1) return null;
+    const updated: Kit = {
+      ...this.kits[idx],
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+    this.kits[idx] = updated;
+    this.logAudit('UPDATE_KIT', 'kits', id, updates);
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('kits').update({
+          name: updated.name,
+          description: updated.description,
+          price: updated.price,
+          promotional_price: updated.promotional_price,
+          image_url: updated.image_url,
+          active: updated.active,
+        }).eq('id', id),
+        'Update Kit'
+      );
+    }
+    this.saveToLocalStorage();
+    this.notifyListeners();
+    return updated;
+  }
+
+  public deleteKit(id: string): boolean {
+    const idx = this.kits.findIndex((k) => k.id === id);
+    if (idx === -1) return false;
+    const removed = this.kits.splice(idx, 1)[0];
+    this.kitItems = this.kitItems.filter((ki) => ki.kit_id !== id);
+    this.logAudit('DELETE_KIT', 'kits', id, removed);
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('kits').delete().eq('id', id),
+        'Delete Kit'
+      );
+    }
+    this.saveToLocalStorage();
+    this.notifyListeners();
+    return true;
+  }
+
+  public getItemById(id: string): Item | undefined {
+    return this.items.find((i) => i.id === id);
+  }
+
+  public getOrcamentos(): Orcamento[] {
+    return [...this.orcamentos].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
+
+  public getOrcamentoById(id: string): Orcamento | undefined {
+    return this.orcamentos.find((o) => o.id === id || o.code === id);
+  }
+
+  public createOrcamento(data: Omit<Orcamento, 'id' | 'created_at' | 'updated_at'>): Orcamento {
+    const id = generateUUID();
+    const now = new Date().toISOString();
+    const newOrcamento: Orcamento = {
+      id,
+      tenant_id: DEFAULT_TENANT_ID,
+      code: data.code || `ORC-${new Date().getFullYear()}-${String(this.orcamentos.length + 1).padStart(3, '0')}`,
+      customer_name: data.customer_name,
+      customer_phone: data.customer_phone,
+      customer_email: data.customer_email || undefined,
+      event_date: data.event_date || undefined,
+      event_location: data.event_location || undefined,
+      items: data.items || [],
+      subtotal: data.subtotal || 0,
+      discount: data.discount || 0,
+      shipping_fee: data.shipping_fee || 0,
+      total: data.total || 0,
+      status: data.status || 'pendente',
+      valid_until: data.valid_until || undefined,
+      notes: data.notes || undefined,
+      created_at: now,
+      updated_at: now,
+    };
+    this.orcamentos.unshift(newOrcamento);
+    this.logAudit('CREATE_ORCAMENTO', 'orcamentos', id, newOrcamento);
+    this.saveToLocalStorage();
+    this.notifyListeners();
+    return newOrcamento;
+  }
+
+  public updateOrcamento(id: string, updates: Partial<Orcamento>): Orcamento | null {
+    const idx = this.orcamentos.findIndex((o) => o.id === id);
+    if (idx === -1) return null;
+    const updated: Orcamento = {
+      ...this.orcamentos[idx],
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+    this.orcamentos[idx] = updated;
+    this.logAudit('UPDATE_ORCAMENTO', 'orcamentos', id, updates);
+    this.saveToLocalStorage();
+    this.notifyListeners();
+    return updated;
+  }
+
+  public deleteOrcamento(id: string): boolean {
+    const idx = this.orcamentos.findIndex((o) => o.id === id);
+    if (idx === -1) return false;
+    const removed = this.orcamentos.splice(idx, 1)[0];
+    this.logAudit('DELETE_ORCAMENTO', 'orcamentos', id, removed);
+    this.saveToLocalStorage();
+    this.notifyListeners();
+    return true;
   }
 
   public createKit(themeId: string, name: string, price: number, description?: string): Kit {

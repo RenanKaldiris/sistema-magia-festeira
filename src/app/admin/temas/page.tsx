@@ -30,6 +30,7 @@ import {
   Eye,
   EyeOff,
   Tag,
+  Settings,
 } from 'lucide-react';
 import { store, DEFAULT_THEME_DESCRIPTION } from '@/lib/store';
 import { Theme, EntityStatus, Category } from '@/types/database';
@@ -40,6 +41,8 @@ import { OrcamentoModal } from '@/components/temas/OrcamentoModal';
 import { ItensTabContent } from '@/components/temas/ItensTabContent';
 import { ImportacoesTabContent } from '@/components/temas/ImportacoesTabContent';
 import { ApplyDiscountModal } from '@/components/temas/ApplyDiscountModal';
+import { ManageCategoriesModal } from '@/components/temas/ManageCategoriesModal';
+import { CustomCatalogModal } from '@/components/temas/CustomCatalogModal';
 import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg, convertImageToWebP, uploadImageToServer, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
 
 type TabType = 'temas' | 'itens' | 'importacoes';
@@ -103,6 +106,8 @@ function TemasManagementContent() {
   const [isNewThemeModalOpen, setIsNewThemeModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isOrcamentoOpen, setIsOrcamentoOpen] = useState(false);
+  const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
+  const [isCustomCatalogOpen, setIsCustomCatalogOpen] = useState(false);
   const [selectedThemeForKit, setSelectedThemeForKit] = useState<Theme | null>(null);
   const [selectedThemeForVariant, setSelectedThemeForVariant] = useState<Theme | null>(null);
 
@@ -187,6 +192,19 @@ function TemasManagementContent() {
     const count = store.removeDiscountFromThemes(ids);
     setThemes(store.getThemes());
     showNotification(`Promoção removida de ${count} tema(s)!`);
+  };
+
+  const handleBatchRemoveDiscount = () => {
+    if (selectedThemeIds.length === 0) return;
+    const count = store.removeDiscountFromThemes(selectedThemeIds);
+    setThemes(store.getThemes());
+    setSelectedThemeIds([]);
+    showNotification(`Promoção removida de ${count} tema(s)!`);
+  };
+
+  const handleOpenCustomCatalog = () => {
+    if (selectedThemeIds.length === 0) return;
+    setIsCustomCatalogOpen(true);
   };
 
   const showNotification = (msg: string) => {
@@ -762,6 +780,16 @@ function TemasManagementContent() {
                   {cat.name}
                 </button>
               ))}
+
+              <button
+                type="button"
+                onClick={() => setIsManageCategoriesOpen(true)}
+                className="px-3 py-1 rounded-lg text-xs font-semibold text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/40 hover:bg-pink-100 dark:hover:bg-pink-900/60 transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 border border-pink-200 dark:border-pink-900/50"
+                title="Gerenciar, criar, renomear e excluir categorias"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>Gerenciar Categorias</span>
+              </button>
             </div>
           </div>
 
@@ -787,7 +815,7 @@ function TemasManagementContent() {
                 return (
                   <div
                     key={theme.id}
-                    onClick={() => setEditingTheme(theme)}
+                    onClick={() => router.push('/admin/temas/' + theme.id)}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-3 ${
                       isSelected
                         ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800 shadow-xs'
@@ -807,63 +835,81 @@ function TemasManagementContent() {
                               }}
                             />
                           ) : (
-                            <img
-                              src={getFallbackImageDataUrl(theme.name)}
-                              alt={theme.name}
-                              className="w-full h-full object-cover"
-                            />
+                            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
+                              <ImageIcon className="w-5 h-5" />
+                              <span className="text-[9px] mt-0.5">Sem Foto</span>
+                            </div>
                           )}
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                              {theme.name}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-slate-900 dark:bg-rose-600 text-white text-[10px] font-bold">
-                              {theme.code}
-                            </span>
-                            {/* Status Badge */}
-                            <span
-                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
-                                theme.status === 'active'
-                                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
-                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                              }`}
-                            >
-                              {theme.status === 'active' ? 'Ativo' : 'Inativo'}
-                            </span>
-                          </div>
-                          <span className="text-xs font-extrabold text-rose-600 dark:text-rose-400 block mt-1">
-                            R$ {theme.base_price.toFixed(2).replace('.', ',')}
+                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                            {theme.code}
                           </span>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
-                            Estoque: <strong className="text-slate-700 dark:text-slate-200">{theme.stock_quantity} un.</strong> • {details?.variants.length || 0} var. • {details?.kits.length || 0} kit(s)
-                          </span>
+                          <h3 className="font-extrabold text-sm text-slate-900 dark:text-white truncate mt-1">
+                            {theme.name}
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                            {details?.category?.name || 'Sem categoria'}
+                          </p>
                         </div>
                       </div>
 
                       {/* Checkbox Touch Selection */}
                       <div
                         onClick={(e) => e.stopPropagation()}
-                        className="p-1 cursor-pointer"
+                        className="p-1 cursor-pointer shrink-0"
                         title={isSelected ? 'Desmarcar' : 'Selecionar'}
                       >
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleToggleSelect(theme.id)}
-                          className="w-5 h-5 text-rose-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-rose-500 cursor-pointer"
+                          className="w-5 h-5 text-rose-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-rose-500 cursor-pointer"
                           aria-label={`Selecionar ${theme.name}`}
                         />
                       </div>
                     </div>
 
+                    <div className="flex items-center justify-between text-xs pt-1">
+                      <div>
+                        {theme.promotional_price && theme.promotional_price < theme.base_price ? (
+                          <div>
+                            <span className="text-[10px] line-through text-slate-400 block">
+                              De R$ {theme.base_price.toFixed(2).replace('.', ',')}
+                            </span>
+                            <span className="font-black text-rose-600 dark:text-rose-400">
+                              Por R$ {theme.promotional_price.toFixed(2).replace('.', ',')}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="font-black text-slate-900 dark:text-white">
+                            R$ {theme.base_price.toFixed(2).replace('.', ',')}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            theme.status === 'active'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                          }`}
+                        >
+                          {theme.status === 'active' ? 'Ativo' : 'Inativo'}
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-medium">
+                          {theme.stock_quantity || 1} un.
+                        </span>
+                      </div>
+                    </div>
+
                     {theme.characters && theme.characters.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
-                        {theme.characters.slice(0, 4).map((c, i) => (
+                      <div className="flex flex-wrap gap-1">
+                        {theme.characters.map((c, i) => (
                           <span
                             key={i}
-                            className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px]"
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 truncate max-w-[120px]"
                           >
                             {c}
                           </span>
@@ -872,30 +918,18 @@ function TemasManagementContent() {
                     )}
 
                     {/* Botões de Ação Touch */}
-                    <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setEditingTheme(theme);
+                          router.push('/admin/temas/' + theme.id);
                         }}
                         className="py-2 px-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors"
                         title="Editar Tema e Variáveis"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                         <span>Editar</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedThemeForVariant(theme);
-                        }}
-                        className="py-2 px-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 text-purple-700 dark:text-purple-300 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors"
-                        title="Incluir Variável"
-                      >
-                        <Layers className="w-3.5 h-3.5" />
-                        <span>+ Variável</span>
                       </button>
                       <button
                         type="button"
@@ -1035,13 +1069,13 @@ function TemasManagementContent() {
                       return (
                         <tr
                           key={theme.id}
-                          onClick={() => setEditingTheme(theme)}
+                          onClick={() => router.push('/admin/temas/' + theme.id)}
                           className={`cursor-pointer transition-colors ${
                             isSelected
                               ? 'bg-rose-50/60 dark:bg-rose-950/25 hover:bg-rose-50/80 dark:hover:bg-rose-950/35'
                               : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
                           }`}
-                          title="Clique para abrir a edição rápida deste tema"
+                          title="Clique para editar este tema"
                         >
                           {/* Código / Tema */}
                           <td className="py-4 px-6">
@@ -1158,24 +1192,12 @@ function TemasManagementContent() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setEditingTheme(theme);
+                                  router.push('/admin/temas/' + theme.id);
                                 }}
-                                title="Editar Tema e Variáveis"
+                                title="Editar Tema, Kits, Variáveis e Promoções"
                                 className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedThemeForVariant(theme);
-                                }}
-                                title="Incluir Variável"
-                                className="p-2 rounded-lg bg-purple-50 dark:bg-purple-950/60 hover:bg-purple-100 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 transition-colors"
-                              >
-                                <Layers className="w-3.5 h-3.5" />
                               </button>
 
                               <button
@@ -1249,29 +1271,14 @@ function TemasManagementContent() {
       {/* TAB 3: HISTÓRICO E IMPORTAÇÕES */}
       {activeTab === 'importacoes' && <ImportacoesTabContent />}
 
-      {/* Floating Batch Action Bar com Gerar Orçamento, Aplicar Promoção e Incluir Variável */}
+      {/* Floating Batch Action Bar com exatamente as 4 opções solicitadas */}
       <BatchActionBar
         selectedCount={selectedThemeIds.length}
         onClearSelection={() => setSelectedThemeIds([])}
-        onGenerateQuote={() => setIsOrcamentoOpen(true)}
         onDelete={() => setIsDeleteModalOpen(true)}
         onApplyPromotion={handleOpenBatchDiscount}
-        onAddVariant={() => {
-          if (selectedThemeIds.length > 0) {
-            const themeToTarget = themes.find((t) => t.id === selectedThemeIds[0]);
-            if (themeToTarget) {
-              setSelectedThemeForVariant(themeToTarget);
-            }
-          }
-        }}
-        onEditTheme={() => {
-          if (selectedThemeIds.length === 1) {
-            const themeToEdit = themes.find((t) => t.id === selectedThemeIds[0]);
-            if (themeToEdit) {
-              setEditingTheme(themeToEdit);
-            }
-          }
-        }}
+        onRemovePromotion={handleBatchRemoveDiscount}
+        onGenerateCustomCatalog={handleOpenCustomCatalog}
         itemTypeLabel={selectedThemeIds.length > 1 ? 'temas selecionados' : 'tema selecionado'}
       />
 
@@ -1312,6 +1319,20 @@ function TemasManagementContent() {
         isOpen={!!editingTheme}
         onClose={() => setEditingTheme(null)}
         onSave={handleSaveEditedTheme}
+      />
+
+      {/* Modal: Catálogo Personalizado */}
+      <CustomCatalogModal
+        isOpen={isCustomCatalogOpen}
+        onClose={() => setIsCustomCatalogOpen(false)}
+        selectedThemes={themes.filter((t) => selectedThemeIds.includes(t.id))}
+      />
+
+      {/* Modal: Gerenciar Categorias */}
+      <ManageCategoriesModal
+        isOpen={isManageCategoriesOpen}
+        onClose={() => setIsManageCategoriesOpen(false)}
+        onSuccess={() => setCategories(store.getCategories())}
       />
 
       {/* Modal: Novo Tema com Upload Múltiplo (Dispositivo, Drive, Galeria) */}

@@ -21,6 +21,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   X,
+  FileText,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -44,6 +45,7 @@ const menuItems: MenuItem[] = [
       { href: '/admin/temas?tab=importacoes', label: 'Histórico e Importações' },
     ],
   },
+  { href: '/admin/orcamentos', label: 'Orçamentos', icon: FileText, matchPaths: ['/admin/orcamentos'] },
   { href: '/admin/locacoes', label: 'Locações', icon: ClipboardList },
   { href: '/admin/clientes', label: 'Clientes', icon: Users },
   { href: '/admin/ia', label: 'Agente de IA (WhatsApp)', icon: Bot },

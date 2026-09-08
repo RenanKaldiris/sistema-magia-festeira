@@ -94,6 +94,99 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
     return '';
   }, [selectedVariantId, theme]);
 
+  // Fotos mapeadas dinamicamente para o tema e versão/kit selecionado
+  const currentPhotos = useMemo(() => {
+    if (!theme) return [];
+
+    const baseMedia = (theme.media || []).map((m) => ({
+      id: m.id,
+      url: m.storage_path,
+      name: m.original_name,
+      variantKey: 'default',
+    }));
+
+    if (selectedVariantId?.startsWith('var-')) {
+      const varId = selectedVariantId.replace('var-', '');
+      const foundVar = theme.variants?.find((v) => v.id === varId);
+      const varMedia = store.getMediaByEntity('variant', varId);
+      const list: { id: string; url: string; name: string; variantKey: string }[] = [];
+
+      if (foundVar?.image_url) {
+        list.push({
+          id: `var-img-${foundVar.id}`,
+          url: foundVar.image_url,
+          name: foundVar.name,
+          variantKey: selectedVariantId,
+        });
+      }
+      varMedia.forEach((m) => {
+        if (!list.some((existing) => existing.url === m.storage_path)) {
+          list.push({
+            id: m.id,
+            url: m.storage_path,
+            name: m.original_name || foundVar?.name || 'Variante',
+            variantKey: selectedVariantId,
+          });
+        }
+      });
+
+      if (list.length > 0) return list;
+      return baseMedia;
+    }
+
+    if (selectedVariantId?.startsWith('kit-')) {
+      const kitId = selectedVariantId.replace('kit-', '');
+      const foundKit = theme.kits?.find((k) => k.id === kitId);
+      const kitMedia = store.getMediaByEntity('kit', kitId);
+      const list: { id: string; url: string; name: string; variantKey: string }[] = [];
+
+      if (foundKit?.image_url) {
+        list.push({
+          id: `kit-img-${foundKit.id}`,
+          url: foundKit.image_url,
+          name: foundKit.name,
+          variantKey: selectedVariantId,
+        });
+      }
+      kitMedia.forEach((m) => {
+        if (!list.some((existing) => existing.url === m.storage_path)) {
+          list.push({
+            id: m.id,
+            url: m.storage_path,
+            name: m.original_name || foundKit?.name || 'Kit',
+            variantKey: selectedVariantId,
+          });
+        }
+      });
+
+      if (list.length > 0) return list;
+      return baseMedia;
+    }
+
+    const all = [...baseMedia];
+    theme.variants?.forEach((v) => {
+      if (v.image_url && !all.some((m) => m.url === v.image_url)) {
+        all.push({
+          id: `var-${v.id}`,
+          url: v.image_url,
+          name: v.name,
+          variantKey: `var-${v.id}`,
+        });
+      }
+    });
+    theme.kits?.forEach((k) => {
+      if (k.image_url && !all.some((m) => m.url === k.image_url)) {
+        all.push({
+          id: `kit-${k.id}`,
+          url: k.image_url,
+          name: k.name,
+          variantKey: `kit-${k.id}`,
+        });
+      }
+    });
+    return all;
+  }, [theme, selectedVariantId]);
+
   const whatsappMsg = showPrices
     ? `Olá! Tenho interesse no tema ${theme.name} (${theme.code})${currentUrl ? `: ${currentUrl}` : ''}. Gostaria de consultar datas e disponibilidade!`
     : `Olá! Tenho interesse no tema ${theme.name} (${theme.code})${currentUrl ? `: ${currentUrl}` : ''}. Gostaria de solicitar um orçamento e consultar disponibilidade de datas!`;
@@ -151,16 +244,16 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
           
           {/* Left Column: Image Showcase & Gallery (7 cols) */}
           <div className="lg:col-span-7 space-y-4">
-            {/* Main Photo Showcase - Adjusts naturally to the attached photo's format */}
-            <div className="w-full rounded-3xl overflow-hidden bg-slate-100/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-sm relative group flex items-center justify-center min-h-[260px]">
+            {/* Main Photo Showcase - Formato Retrato / Proporção Natural da Foto */}
+            <div className="w-full rounded-3xl overflow-hidden bg-slate-100/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-sm relative group flex items-center justify-center aspect-[3/4] max-h-[640px]">
               {activeImage ? (
                 <OptimizedImage
                   src={activeImage}
                   alt={theme.name}
                   aspectRatio="auto"
                   priority
-                  className="w-full h-auto max-h-[640px] object-contain rounded-3xl mx-auto transition-all duration-300"
-                  containerClassName="w-full flex items-center justify-center min-h-[260px] rounded-3xl bg-transparent"
+                  className="w-full h-full object-contain rounded-3xl mx-auto transition-all duration-300"
+                  containerClassName="w-full h-full flex items-center justify-center rounded-3xl bg-transparent"
                 />
               ) : (
                 <div className="py-24 text-center text-slate-400 dark:text-slate-500">
@@ -185,24 +278,23 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
               </div>
             </div>
 
-            {/* Thumbnail Strip positioned below main photo */}
-            {theme.media && theme.media.length > 0 && (
+            {/* Thumbnail Strip positioned below main photo - Sincronizado com Versão/Kit Selecionado */}
+            {currentPhotos && currentPhotos.length > 0 && (
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none pt-1">
-                {theme.media.map((img) => (
+                {currentPhotos.map((img) => (
                   <button
                     key={img.id}
                     type="button"
                     onClick={() => {
-                      setSelectedVariantId(null);
-                      setActiveImage(img.storage_path);
+                      setActiveImage(img.url);
                     }}
                     className={`relative w-20 h-24 rounded-2xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer bg-slate-100 dark:bg-slate-800 ${
-                      activeImage === img.storage_path
+                      activeImage === img.url
                         ? 'border-rose-600 ring-2 ring-rose-200 dark:ring-rose-900 scale-100 shadow-md'
                         : 'border-slate-200 dark:border-slate-700 opacity-70 hover:opacity-100'
                     }`}
                   >
-                    <img src={img.storage_path} alt={img.original_name} className="w-full h-full object-cover" />
+                    <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -225,7 +317,12 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
                         if (variant.image_url) {
                           setActiveImage(variant.image_url);
                         } else {
-                          setActiveImage(defaultImage);
+                          const varMedia = store.getMediaByEntity('variant', variant.id);
+                          if (varMedia.length > 0 && varMedia[0].storage_path) {
+                            setActiveImage(varMedia[0].storage_path);
+                          } else {
+                            setActiveImage(defaultImage);
+                          }
                         }
                       }}
                       className={`text-left p-3.5 rounded-2xl border transition-all cursor-pointer ${
@@ -248,11 +345,6 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
           {/* Right Column: Information, Kits & WhatsApp CTA (5 cols) */}
           <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
             <div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider mb-1">
-                <Sparkles className="w-4 h-4" />
-                <span>Decoração Temática Oficial</span>
-              </div>
-
               <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 {theme.name}
               </h1>
@@ -338,7 +430,12 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
                             if (kit.image_url) {
                               setActiveImage(kit.image_url);
                             } else {
-                              setActiveImage(defaultImage);
+                              const kitMedia = store.getMediaByEntity('kit', kit.id);
+                              if (kitMedia.length > 0 && kitMedia[0].storage_path) {
+                                setActiveImage(kitMedia[0].storage_path);
+                              } else {
+                                setActiveImage(defaultImage);
+                              }
                             }
                           }}
                           className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
@@ -376,7 +473,12 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
                             if (variant.image_url) {
                               setActiveImage(variant.image_url);
                             } else {
-                              setActiveImage(defaultImage);
+                              const varMedia = store.getMediaByEntity('variant', variant.id);
+                              if (varMedia.length > 0 && varMedia[0].storage_path) {
+                                setActiveImage(varMedia[0].storage_path);
+                              } else {
+                                setActiveImage(defaultImage);
+                              }
                             }
                           }}
                           className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${

@@ -337,3 +337,39 @@ export interface RentalWithDetails extends Rental {
   payments: Payment[];
   calendar_sync?: CalendarSync | null;
 }
+
+// 24. Orçamentos
+export type OrcamentoStatus = 'pendente' | 'aprovado' | 'recusado' | 'convertido';
+
+export interface OrcamentoItemData {
+  id: string;
+  item_type: 'theme' | 'item' | 'kit' | 'custom';
+  entity_id?: string;
+  title: string;
+  description?: string;
+  quantity: number;
+  unit_price: number;
+  discount: number;
+  total: number;
+}
+
+export interface Orcamento {
+  id: string;
+  tenant_id: string;
+  code: string; // ex: ORC-001
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  event_date?: string;
+  event_location?: string;
+  items: OrcamentoItemData[];
+  subtotal: number;
+  discount: number;
+  shipping_fee: number;
+  total: number;
+  status: OrcamentoStatus;
+  valid_until?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Package2,
   Plus,
@@ -23,6 +24,8 @@ import {
   Package,
   ExternalLink,
   UploadCloud,
+  Settings,
+  Sparkles,
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { Item } from '@/types/database';
@@ -31,6 +34,7 @@ import { DeleteConfirmationModal } from '@/components/temas/DeleteConfirmationMo
 import { ItemEditDrawer } from '@/components/temas/ItemEditDrawer';
 import { OrcamentoModal } from '@/components/temas/OrcamentoModal';
 import { ApplyDiscountModal } from '@/components/temas/ApplyDiscountModal';
+import { ManageCategoriesModal } from '@/components/temas/ManageCategoriesModal';
 import { fileToDataUrl, convertImageToWebP, uploadImageToServer } from '@/lib/imageUtils';
 
 interface UploadedFileItem {
@@ -48,7 +52,8 @@ interface SortState {
 }
 
 export function ItensTabContent() {
-  const [items, setItems] = useState<Item[]>(store.getItems());
+  const router = useRouter();
+  const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all');
@@ -65,6 +70,8 @@ export function ItensTabContent() {
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
   const [discountTargetItems, setDiscountTargetItems] = useState<Item[]>([]);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [isManageCatOpen, setIsManageCatOpen] = useState(false);
+  const [isCustomCatalogOpen, setIsCustomCatalogOpen] = useState(false);
 
   // Modais de Ação: Variação e Kit
   const [selectedItemForVariant, setSelectedItemForVariant] = useState<Item | null>(null);
@@ -268,6 +275,14 @@ export function ItensTabContent() {
     setItems(store.getItems());
     setIsDiscountModalOpen(false);
     showNotification(`Promoção removida de ${targetIds.length} item(ns).`);
+  };
+
+  const handleBatchRemoveDiscount = () => {
+    if (selectedItemIds.length === 0) return;
+    const count = store.removeDiscountFromItems(selectedItemIds);
+    setItems(store.getItems());
+    setSelectedItemIds([]);
+    showNotification(`Promoção removida de ${count} item(ns).`);
   };
 
   const handleOpenItemVariant = (item: Item) => {
@@ -578,6 +593,15 @@ export function ItensTabContent() {
               {cat}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setIsManageCatOpen(true)}
+            className="px-3 py-1 rounded-lg text-xs font-semibold text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/40 hover:bg-pink-100 dark:hover:bg-pink-900/60 transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 border border-pink-200 dark:border-pink-900/50"
+            title="Gerenciar, criar, renomear e excluir categorias"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>Gerenciar Categorias</span>
+          </button>
         </div>
       </div>
 
@@ -597,7 +621,7 @@ export function ItensTabContent() {
             return (
               <div
                 key={item.id}
-                onClick={() => setEditingItem(item)}
+                onClick={() => router.push('/admin/itens/' + item.id)}
                 className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all cursor-pointer space-y-3 ${
                   isSelected
                     ? 'border-rose-500 bg-rose-50/20 dark:bg-rose-950/20 shadow-xs'
@@ -733,7 +757,10 @@ export function ItensTabContent() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => setEditingItem(item)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push('/admin/itens/' + item.id);
+                    }}
                     title="Editar item"
                     className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                   >
@@ -843,7 +870,7 @@ export function ItensTabContent() {
                 return (
                   <tr
                     key={item.id}
-                    onClick={() => setEditingItem(item)}
+                    onClick={() => router.push('/admin/itens/' + item.id)}
                     className={`transition-colors cursor-pointer ${
                       isSelected
                         ? 'bg-rose-50/40 dark:bg-rose-950/20 hover:bg-rose-50/60 dark:hover:bg-rose-950/30'
@@ -994,7 +1021,7 @@ export function ItensTabContent() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setEditingItem(item);
+                            router.push('/admin/itens/' + item.id);
                           }}
                           className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                           title="Editar item"
@@ -1016,9 +1043,12 @@ export function ItensTabContent() {
         selectedCount={selectedItemIds.length}
         itemTypeLabel="item(ns)"
         onClearSelection={() => setSelectedItemIds([])}
-        onGenerateQuote={() => setIsOrcamentoOpen(true)}
-        onApplyPromotion={handleOpenBatchDiscount}
         onDelete={() => setIsDeleteModalOpen(true)}
+        onApplyPromotion={handleOpenBatchDiscount}
+        onRemovePromotion={handleBatchRemoveDiscount}
+        onGenerateCustomCatalog={() => {
+          showNotification('Selecione temas na aba Temas de Decoração para gerar o catálogo personalizado.');
+        }}
       />
 
       {/* Modal de Promoção / Desconto em Lote ou Individual */}
@@ -1626,6 +1656,12 @@ export function ItensTabContent() {
           </div>
         </div>
       )}
+
+      {/* Modal Gerenciar Categorias */}
+      <ManageCategoriesModal
+        isOpen={isManageCatOpen}
+        onClose={() => setIsManageCatOpen(false)}
+      />
     </div>
   );
 }
