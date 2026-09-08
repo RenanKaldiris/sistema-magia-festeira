@@ -864,8 +864,13 @@ class MagiaStore {
   public saveToLocalStorage() {
     if (typeof window === 'undefined') return;
     try {
-      // Poda preventiva de arrays para evitar estourar a cota de 5MB do LocalStorage
-      const trimmedMedia = this.media.slice(-35);
+      // Salva mídias sem podar temas! Higieniza para nunca guardar strings base64 pesadas no LocalStorage
+      const cleanMedia = this.media.map((m) => {
+        if (m.storage_path && m.storage_path.startsWith('data:')) {
+          return { ...m, storage_path: '', thumbnail_path: '' };
+        }
+        return m;
+      });
       const trimmedImportAssets = this.importAssets.slice(-25);
       const trimmedAuditLogs = this.auditLogs.slice(0, 20);
 
@@ -878,7 +883,7 @@ class MagiaStore {
         kits: this.kits,
         kitItems: this.kitItems,
         payments: this.payments,
-        media: trimmedMedia,
+        media: cleanMedia,
         imports: this.imports,
         importAssets: trimmedImportAssets,
         auditLogs: trimmedAuditLogs,
@@ -888,8 +893,7 @@ class MagiaStore {
       try {
         localStorage.setItem('magia_festeira_local_store', JSON.stringify(state));
       } catch (storageErr) {
-        console.warn('[LocalStorage Quota Exceeded, aplicando compressão de emergência]', storageErr);
-        // Fallback de emergência: salva dados críticos com mídias ultra-enxutas
+        console.warn('[LocalStorage Quota Exceeded, aplicando salvamento seguro]', storageErr);
         const minimalState = {
           themes: this.themes,
           customers: this.customers,
@@ -899,7 +903,7 @@ class MagiaStore {
           kits: this.kits,
           kitItems: this.kitItems,
           payments: this.payments,
-          media: this.media.slice(-15),
+          media: cleanMedia,
           imports: this.imports.slice(-10),
           importAssets: this.importAssets.slice(-10),
           auditLogs: [],
@@ -961,7 +965,11 @@ class MagiaStore {
       if (parsed.kits && Array.isArray(parsed.kits)) this.kits = parsed.kits;
       if (parsed.kitItems && Array.isArray(parsed.kitItems)) this.kitItems = parsed.kitItems;
       if (parsed.payments && Array.isArray(parsed.payments)) this.payments = parsed.payments;
-      if (parsed.media && Array.isArray(parsed.media)) this.media = parsed.media;
+      if (parsed.media && Array.isArray(parsed.media)) {
+        const loadedIds = new Set(parsed.media.map((m: any) => m.id));
+        const missingSeeds = this.media.filter((m) => !loadedIds.has(m.id));
+        this.media = [...parsed.media, ...missingSeeds];
+      }
       if (parsed.imports && Array.isArray(parsed.imports)) this.imports = parsed.imports;
       if (parsed.importAssets && Array.isArray(parsed.importAssets)) this.importAssets = parsed.importAssets;
       if (parsed.auditLogs && Array.isArray(parsed.auditLogs)) this.auditLogs = parsed.auditLogs;

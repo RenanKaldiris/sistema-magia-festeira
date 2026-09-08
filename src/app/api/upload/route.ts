@@ -11,11 +11,11 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 /**
- * Pipeline Universal de Upload e Conversão Obrigatória para WebP 70%
+ * Pipeline Universal de Upload e Conversão Obrigatória para WebP 60%
  * - Converte qualquer formato (JPEG, PNG, HEIC, HEIF, WebP, etc.)
  * - Rotação automática respeitando EXIF de câmeras de celular
  * - Redimensionamento inteligente (máx. 1600px de largura/altura)
- * - Compressão Sharp para .webp com quality: 70
+ * - Compressão Sharp para .webp com quality: 60
  * - Salva no Supabase Storage bucket 'photos' (persistente e de alta velocidade)
  * - Retorna URL pública persistente do CDN Supabase
  */
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Processamento e compressão via Sharp para WebP 70% com limites de dimensão
+    // Processamento e compressão via Sharp para WebP 60% com limites de dimensão
     const processed = sharp(sourceBuffer)
       .rotate() // orienta corretamente fotos tiradas em pé/deitado
       .resize({
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
         fit: 'inside',
         withoutEnlargement: true,
       })
-      .webp({ quality: 70, effort: 4 });
+      .webp({ quality: 60, effort: 4 });
 
     const { data: webpBuffer, info } = await processed.toBuffer({ resolveWithObject: true });
 
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
     console.error('[API /api/upload error]', error);
     return NextResponse.json(
       {
-        error: 'Falha no upload e conversão da imagem para WebP 70%',
+        error: 'Falha no upload e conversão da imagem para WebP 60%',
         details: error?.message || String(error),
       },
       { status: 500 }

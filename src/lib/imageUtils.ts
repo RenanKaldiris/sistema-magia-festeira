@@ -1,13 +1,13 @@
 /**
- * Utilit�rios de Imagem, Convers�o WebP (70% de qualidade) e Detec��o de Entidades - Sistema Magia Festeira
+ * Utilitários de Imagem, Conversão WebP (60% de qualidade) e Detecção de Entidades - Sistema Magia Festeira
  * Garante:
- * 1. Convers�o mandat�ria de toda e qualquer foto enviada para formato .WEBP com 70% de qualidade
- * 2. Redu��o dr�stica do tamanho dos arquivos preservando nitidez visual para cat�logos e decora��es
+ * 1. Conversão mandatória de toda e qualquer foto enviada para formato .WEBP com 60% de qualidade
+ * 2. Redução drástica do tamanho dos arquivos preservando nitidez visual para catálogos e decorações
  * 3. Suporte integral a fotos de iPhone/iOS (.HEIC / .HEIF), JPEG, PNG e outros formatos
- * 4. Pr�-visualiza��o instant�nea (0ms) e persist�ncia sem estouro de cota do navegador
+ * 4. Pré-visualização instantânea (0ms) e persistência em Supabase Storage CDN
  */
 
-export const WEBP_QUALITY = 0.70;
+export const WEBP_QUALITY = 0.60;
 
 export function ensureWebpExtension(fileName: string): string {
   if (!fileName) return 'foto.webp';

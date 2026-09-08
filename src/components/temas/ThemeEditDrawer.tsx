@@ -241,7 +241,7 @@ export function ThemeEditDrawer({
         setMediaList((prev) => [...prev, tempMedia]);
       }
 
-      // Converte mandatória e automaticamente qualquer foto para .WEBP com 70% de qualidade
+      // Converte mandatória e automaticamente qualquer foto para .WEBP com 60% de qualidade
       try {
         const uploaded = await uploadImageToServer(rawFile);
         const webpMedia: Media = {
@@ -265,11 +265,11 @@ export function ThemeEditDrawer({
           });
           refreshMedia(theme.id);
         }
-        showNotification(`Foto "${uploaded.fileName}" convertida para .WEBP (70%) e vinculada ao tema.`);
+        showNotification(`Foto "${uploaded.fileName}" convertida para .WEBP (60%) e vinculada ao tema.`);
       } catch (err) {
         console.warn('Erro ao usar uploadImageToServer, aplicando fallback local:', err);
         try {
-          const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.70);
+          const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.60);
           const webpMedia: Media = {
             ...tempMedia,
             storage_path: webpDataUrl,
@@ -291,7 +291,7 @@ export function ThemeEditDrawer({
             });
             refreshMedia(theme.id);
           }
-          showNotification(`Foto "${webpFile.name}" convertida para .WEBP (70%) e vinculada ao tema.`);
+          showNotification(`Foto "${webpFile.name}" convertida para .WEBP (60%) e vinculada ao tema.`);
         } catch {
           const file = await convertHeicToJpeg(rawFile);
           const permanentUrl = await fileToDataUrl(file);
