@@ -822,17 +822,30 @@ function TemasManagementContent() {
                     )}
 
                     {/* Botões de Ação Touch */}
-                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTheme(theme);
+                        }}
+                        className="py-2 px-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors"
+                        title="Editar Tema e Variáveis"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Editar</span>
+                      </button>
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedThemeForVariant(theme);
                         }}
-                        className="py-2 px-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                        className="py-2 px-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 text-purple-700 dark:text-purple-300 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors"
+                        title="Incluir Variável"
                       >
                         <Layers className="w-3.5 h-3.5" />
-                        <span>+ Variação</span>
+                        <span>+ Variável</span>
                       </button>
                       <button
                         type="button"
@@ -840,7 +853,7 @@ function TemasManagementContent() {
                           e.stopPropagation();
                           setSelectedThemeForKit(theme);
                         }}
-                        className="py-2 px-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                        className="py-2 px-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors"
                       >
                         <Package className="w-3.5 h-3.5" />
                         <span>+ Kit</span>
@@ -849,7 +862,7 @@ function TemasManagementContent() {
                         href={`/catalogo/${theme.slug}`}
                         target="_blank"
                         onClick={(e) => e.stopPropagation()}
-                        className="py-2 px-2 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                        className="py-2 px-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         <span>Catálogo</span>
@@ -1095,6 +1108,30 @@ function TemasManagementContent() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  setEditingTheme(theme);
+                                }}
+                                title="Editar Tema e Variáveis"
+                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedThemeForVariant(theme);
+                                }}
+                                title="Incluir Variável"
+                                className="p-2 rounded-lg bg-purple-50 dark:bg-purple-950/60 hover:bg-purple-100 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 transition-colors"
+                              >
+                                <Layers className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   handleOpenSingleDiscount(theme);
                                 }}
                                 title="Aplicar/Gerenciar Promoção"
@@ -1105,18 +1142,6 @@ function TemasManagementContent() {
                                 }`}
                               >
                                 <Tag className="w-3.5 h-3.5" />
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedThemeForVariant(theme);
-                                }}
-                                title="Adicionar Variação"
-                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
-                              >
-                                <Layers className="w-3.5 h-3.5" />
                               </button>
 
                               <button
@@ -1174,13 +1199,29 @@ function TemasManagementContent() {
       {/* TAB 3: HISTÓRICO E IMPORTAÇÕES */}
       {activeTab === 'importacoes' && <ImportacoesTabContent />}
 
-      {/* Floating Batch Action Bar com Gerar Orçamento e Aplicar Promoção */}
+      {/* Floating Batch Action Bar com Gerar Orçamento, Aplicar Promoção e Incluir Variável */}
       <BatchActionBar
         selectedCount={selectedThemeIds.length}
         onClearSelection={() => setSelectedThemeIds([])}
         onGenerateQuote={() => setIsOrcamentoOpen(true)}
         onDelete={() => setIsDeleteModalOpen(true)}
         onApplyPromotion={handleOpenBatchDiscount}
+        onAddVariant={() => {
+          if (selectedThemeIds.length > 0) {
+            const themeToTarget = themes.find((t) => t.id === selectedThemeIds[0]);
+            if (themeToTarget) {
+              setSelectedThemeForVariant(themeToTarget);
+            }
+          }
+        }}
+        onEditTheme={() => {
+          if (selectedThemeIds.length === 1) {
+            const themeToEdit = themes.find((t) => t.id === selectedThemeIds[0]);
+            if (themeToEdit) {
+              setEditingTheme(themeToEdit);
+            }
+          }
+        }}
         itemTypeLabel={selectedThemeIds.length > 1 ? 'temas selecionados' : 'tema selecionado'}
       />
 

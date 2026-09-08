@@ -1893,7 +1893,7 @@ class MagiaStore {
     return toDelete.length;
   }
 
-  public createThemeVariant(themeId: string, name: string, description?: string): ThemeVariant {
+  public createThemeVariant(themeId: string, name: string, description?: string, imageUrl?: string): ThemeVariant {
     const id = generateUUID();
     const now = new Date().toISOString();
 
@@ -1902,6 +1902,7 @@ class MagiaStore {
       theme_id: themeId,
       name,
       description: description || null,
+      image_url: imageUrl || null,
       ai_confidence: 1.0,
       active: true,
       created_at: now,
@@ -1918,6 +1919,7 @@ class MagiaStore {
           theme_id: variant.theme_id,
           name: variant.name,
           description: variant.description,
+          image_url: variant.image_url,
           ai_confidence: variant.ai_confidence,
           active: variant.active,
         }),
@@ -1926,7 +1928,29 @@ class MagiaStore {
     }
 
     this.saveToLocalStorage();
+    this.notifyListeners();
     return variant;
+  }
+
+  public getThemeVariants(themeId: string): ThemeVariant[] {
+    return this.themeVariants.filter((v) => v.theme_id === themeId);
+  }
+
+  public deleteThemeVariant(variantId: string): boolean {
+    const initialLen = this.themeVariants.length;
+    this.themeVariants = this.themeVariants.filter((v) => v.id !== variantId);
+    if (this.themeVariants.length !== initialLen) {
+      if (isSupabaseConfigured && supabase) {
+        safeSupabaseOperation(
+          supabase.from('theme_variants').delete().eq('id', variantId),
+          'Delete Variant'
+        );
+      }
+      this.saveToLocalStorage();
+      this.notifyListeners();
+      return true;
+    }
+    return false;
   }
 
   public createKit(themeId: string, name: string, price: number, description?: string): Kit {

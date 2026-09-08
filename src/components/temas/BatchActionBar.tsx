@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { FileText, Trash2, X, CheckSquare, Tag } from 'lucide-react';
+import { FileText, Trash2, X, CheckSquare, Tag, Layers, Edit3 } from 'lucide-react';
 
 interface BatchActionBarProps {
   selectedCount: number;
@@ -9,6 +9,8 @@ interface BatchActionBarProps {
   onGenerateQuote: () => void;
   onDelete: () => void;
   onApplyPromotion?: () => void;
+  onAddVariant?: () => void;
+  onEditTheme?: () => void;
   itemTypeLabel?: string;
 }
 
@@ -18,6 +20,8 @@ export function BatchActionBar({
   onGenerateQuote,
   onDelete,
   onApplyPromotion,
+  onAddVariant,
+  onEditTheme,
   itemTypeLabel = 'selecionado(s)',
 }: BatchActionBarProps) {
   if (selectedCount === 0) return null;
@@ -51,6 +55,32 @@ export function BatchActionBar({
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+        {/* Editar Tema (quando 1 item selecionado) */}
+        {selectedCount === 1 && onEditTheme && (
+          <button
+            type="button"
+            onClick={onEditTheme}
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 text-xs sm:text-sm font-semibold transition-colors cursor-pointer shadow-xs"
+            title="Editar dados e variáveis do tema selecionado"
+          >
+            <Edit3 className="w-4 h-4" />
+            <span>Editar Tema</span>
+          </button>
+        )}
+
+        {/* Incluir Variável */}
+        {onAddVariant && (
+          <button
+            type="button"
+            onClick={onAddVariant}
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-xs sm:text-sm font-semibold transition-colors cursor-pointer shadow-xs"
+            title="Incluir variável/variação para o tema selecionado"
+          >
+            <Layers className="w-4 h-4" />
+            <span>Incluir Variável</span>
+          </button>
+        )}
+
         {/* Aplicar Promoção */}
         {onApplyPromotion && (
           <button

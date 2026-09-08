@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, use, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -76,6 +76,24 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
   const hasPromo = showPrices && theme.promotional_price && theme.promotional_price < theme.base_price;
 
+  const activeDescription = useMemo(() => {
+    if (!theme) return '';
+    if (!selectedVariantId) {
+      return theme.description?.trim() || '';
+    }
+    if (selectedVariantId.startsWith('kit-')) {
+      const kitId = selectedVariantId.replace('kit-', '');
+      const foundKit = theme.kits?.find((k) => k.id === kitId);
+      return foundKit?.description?.trim() || '';
+    }
+    if (selectedVariantId.startsWith('var-')) {
+      const varId = selectedVariantId.replace('var-', '');
+      const foundVar = theme.variants?.find((v) => v.id === varId);
+      return foundVar?.description?.trim() || '';
+    }
+    return '';
+  }, [selectedVariantId, theme]);
+
   const whatsappMsg = showPrices
     ? `Olá! Tenho interesse no tema ${theme.name} (${theme.code})${currentUrl ? `: ${currentUrl}` : ''}. Gostaria de consultar datas e disponibilidade!`
     : `Olá! Tenho interesse no tema ${theme.name} (${theme.code})${currentUrl ? `: ${currentUrl}` : ''}. Gostaria de solicitar um orçamento e consultar disponibilidade de datas!`;
@@ -133,14 +151,16 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
           
           {/* Left Column: Image Showcase & Gallery (7 cols) */}
           <div className="lg:col-span-7 space-y-4">
-            {/* Main Photo Showcase - Aspect Ratio Container preventing CLS */}
-            <div className="w-full aspect-[4/3] sm:aspect-[3/4] max-h-[580px] rounded-3xl overflow-hidden bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-sm relative group flex items-center justify-center p-3">
+            {/* Main Photo Showcase - Adjusts naturally to the attached photo's format */}
+            <div className="w-full rounded-3xl overflow-hidden bg-slate-100/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-sm relative group flex items-center justify-center min-h-[260px]">
               {activeImage ? (
                 <OptimizedImage
                   src={activeImage}
                   alt={theme.name}
                   aspectRatio="auto"
-                  className="w-full h-full object-contain rounded-2xl mx-auto transition-all duration-300"
+                  priority
+                  className="w-full h-auto max-h-[640px] object-contain rounded-3xl mx-auto transition-all duration-300"
+                  containerClassName="w-full flex items-center justify-center min-h-[260px] rounded-3xl bg-transparent"
                 />
               ) : (
                 <div className="py-24 text-center text-slate-400 dark:text-slate-500">
@@ -273,20 +293,22 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
                 </div>
               )}
 
-              {/* Description & Included Items */}
-              <div className="mt-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-850/60 border border-slate-100 dark:border-slate-800">
-                <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider block mb-2">
-                  Legenda / Itens Inclusos:
-                </span>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line font-normal">
-                  {theme.description || DEFAULT_THEME_DESCRIPTION}
-                </p>
-              </div>
+              {/* Dynamic Legenda / Itens Inclusos */}
+              {activeDescription ? (
+                <div className="mt-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-850/60 border border-slate-100 dark:border-slate-800 transition-all duration-200">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider block mb-2">
+                    Legenda / Itens Inclusos:
+                  </span>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line font-normal">
+                    {activeDescription}
+                  </p>
+                </div>
+              ) : null}
 
               {/* Interactive Kit / Variable Switcher Buttons */}
               <div className="mt-5 space-y-2">
                 <span className="block text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                  Trocar Foto / Visualizar Kit ou Versão:
+                  Visualizar Kit ou Versão:
                 </span>
                 <div className="flex flex-wrap gap-2">
                   <button

@@ -13,8 +13,10 @@ import {
   FolderPlus,
   Link2,
   Smartphone,
+  Layers,
+  Plus,
 } from 'lucide-react';
-import { Theme, EntityStatus, Media } from '@/types/database';
+import { Theme, EntityStatus, Media, ThemeVariant } from '@/types/database';
 import { store, DEFAULT_THEME_DESCRIPTION } from '@/lib/store';
 import { fileToDataUrl, convertHeicToJpeg, convertImageToWebP, getFallbackImageDataUrl, isHeicFile, uploadImageToServer } from '@/lib/imageUtils';
 
@@ -60,9 +62,27 @@ export function ThemeEditDrawer({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
+  // Estados para Gestão de Variáveis do Tema
+  const [variantsList, setVariantsList] = useState<ThemeVariant[]>([]);
+  const [isAddingVariant, setIsAddingVariant] = useState(false);
+  const [varName, setVarName] = useState('');
+  const [varDesc, setVarDesc] = useState('');
+  const [varPhoto, setVarPhoto] = useState<{
+    file?: File;
+    previewUrl: string;
+    name: string;
+  } | null>(null);
+  const [isSavingVariant, setIsSavingVariant] = useState(false);
+  const variantFileInputRef = useRef<HTMLInputElement>(null);
+
   const refreshMedia = (themeId: string) => {
     const list = store.getMediaByEntity('theme', themeId);
     setMediaList(list);
+  };
+
+  const refreshVariants = (themeId: string) => {
+    const list = store.getThemeVariants(themeId);
+    setVariantsList(list);
   };
 
   useEffect(() => {
@@ -100,9 +120,70 @@ export function ThemeEditDrawer({
         }
       } else {
         refreshMedia(theme.id);
+        refreshVariants(theme.id);
       }
     }
   }, [theme, isPreApproval]);
+
+  const handleSaveVariant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!theme || !varName.trim()) return;
+    setIsSavingVariant(true);
+
+    try {
+      let finalImageUrl: string | undefined = undefined;
+      if (varPhoto?.file) {
+        try {
+          const uploaded = await uploadImageToServer(varPhoto.file);
+          finalImageUrl = uploaded.url;
+        } catch {
+          finalImageUrl = varPhoto.previewUrl;
+        }
+      } else if (varPhoto?.previewUrl) {
+        finalImageUrl = varPhoto.previewUrl;
+      }
+
+      const createdVar = store.createThemeVariant(
+        theme.id,
+        varName.trim(),
+        varDesc.trim() || undefined,
+        finalImageUrl
+      );
+
+      if (finalImageUrl) {
+        store.addMediaToEntity({
+          entity_type: 'variant',
+          entity_id: createdVar.id,
+          storage_path: finalImageUrl,
+          original_name: varPhoto?.name || `${varName.trim()}_foto.webp`,
+          mime_type: 'image/webp',
+          file_size: varPhoto?.file?.size || 400000,
+          fingerprint: `sha256-var-${createdVar.id.substring(0, 6)}-${Date.now()}`,
+          is_primary: true,
+          ai_tags: [varName.trim()],
+        });
+      }
+
+      setVarName('');
+      setVarDesc('');
+      setVarPhoto(null);
+      setIsAddingVariant(false);
+      refreshVariants(theme.id);
+      showNotification(`Variável "${varName}" incluída com sucesso no tema.`);
+    } catch (err) {
+      console.error('Erro ao salvar variável:', err);
+      showNotification('Erro ao salvar a variável.');
+    } finally {
+      setIsSavingVariant(false);
+    }
+  };
+
+  const handleDeleteVariant = (variantId: string, variantName: string) => {
+    if (!theme) return;
+    store.deleteThemeVariant(variantId);
+    refreshVariants(theme.id);
+    showNotification(`Variável "${variantName}" removida.`);
+  };
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -699,6 +780,204 @@ export function ThemeEditDrawer({
                 Se não informado, será preenchido automaticamente com a lista padrão de itens inclusos.
               </span>
             </div>
+
+            {/* Seção: Variáveis e Variações do Tema */}
+            {!isPreApproval && (
+              <div className="p-4 rounded-2xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/70 dark:border-purple-900/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                      Variáveis do Tema ({variantsList.length})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingVariant(!isAddingVariant)}
+                    className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{isAddingVariant ? 'Fechar' : 'Incluir Variável'}</span>
+                  </button>
+                </div>
+
+                {/* Form Inline para Adicionar Variável */}
+                {isAddingVariant && (
+                  <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-800 space-y-3 mt-2 animate-in fade-in duration-200">
+                    <span className="block text-xs font-bold text-slate-900 dark:text-white">
+                      Nova Variável para {name}
+                    </span>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Nome da Variável *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={varName}
+                        onChange={(e) => setVarName(e.target.value)}
+                        placeholder="Ex: Vingadores Baby, Versão Rústica..."
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Foto da Variável
+                      </label>
+                      <input
+                        type="file"
+                        ref={variantFileInputRef}
+                        accept="image/*,.heic,.heif,.HEIC,.HEIF"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const rawFile = e.target.files?.[0];
+                          if (rawFile) {
+                            const isHeic = isHeicFile(rawFile);
+                            const initialPreview = isHeic
+                              ? getFallbackImageDataUrl(rawFile.name)
+                              : URL.createObjectURL(rawFile);
+                            setVarPhoto({
+                              file: rawFile,
+                              previewUrl: initialPreview,
+                              name: rawFile.name,
+                            });
+                            try {
+                              const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.70);
+                              setVarPhoto({
+                                file: webpFile,
+                                previewUrl: webpDataUrl,
+                                name: webpFile.name,
+                              });
+                            } catch {
+                              const file = await convertHeicToJpeg(rawFile);
+                              const permanentUrl = await fileToDataUrl(file);
+                              setVarPhoto({
+                                file,
+                                previewUrl: permanentUrl || URL.createObjectURL(file),
+                                name: file.name,
+                              });
+                            }
+                          }
+                        }}
+                      />
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => variantFileInputRef.current?.click()}
+                          className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-755 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <UploadCloud className="w-3.5 h-3.5 text-purple-500" />
+                          <span>{varPhoto ? 'Trocar Foto' : 'Carregar Foto'}</span>
+                        </button>
+                        {varPhoto && (
+                          <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700">
+                            <img
+                              src={varPhoto.previewUrl}
+                              alt={varPhoto.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = getFallbackImageDataUrl(varPhoto.name);
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setVarPhoto(null)}
+                              className="absolute top-0.5 right-0.5 p-0.5 bg-black/70 text-white rounded hover:bg-rose-600 transition-colors cursor-pointer"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Legenda / Diferenciais da Variável
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={varDesc}
+                        onChange={(e) => setVarDesc(e.target.value)}
+                        placeholder="Descreva itens específicos ou detalhes desta versão..."
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none text-xs"
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingVariant(false)}
+                        className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isSavingVariant || !varName.trim()}
+                        onClick={handleSaveVariant}
+                        className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                      >
+                        {isSavingVariant ? 'Salvando...' : 'Salvar Variável'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Lista de Variáveis Existentes */}
+                {variantsList.length === 0 ? (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                    Nenhuma variável cadastrada para este tema ainda. Clique em "Incluir Variável" acima.
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {variantsList.map((v) => (
+                      <div
+                        key={v.id}
+                        className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-xs"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                            {v.image_url ? (
+                              <img
+                                src={v.image_url}
+                                alt={v.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = getFallbackImageDataUrl(v.name);
+                                }}
+                              />
+                            ) : (
+                              <Layers className="w-4 h-4 text-slate-400" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="font-bold text-slate-900 dark:text-white block truncate">
+                              {v.name}
+                            </span>
+                            {v.description && (
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+                                {v.description}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteVariant(v.id, v.name)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition-colors shrink-0 cursor-pointer"
+                          title="Remover variável"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Footer Buttons inside drawer */}
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-end gap-2.5">

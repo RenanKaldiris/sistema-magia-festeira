@@ -45,7 +45,7 @@ export function OptimizedImage({
     '4/3': 'aspect-[4/3]',
     '1/1': 'aspect-square',
     '16/9': 'aspect-video',
-    'auto': 'w-full h-full min-h-[160px]',
+    'auto': '',
   }[aspectRatio];
 
   const fitClass = objectFit === 'contain' ? 'object-contain' : 'object-cover';
@@ -91,7 +91,7 @@ export function OptimizedImage({
           setIsLoaded(true);
           setHasError(true);
         }}
-        className={`w-full h-full ${fitClass} transition-opacity duration-300 relative z-10 ${
+        className={`w-full ${aspectRatio === 'auto' ? 'h-auto' : 'h-full'} ${fitClass} transition-opacity duration-300 relative z-10 ${
           isLoaded ? 'opacity-100' : 'opacity-0'
         } ${className}`}
         {...props}
