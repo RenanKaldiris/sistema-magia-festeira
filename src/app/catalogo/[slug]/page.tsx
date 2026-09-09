@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { store, DEFAULT_THEME_DESCRIPTION } from '@/lib/store';
-import { getWhatsAppUrl } from '@/lib/whatsapp';
+import { getWhatsAppUrl, formatWhatsAppDisplay } from '@/lib/whatsapp';
 import { OptimizedImage } from '@/components/ui/OptimizedImage';
 
 export default function ThemeDetailPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -198,10 +198,23 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
     return all;
   }, [theme, selectedVariantId]);
 
-  const whatsappMsg = showPrices
-    ? `Olá! Tenho interesse no tema ${theme.name} (${theme.code})${currentUrl ? `: ${currentUrl}` : ''}. Gostaria de consultar datas e disponibilidade!`
-    : `Olá! Tenho interesse no tema ${theme.name} (${theme.code})${currentUrl ? `: ${currentUrl}` : ''}. Gostaria de solicitar um orçamento e consultar disponibilidade de datas!`;
+  const selectedKit = selectedVariantId?.startsWith('kit-')
+    ? theme.kits?.find((k) => `kit-${k.id}` === selectedVariantId)
+    : null;
+  const selectedVariant = selectedVariantId?.startsWith('var-')
+    ? theme.variants?.find((v) => `var-${v.id}` === selectedVariantId)
+    : null;
+  const selectionInfo = selectedKit
+    ? ` (Kit: ${selectedKit.name})`
+    : selectedVariant
+    ? ` (Variação: ${selectedVariant.name})`
+    : '';
 
+  const whatsappMsg = showPrices
+    ? `Olá! Tenho interesse no tema ${theme.name} (${theme.code})${selectionInfo}${currentUrl ? `: ${currentUrl}` : ''}. Gostaria de consultar datas e disponibilidade!`
+    : `Olá! Tenho interesse no tema ${theme.name} (${theme.code})${selectionInfo}${currentUrl ? `: ${currentUrl}` : ''}. Gostaria de solicitar um orçamento e consultar disponibilidade de datas!`;
+
+  // Gera link wa.me oficial com mensagem contextualizada
   const whatsappUrl = getWhatsAppUrl(whatsappMsg);
 
   const handleShare = async () => {
@@ -619,6 +632,10 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
                 <MessageCircle className="w-5 h-5 text-emerald-600" />
                 <span>{showPrices ? 'Tenho Interesse Neste Tema' : 'Consultar Disponibilidade'}</span>
               </a>
+
+              <p className="mt-2.5 text-center text-[11px] text-emerald-100 font-medium">
+                WhatsApp Oficial: {formatWhatsAppDisplay()}
+              </p>
             </div>
           </div>
 
@@ -641,6 +658,17 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
             height={44}
             className="h-9 w-auto object-contain hidden dark:block opacity-85"
           />
+          <div className="flex items-center gap-4 text-xs font-medium mt-1">
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors font-semibold"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>Atendimento Oficial WhatsApp {formatWhatsAppDisplay()}</span>
+            </a>
+          </div>
           <p>© 2026 Magia Festeira. Todos os direitos reservados.</p>
         </div>
       </footer>

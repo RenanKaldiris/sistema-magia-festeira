@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { store, DEFAULT_THEME_DESCRIPTION } from '@/lib/store';
-import { getWhatsAppUrl } from '@/lib/whatsapp';
+import { getWhatsAppUrl, formatWhatsAppDisplay } from '@/lib/whatsapp';
 import { OptimizedImage } from '@/components/ui/OptimizedImage';
 import { Theme, Item, Category } from '@/types/database';
 
@@ -537,7 +537,7 @@ export default function CatalogoPage() {
         )}
       </main>
 
-      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-10 text-center text-xs text-slate-500 dark:text-slate-400">
+      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-10 pb-24 sm:pb-10 text-center text-xs text-slate-500 dark:text-slate-400">
         <div className="max-w-7xl mx-auto px-4 flex flex-col items-center gap-3">
           <Image
             src="/logo/logo-dark.png"
@@ -553,9 +553,34 @@ export default function CatalogoPage() {
             height={44}
             className="h-9 w-auto object-contain hidden dark:block opacity-85"
           />
+          <div className="flex items-center gap-4 text-xs font-medium mt-1">
+            <a
+              href={getWhatsAppUrl('Olá! Estou navegando pelo catálogo da Magia Festeira e gostaria de mais informações.')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors font-semibold"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>Atendimento Oficial WhatsApp {formatWhatsAppDisplay()}</span>
+            </a>
+          </div>
           <p>© 2026 Magia Festeira. Fotos reais de decorações do nosso acervo.</p>
         </div>
       </footer>
+
+      {/* Floating WhatsApp Action Button - Magia Festeira Oficial */}
+      <a
+        href={getWhatsAppUrl('Olá! Estou no catálogo da Magia Festeira e gostaria de tirar uma dúvida.')}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Falar no WhatsApp Oficial da Magia Festeira (${formatWhatsAppDisplay()})`}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-lg hover:shadow-2xl hover:scale-105 active:scale-95 transition-all group border border-emerald-500/50"
+      >
+        <MessageCircle className="w-5 h-5 fill-white/20 shrink-0" />
+        <span className="text-xs sm:text-sm font-bold tracking-wide pr-1">
+          WhatsApp Oficial
+        </span>
+      </a>
     </div>
   );
 }

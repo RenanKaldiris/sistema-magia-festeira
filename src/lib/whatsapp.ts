@@ -2,16 +2,16 @@
  * Configuração e utilitários centralizados para o WhatsApp da Magia Festeira.
  * 
  * O número oficial pode ser configurado via variável de ambiente:
- * NEXT_PUBLIC_WHATSAPP_NUMBER=5511999998888
+ * NEXT_PUBLIC_WHATSAPP_NUMBER=5511977823876
  * 
- * Se não definido, utiliza o número padrão cadastrado.
+ * Se não definido, utiliza o número padrão cadastrado da Magia Festeira (+55 11 97782-3876).
  */
 
-export const DEFAULT_WHATSAPP_NUMBER = '5511999998888';
+export const DEFAULT_WHATSAPP_NUMBER = '5511977823876';
 
 /**
  * Normaliza qualquer string de telefone para o formato internacional de link wa.me
- * Exemplo: "(11) 99999-8888" -> "5511999998888"
+ * Exemplo: "(11) 97782-3876" -> "5511977823876"
  */
 export function sanitizeWhatsAppNumber(phone?: string | null): string {
   if (!phone) {
@@ -27,7 +27,7 @@ export function sanitizeWhatsAppNumber(phone?: string | null): string {
     return digits;
   }
 
-  // Se for número brasileiro com DDD (10 ou 11 dígitos, ex: 11999998888)
+  // Se for número brasileiro com DDD (10 ou 11 dígitos, ex: 11977823876)
   if (digits.length === 10 || digits.length === 11) {
     return `55${digits}`;
   }
@@ -44,7 +44,7 @@ export function getOfficialWhatsAppNumber(): string {
 
 /**
  * Formata o número para exibição legível na interface
- * Exemplo: "5511999998888" -> "(11) 99999-8888"
+ * Exemplo: "5511977823876" -> "(11) 97782-3876"
  */
 export function formatWhatsAppDisplay(phone?: string | null): string {
   const clean = sanitizeWhatsAppNumber(phone);
@@ -57,7 +57,7 @@ export function formatWhatsAppDisplay(phone?: string | null): string {
     return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
   }
 
-  return phone || '(11) 99999-8888';
+  return phone || '(11) 97782-3876';
 }
 
 /**

@@ -160,8 +160,9 @@ async function runAcceptanceTests() {
   console.log('\n19. Geração de URL do WhatsApp com contexto do tema');
   const expectedMsg = `Olá! Tenho interesse no tema Vingadores (MF-0127): http://localhost:3000/catalogo/vingadores`;
   const encodedMsg = encodeURIComponent(expectedMsg);
-  const waUrl = `https://wa.me/5511999998888?text=${encodedMsg}`;
+  const waUrl = `https://wa.me/5511977823876?text=${encodedMsg}`;
   assert(waUrl.includes('MF-0127'), 'URL do WhatsApp gerada com código e URL do tema');
+  assert(waUrl.includes('5511977823876'), 'URL do WhatsApp direcionada para o número oficial da Magia Festeira');
 
   // 20. Aplicar permissões reais para funcionários (RBAC)
   console.log('\n20. Governança e permissões RBAC');

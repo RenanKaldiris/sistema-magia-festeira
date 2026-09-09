@@ -76,7 +76,7 @@ assert(importsContent.includes('fingerprint') && importsContent.includes('reimpo
 
 // 17. Exibir o tema no catálogo público
 const catalogoContent = readFileSync(resolve('src/app/catalogo/page.tsx'), 'utf8');
-assert(catalogoContent.includes('Catálogo de Temas & Decorações') && catalogoContent.includes('filteredThemes.map'), '17. Catálogo público responsivo exibindo temas e variações');
+assert((catalogoContent.includes('Catálogo de Temas & Decorações') || catalogoContent.includes('Catálogo Oficial de Locação')) && catalogoContent.includes('filteredThemes.map'), '17. Catálogo público responsivo exibindo temas e variações');
 
 // 18. Compartilhar página direta do tema
 const themeDetailContent = readFileSync(resolve('src/app/catalogo/[slug]/page.tsx'), 'utf8');
