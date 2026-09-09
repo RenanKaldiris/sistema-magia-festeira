@@ -35,7 +35,7 @@ import { ItemEditDrawer } from '@/components/temas/ItemEditDrawer';
 import { OrcamentoModal } from '@/components/temas/OrcamentoModal';
 import { ApplyDiscountModal } from '@/components/temas/ApplyDiscountModal';
 import { ManageCategoriesModal } from '@/components/temas/ManageCategoriesModal';
-import { fileToDataUrl, convertImageToWebP, uploadImageToServer } from '@/lib/imageUtils';
+import { fileToDataUrl, convertImageToWebP, uploadImageToServer, getFallbackImageDataUrl } from '@/lib/imageUtils';
 
 interface UploadedFileItem {
   id: string;
@@ -605,8 +605,16 @@ export function ItensTabContent() {
         </div>
       </div>
 
-      {/* Mobile Items Cards */}
-      <div className="md:hidden space-y-3">
+      {/* Dica de Edição Rápida */}
+      <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 px-1 md:hidden">
+        <Edit3 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+        <span>
+          <strong>Dica:</strong> Toque no card para abrir a <strong>Edição Rápida</strong> instantânea ou utilize os botões para kits, variações e promoções.
+        </span>
+      </div>
+
+      {/* Mobile Items Cards (touch-friendly, otimizado e respirável) */}
+      <div className="md:hidden space-y-3.5">
         {filteredItems.length === 0 ? (
           <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 text-xs">
             Nenhum item encontrado para os filtros selecionados.
@@ -617,155 +625,183 @@ export function ItensTabContent() {
             const primaryImg = itemMedia.find((m) => m.is_primary) || itemMedia[0];
             const isSelected = selectedItemIds.includes(item.id);
             const isInactive = item.status === 'inactive';
+            const hasPromo = !!(item.promotional_price && item.promotional_price < item.unit_price);
 
             return (
               <div
                 key={item.id}
-                onClick={() => router.push('/admin/itens/' + item.id)}
-                className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all cursor-pointer space-y-3 ${
+                onClick={() => setEditingItem(item)}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-3 ${
                   isSelected
-                    ? 'border-rose-500 bg-rose-50/20 dark:bg-rose-950/20 shadow-xs'
-                    : 'border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300'
+                    ? 'border-rose-400 bg-rose-50/70 dark:bg-rose-950/30 shadow-xs ring-2 ring-rose-500/20'
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700'
                 }`}
               >
-                <div className="flex items-start gap-3">
+                {/* Header do Card: Foto, Código, Nome, Categoria e Checkbox */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
+                      {primaryImg ? (
+                        <img
+                          src={primaryImg.storage_path}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = getFallbackImageDataUrl(item.name);
+                          }}
+                        />
+                      ) : (
+                        <Package2 className="w-6 h-6 text-slate-400" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono font-bold border border-slate-200 dark:border-slate-700">
+                          {item.code}
+                        </span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                          {item.category || 'Geral'}
+                        </span>
+                      </div>
+
+                      <h3 className="font-extrabold text-sm text-slate-900 dark:text-white truncate mt-1">
+                        {item.name}
+                      </h3>
+
+                      {/* Preço Unitário */}
+                      <div className="flex items-center gap-2 mt-1">
+                        {hasPromo ? (
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-[10px] line-through text-slate-400">
+                              R$ {item.unit_price.toFixed(2).replace('.', ',')}
+                            </span>
+                            <span className="font-black text-xs text-rose-600 dark:text-rose-400">
+                              R$ {item.promotional_price!.toFixed(2).replace('.', ',')}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="font-extrabold text-xs text-slate-900 dark:text-white">
+                            R$ {item.unit_price.toFixed(2).replace('.', ',')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Selection Checkbox */}
                   <div
                     onClick={(e) => {
                       e.stopPropagation();
                       handleToggleSelectItem(item.id);
                     }}
-                    className="pt-1"
+                    className="p-1.5 -mr-1 -mt-1 cursor-pointer shrink-0 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    title={isSelected ? 'Desmarcar' : 'Selecionar'}
                   >
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => handleToggleSelectItem(item.id)}
-                      className="w-4 h-4 text-rose-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-rose-500 cursor-pointer"
+                      className="w-5 h-5 text-rose-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-rose-500 cursor-pointer"
+                      aria-label={`Selecionar ${item.name}`}
                     />
-                  </div>
-
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
-                    {primaryImg ? (
-                      <img
-                        src={primaryImg.storage_path}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Package2 className="w-5 h-5 text-slate-400" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="font-bold text-sm text-slate-900 dark:text-white truncate block">
-                        {item.name}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
-                          isInactive
-                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                            : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40'
-                        }`}
-                      >
-                        {isInactive ? 'Inativo' : 'Em linha'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono font-bold border border-slate-200 dark:border-slate-700">
-                        {item.code}
-                      </span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {item.category || 'Geral'}
-                      </span>
-                    </div>
                   </div>
                 </div>
 
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-between text-xs">
-                  <div>
-                    <span className="text-slate-400 dark:text-slate-500 text-[10px] block">
-                      Disponibilidade
-                    </span>
+                {/* Faixa intermediária: Disponibilidade e Status */}
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                  <div className="text-xs">
+                    <span className="text-slate-400 text-[10px] block">Estoque Disponível</span>
                     <span className="font-bold text-emerald-600 dark:text-emerald-400">
                       {item.quantity_available} de {item.quantity_total} livres
                     </span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-slate-400 dark:text-slate-500 text-[10px] block">
-                      Unitário
-                    </span>
-                    {item.promotional_price ? (
-                      <div>
-                        <span className="text-[10px] line-through text-slate-400 block">
-                          De R$ {item.unit_price.toFixed(2).replace('.', ',')}
-                        </span>
-                        <span className="font-extrabold text-rose-600 dark:text-rose-400">
-                          Por R$ {item.promotional_price.toFixed(2).replace('.', ',')}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="font-extrabold text-slate-900 dark:text-white">
-                        R$ {item.unit_price.toFixed(2).replace('.', ',')}
-                      </span>
-                    )}
-                  </div>
-                </div>
 
-                {/* Ações Rápidas Mobile */}
-                <div
-                  className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-1.5"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    onClick={(e) => handleOpenItemDiscount(item, e)}
-                    title="Aplicar/Gerenciar Promoção"
-                    className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                      item.promotional_price && item.promotional_price < item.unit_price
-                        ? 'bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      isInactive
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                        : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40'
                     }`}
                   >
-                    <Tag className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenItemVariant(item)}
-                    title="Adicionar Variação"
-                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-                  >
-                    <Layers className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenItemKit(item)}
-                    title="Adicionar Kit"
-                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-                  >
-                    <Package className="w-3.5 h-3.5" />
-                  </button>
-                  <Link
-                    href={`/catalogo?tab=items&search=${encodeURIComponent(item.code || item.name)}`}
-                    target="_blank"
-                    title="Ver no Catálogo"
-                    className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push('/admin/itens/' + item.id);
-                    }}
-                    title="Editar item"
-                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
+                    {isInactive ? 'Inativo' : 'Em linha'}
+                  </span>
+                </div>
+
+                {/* Barra de Ações Rápidas Mobile - Paridade com Web */}
+                <div
+                  className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Linha 1: Edição Rápida (Gaveta) + Promoção */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setEditingItem(item)}
+                      className="py-2 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      title="Edição Rápida de dados e fotos sem sair da página"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                      <span>Edição Rápida</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenItemDiscount(item, e)}
+                      className={`py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                        hasPromo
+                          ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                          : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300'
+                      }`}
+                      title="Aplicar/Gerenciar Promoção"
+                    >
+                      <Tag className="w-3.5 h-3.5 shrink-0" />
+                      <span>{hasPromo ? 'Promoção (Ativa)' : 'Aplicar Promo'}</span>
+                    </button>
+                  </div>
+
+                  {/* Linha 2: + Variação, + Kit, Catálogo, Completo */}
+                  <div className="grid grid-cols-4 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenItemVariant(item)}
+                      className="py-2 px-1 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-300 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer truncate"
+                      title="Adicionar Variação de peça"
+                    >
+                      <Layers className="w-3.5 h-3.5 shrink-0 text-purple-500" />
+                      <span>+ Var</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenItemKit(item)}
+                      className="py-2 px-1 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-300 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer truncate"
+                      title="Adicionar ao Kit"
+                    >
+                      <Package className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+                      <span>+ Kit</span>
+                    </button>
+
+                    <Link
+                      href={`/catalogo?tab=items&search=${encodeURIComponent(item.code || item.name)}`}
+                      target="_blank"
+                      className="py-2 px-1 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer truncate"
+                      title="Ver item no Catálogo"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                      <span>Catálogo</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => router.push('/admin/itens/' + item.id)}
+                      className="py-2 px-1 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-300 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer truncate"
+                      title="Página detalhada com fotos e histórico"
+                    >
+                      <Settings className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+                      <span>Completo</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );

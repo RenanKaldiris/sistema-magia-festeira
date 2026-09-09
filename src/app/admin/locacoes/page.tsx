@@ -284,43 +284,43 @@ export default function AdminLocacoesPage() {
   }, [rentals, deleteTargetIds]);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       {/* Header com Ações Superiores */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Locações
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40">
+            <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40">
               {rentals.length}
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Gestão operacional de reservas, pagamentos parciais, saldo devedor e relatórios visuais.
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Gestão operacional de reservas, pagamentos parciais e saldo devedor
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           {/* Botão: Extrair Gráficos */}
           <button
             type="button"
             onClick={() => setIsChartsModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-950 dark:bg-slate-800 dark:hover:bg-slate-750 text-white text-xs sm:text-sm font-bold border border-slate-700/80 shadow-xs transition-colors shrink-0 cursor-pointer"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-750 text-white text-xs font-bold border border-slate-700/80 shadow-xs transition-colors shrink-0 cursor-pointer"
             title="Extrair gráficos, ranking de temas, kits mais alugados e ticket médio"
           >
-            <BarChart3 className="w-4 h-4 text-rose-400" />
-            <span>Gráficos & Métricas</span>
+            <BarChart3 className="w-3.5 h-3.5 text-rose-400" />
+            <span>Gráficos</span>
           </button>
 
           {/* Botão: Exportar */}
           <button
             type="button"
             onClick={() => setIsExportModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-950 dark:bg-slate-800 dark:hover:bg-slate-750 text-white text-xs sm:text-sm font-bold border border-slate-700/80 shadow-xs transition-colors shrink-0 cursor-pointer"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-750 text-white text-xs font-bold border border-slate-700/80 shadow-xs transition-colors shrink-0 cursor-pointer"
             title="Exportar locações para Excel, PDF ou texto simples"
           >
-            <Download className="w-4 h-4 text-rose-400" />
+            <Download className="w-3.5 h-3.5 text-rose-400" />
             <span>Exportar</span>
           </button>
 
@@ -328,128 +328,128 @@ export default function AdminLocacoesPage() {
           <button
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs sm:text-sm font-bold shadow-xs transition-colors shrink-0 cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs font-bold shadow-xs transition-colors shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Adicionar Reserva/Locação</span>
+            <span>Nova Reserva / Locação</span>
           </button>
         </div>
       </div>
 
       {/* Somatória dos Valores no Topo da Página (KPI Cards) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* 1. Somatória dos Valores Pagos */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Total Pago Recebido
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
+              Total Recebido
             </span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <DollarSign className="w-4 h-4" />
+            <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+              <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div className="mt-2 sm:mt-3">
-            <span className="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight block">
+            <span className="text-base sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight block truncate">
               R$ {totalPaidSum.toFixed(2).replace('.', ',')}
             </span>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5">
-              Valores já liquidados via PIX/Cartão
+            <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate">
+              Já liquidado PIX/Cartão
             </span>
           </div>
         </div>
 
-        {/* 2. Somatória do Saldo Devedor (Quanto ainda falta receber) */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Saldo Devedor a Receber
+        {/* 2. Somatória do Saldo Devedor */}
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
+              Saldo a Receber
             </span>
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <Clock className="w-4 h-4" />
+            <div className="p-1.5 sm:p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div className="mt-2 sm:mt-3">
-            <span className="text-xl sm:text-2xl font-extrabold text-amber-600 dark:text-amber-400 tracking-tight block">
+            <span className="text-base sm:text-2xl font-extrabold text-amber-600 dark:text-amber-400 tracking-tight block truncate">
               R$ {totalBalanceSum.toFixed(2).replace('.', ',')}
             </span>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5">
-              Quanto ainda falta receber dos clientes
+            <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate">
+              Pendente dos clientes
             </span>
           </div>
         </div>
 
         {/* 3. Valor Total Contratado */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
               Total Contratado
             </span>
-            <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
-              <CreditCard className="w-4 h-4" />
+            <div className="p-1.5 sm:p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 shrink-0">
+              <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div className="mt-2 sm:mt-3">
-            <span className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight block">
+            <span className="text-base sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight block truncate">
               R$ {totalContractedSum.toFixed(2).replace('.', ',')}
             </span>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5">
-              Faturamento bruto de todas as locações
+            <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate">
+              Faturamento global
             </span>
           </div>
         </div>
 
         {/* 4. Temas Alugados vs. Reservados */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Ocupação de Temas
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
+              Ocupação Temas
             </span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <Layers className="w-4 h-4" />
+            <div className="p-1.5 sm:p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+              <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3 flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl font-extrabold text-amber-600 dark:text-amber-400">
+          <div className="mt-2 sm:mt-3 flex items-baseline gap-1.5">
+            <span className="text-base sm:text-2xl font-extrabold text-amber-600 dark:text-amber-400">
               {currentlyRentedCount}
             </span>
-            <span className="text-xs text-slate-400 font-semibold">alugados</span>
+            <span className="text-[10px] sm:text-xs text-slate-400 font-semibold">alug.</span>
             <span className="text-slate-300 dark:text-slate-700">|</span>
-            <span className="text-xl sm:text-2xl font-extrabold text-blue-600 dark:text-blue-400">
+            <span className="text-base sm:text-2xl font-extrabold text-blue-600 dark:text-blue-400">
               {currentlyReservedCount}
             </span>
-            <span className="text-xs text-slate-400 font-semibold">reservados</span>
+            <span className="text-[10px] sm:text-xs text-slate-400 font-semibold">res.</span>
           </div>
-          <span className="text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5">
-            Status operacional do acervo no momento
+          <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate">
+            Status do acervo
           </span>
         </div>
       </div>
 
       {/* Notificação Toast */}
       {notification && (
-        <div className="p-3.5 rounded-xl bg-emerald-600 text-white text-xs sm:text-sm font-semibold shadow-md flex items-center gap-2 animate-in fade-in duration-150">
+        <div className="p-3 rounded-xl bg-emerald-600 text-white text-xs sm:text-sm font-semibold shadow-md flex items-center gap-2 animate-in fade-in duration-150">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{notification}</span>
         </div>
       )}
 
       {/* Barra de Busca & Filtros por Status */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
+      <div className="bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto flex-1">
           <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por cliente, telefone, tema, código, local de entrega ou observações..."
+            placeholder="Buscar por cliente, telefone, tema ou local..."
             className="w-full text-xs sm:text-sm bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
           />
         </div>
 
         {/* Status Filter Chips */}
-        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
+        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto scrollbar-none pb-0.5 sm:pb-0">
           {[
-            { key: 'all', label: 'Todos os Status' },
+            { key: 'all', label: 'Todos' },
             { key: 'reservado', label: 'Reservado' },
             { key: 'alugado', label: 'Alugado' },
             { key: 'devolvido', label: 'Devolvido' },
@@ -471,11 +471,11 @@ export default function AdminLocacoesPage() {
         </div>
 
         {/* Mobile Quick-Sort Chips */}
-        <div className="flex md:hidden items-center gap-2 w-full justify-between pt-2 border-t border-slate-100 dark:border-slate-800 overflow-x-auto">
+        <div className="flex md:hidden items-center gap-2 w-full justify-between pt-2 border-t border-slate-100 dark:border-slate-800 overflow-x-auto scrollbar-none pb-0.5">
           <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
             Ordenar:
           </span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={() => handleSort('status')}
@@ -548,10 +548,10 @@ export default function AdminLocacoesPage() {
       </div>
 
       {/* Dica de edição rápida */}
-      <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 px-1">
-        <Edit3 className="w-3.5 h-3.5 text-rose-500" />
+      <div className="hidden sm:flex text-[11px] text-slate-500 dark:text-slate-400 items-center gap-1.5 px-1">
+        <Edit3 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
         <span>
-          <strong>Dica:</strong> Clique em qualquer linha ou card para abrir a gaveta lateral com histórico completo de pagamentos, dados de entrega e detalhes da locação.
+          <strong>Dica:</strong> Toque em qualquer linha ou card para abrir a gaveta lateral com histórico de pagamentos e detalhes completos.
         </span>
       </div>
 

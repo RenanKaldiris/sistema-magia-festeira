@@ -212,31 +212,31 @@ export default function OrcamentosPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       {/* Toast */}
       {notification && (
-        <div className="fixed top-16 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-zinc-900 text-white text-xs font-semibold rounded-xl shadow-xl border border-zinc-700 animate-in fade-in">
-          <Check className="w-4 h-4 text-emerald-400" />
+        <div className="fixed top-16 right-4 sm:right-6 z-50 flex items-center gap-2 px-3.5 py-2.5 bg-zinc-900 text-white text-xs font-semibold rounded-xl shadow-xl border border-zinc-700 animate-in fade-in">
+          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{notification}</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2.5">
-            <FileText className="w-6 h-6 text-pink-600" />
-            Orçamentos & Propostas
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-pink-600 shrink-0" />
+            <span>Orçamentos & Propostas</span>
           </h1>
-          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-            Crie, envie via WhatsApp e controle propostas de locação para clientes
+          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+            Crie, envie via WhatsApp e controle propostas de locação
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => setIsNewModalOpen(true)}
-          className="px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-2 shadow-sm"
+          className="self-start sm:self-auto px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-2 shadow-xs"
         >
           <Plus className="w-4 h-4" />
           <span>Novo Orçamento</span>
@@ -244,59 +244,59 @@ export default function OrcamentosPage() {
       </div>
 
       {/* KPIs Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs">
-          <span className="text-xs font-medium text-zinc-500">Total Propostas</span>
-          <p className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mt-1">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col justify-between">
+          <span className="text-[11px] sm:text-xs font-semibold text-zinc-500">Total Propostas</span>
+          <p className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 mt-1">
             {totalOrcamentos}
           </p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-500">Pendentes</span>
-            <Clock className="w-4 h-4 text-amber-500" />
+        <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[11px] sm:text-xs font-semibold text-zinc-500">Pendentes</span>
+            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
           </div>
-          <p className="text-2xl font-black text-amber-600 mt-1">
+          <p className="text-xl sm:text-2xl font-black text-amber-600 mt-1">
             {pendentes.length}
           </p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-500">Aprovados / Fechados</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+        <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[11px] sm:text-xs font-semibold text-zinc-500">Aprovados</span>
+            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
           </div>
-          <p className="text-2xl font-black text-emerald-600 mt-1">
+          <p className="text-xl sm:text-2xl font-black text-emerald-600 mt-1">
             {aprovados.length}
           </p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-500">Valor Fechado</span>
-            <TrendingUp className="w-4 h-4 text-pink-500" />
+        <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[11px] sm:text-xs font-semibold text-zinc-500 truncate">Valor Fechado</span>
+            <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-500 shrink-0" />
           </div>
-          <p className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mt-1">
+          <p className="text-base sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 mt-1 truncate">
             R$ {totalAprovadoValor.toFixed(2).replace('.', ',')}
           </p>
         </div>
       </div>
 
       {/* Filters & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3.5 top-3 text-zinc-400" />
+          <Search className="w-4 h-4 absolute left-3 top-2.5 text-zinc-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por cliente, código ou local..."
-            className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-pink-500"
+            className="w-full pl-9 pr-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-pink-500"
           />
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5 sm:pb-0">
           {['todos', 'pendente', 'aprovado', 'recusado'].map((status) => (
             <button
               key={status}
@@ -316,9 +316,9 @@ export default function OrcamentosPage() {
 
       {/* List of Proposals */}
       {filteredOrcamentos.length === 0 ? (
-        <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
-          <FileText className="w-12 h-12 text-zinc-300 dark:text-zinc-700 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200">
+        <div className="text-center py-12 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
+          <FileText className="w-10 h-10 text-zinc-300 dark:text-zinc-700 mx-auto mb-2.5" />
+          <h3 className="text-sm sm:text-base font-bold text-zinc-800 dark:text-zinc-200">
             Nenhum orçamento encontrado
           </h3>
           <p className="text-xs text-zinc-500 mt-1 mb-4">
@@ -342,15 +342,15 @@ export default function OrcamentosPage() {
             return (
               <div
                 key={orc.id}
-                className="p-5 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-pink-300 dark:hover:border-pink-900/60 transition"
+                className="p-3.5 sm:p-5 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 hover:border-pink-300 dark:hover:border-pink-900/60 transition"
               >
-                <div className="space-y-2 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-mono font-bold text-pink-600 bg-pink-50 dark:bg-pink-950/40 px-2.5 py-0.5 rounded-lg">
+                <div className="space-y-2 flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <span className="text-[11px] sm:text-xs font-mono font-bold text-pink-600 bg-pink-50 dark:bg-pink-950/40 px-2 py-0.5 rounded-md">
                       {orc.code}
                     </span>
                     <span
-                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg uppercase tracking-wider ${
+                      className={`text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
                         isApproved
                           ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
                           : isPending
@@ -360,42 +360,42 @@ export default function OrcamentosPage() {
                     >
                       {orc.status}
                     </span>
-                    <span className="text-xs text-zinc-400 font-medium">
-                      Criado em {new Date(orc.created_at).toLocaleDateString('pt-BR')}
+                    <span className="text-[11px] text-zinc-400 font-medium ml-auto sm:ml-0">
+                      {new Date(orc.created_at).toLocaleDateString('pt-BR')}
                     </span>
                   </div>
 
                   <div>
-                    <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                    <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 truncate">
                       {orc.customer_name}
                     </h3>
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                       <span className="flex items-center gap-1">
-                        <Phone className="w-3.5 h-3.5 text-zinc-400" />
+                        <Phone className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                         {orc.customer_phone}
                       </span>
                       {orc.event_date && (
                         <span className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-pink-500" />
+                          <Calendar className="w-3.5 h-3.5 text-pink-500 shrink-0" />
                           Festa: {orc.event_date}
                         </span>
                       )}
                       {orc.event_location && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-zinc-400" />
-                          {orc.event_location}
+                        <span className="flex items-center gap-1 truncate max-w-full">
+                          <MapPin className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                          <span className="truncate">{orc.event_location}</span>
                         </span>
                       )}
                     </div>
                   </div>
 
                   {/* Itens */}
-                  <div className="pt-2">
+                  <div className="pt-1">
                     <div className="flex flex-wrap gap-1.5">
                       {orc.items.map((item) => (
                         <span
                           key={item.id}
-                          className="text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded-md"
+                          className="text-[10px] sm:text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded-md"
                         >
                           {item.quantity}x {item.title}
                         </span>
@@ -405,15 +405,15 @@ export default function OrcamentosPage() {
                 </div>
 
                 {/* Total & Action Buttons */}
-                <div className="flex flex-col sm:flex-row md:flex-col items-end justify-between gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-zinc-100 dark:border-zinc-800">
-                  <div className="text-right">
-                    <span className="text-xs text-zinc-400 font-medium">Total da Proposta</span>
-                    <p className="text-xl font-black text-zinc-900 dark:text-zinc-100">
+                <div className="flex flex-row md:flex-col items-center md:items-end justify-between gap-2.5 pt-2.5 md:pt-0 border-t md:border-t-0 border-zinc-100 dark:border-zinc-800 shrink-0">
+                  <div className="text-left md:text-right">
+                    <span className="text-[10px] sm:text-xs text-zinc-400 font-medium block">Total</span>
+                    <p className="text-base sm:text-xl font-black text-zinc-900 dark:text-zinc-100 leading-tight">
                       R$ {orc.total.toFixed(2).replace('.', ',')}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                     {/* Alterar Status */}
                     {isPending && (
                       <button
@@ -423,7 +423,7 @@ export default function OrcamentosPage() {
                         title="Marcar como Aprovado"
                       >
                         <Check className="w-3.5 h-3.5" />
-                        Aprovar
+                        <span className="hidden xs:inline">Aprovar</span>
                       </button>
                     )}
 
@@ -431,11 +431,11 @@ export default function OrcamentosPage() {
                     <button
                       type="button"
                       onClick={() => handleSendWhatsApp(orc)}
-                      className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 shadow-xs"
+                      className="px-2.5 sm:px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 shadow-xs"
                       title="Enviar proposta no WhatsApp do cliente"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
-                      WhatsApp
+                      <span>WhatsApp</span>
                     </button>
 
                     {/* Excluir */}
@@ -457,39 +457,39 @@ export default function OrcamentosPage() {
 
       {/* MODAL: NOVO ORÇAMENTO */}
       {isNewModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="relative w-full max-w-3xl bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="relative w-full max-w-3xl bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[94vh]">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 flex items-center justify-center">
-                  <FileText className="w-5 h-5" />
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                  <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100">
                     Criar Novo Orçamento
                   </h2>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Monte a proposta com itens do catálogo e envie direto ao cliente
+                  <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400">
+                    Monte a proposta com itens do catálogo
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsNewModalOpen(false)}
-                className="p-2 rounded-xl text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleCreateOrcamento} className="p-6 overflow-y-auto space-y-6 flex-1">
+            <form onSubmit={handleCreateOrcamento} className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 flex-1">
               {/* Cliente */}
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2.5">
                   1. Dados do Cliente & Evento
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                       Nome do Cliente *
@@ -686,17 +686,17 @@ export default function OrcamentosPage() {
               </div>
 
               {/* Botões do Modal */}
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="sticky bottom-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 p-3 sm:p-4 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-2 z-10">
                 <button
                   type="button"
                   onClick={() => setIsNewModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-xl transition"
+                  className="px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold rounded-xl transition shadow-sm"
+                  className="px-5 py-2 bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold rounded-xl transition shadow-xs"
                 >
                   Criar Orçamento
                 </button>

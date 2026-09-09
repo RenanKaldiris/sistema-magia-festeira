@@ -412,47 +412,46 @@ export default function ThemeEditPage({ params }: PageProps) {
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-20">
       {/* Top Breadcrumb & Actions Bar */}
       <div className="sticky top-0 z-30 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               type="button"
               onClick={() => router.push('/admin/temas')}
-              className="p-2 -ml-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-1.5 text-xs font-semibold"
+              className="p-1.5 sm:p-2 -ml-1 sm:-ml-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-1 text-xs font-semibold shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Voltar</span>
+              <span className="hidden sm:inline">Voltar</span>
             </button>
-            <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700" />
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold text-pink-600 bg-pink-50 dark:bg-pink-950/40 px-2 py-0.5 rounded-md">
-                  {theme.code}
-                </span>
-                <h1 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[240px] sm:max-w-md">
-                  {theme.name}
-                </h1>
-              </div>
+            <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700 shrink-0" />
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[10px] sm:text-xs font-mono font-bold text-pink-600 bg-pink-50 dark:bg-pink-950/40 px-2 py-0.5 rounded-md shrink-0">
+                {theme.code}
+              </span>
+              <h1 className="text-sm sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                {theme.name}
+              </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <Link
               href={`/catalogo/${theme.slug}`}
               target="_blank"
-              className="px-3 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition flex items-center gap-1.5 border border-zinc-200 dark:border-zinc-700"
+              className="p-2 sm:px-3 sm:py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition flex items-center gap-1.5 border border-zinc-200 dark:border-zinc-700 shrink-0"
+              title="Ver no Catálogo"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Ver no Catálogo</span>
+              <span className="hidden sm:inline">Catálogo</span>
             </Link>
 
             <button
               type="button"
               onClick={() => handleSaveGeneral()}
               disabled={isSaving}
-              className="px-4 py-2 bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
+              className="px-3 sm:px-4 py-2 bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs shrink-0"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>{isSaving ? 'Salvando...' : 'Salvar Alterações'}</span>
+              <span>{isSaving ? 'Salvando...' : 'Salvar'}</span>
             </button>
           </div>
         </div>
@@ -461,7 +460,7 @@ export default function ThemeEditPage({ params }: PageProps) {
       {/* Notification Toast */}
       {notification && (
         <div
-          className={`fixed top-16 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200 ${
+          className={`fixed top-16 right-4 sm:right-6 z-50 flex items-center gap-2 px-3.5 py-2.5 rounded-xl shadow-lg border text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200 ${
             notification.type === 'success'
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/90 dark:text-emerald-200 dark:border-emerald-800'
               : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/90 dark:text-rose-200 dark:border-rose-800'
@@ -477,72 +476,72 @@ export default function ThemeEditPage({ params }: PageProps) {
       )}
 
       {/* Main Container */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+      <div className="max-w-6xl mx-auto px-2.5 sm:px-6 pt-4 sm:pt-6">
         {/* Navigation Tabs */}
-        <div className="flex border-b border-zinc-200 dark:border-zinc-800 gap-1 overflow-x-auto pb-px mb-6 scrollbar-none">
+        <div className="flex border-b border-zinc-200 dark:border-zinc-800 gap-1 overflow-x-auto pb-px mb-4 sm:mb-6 scrollbar-none">
           <button
             type="button"
             onClick={() => setActiveTab('dados')}
-            className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-t-xl transition whitespace-nowrap flex items-center gap-2 border-b-2 ${
+            className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-t-xl transition whitespace-nowrap flex items-center gap-1.5 sm:gap-2 border-b-2 ${
               activeTab === 'dados'
                 ? 'border-pink-600 text-pink-600 dark:text-pink-400 bg-white dark:bg-zinc-900 shadow-xs'
                 : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
             }`}
           >
-            <Settings className="w-4 h-4" />
-            Dados Gerais
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>Dados</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('fotos')}
-            className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-t-xl transition whitespace-nowrap flex items-center gap-2 border-b-2 ${
+            className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-t-xl transition whitespace-nowrap flex items-center gap-1.5 sm:gap-2 border-b-2 ${
               activeTab === 'fotos'
                 ? 'border-pink-600 text-pink-600 dark:text-pink-400 bg-white dark:bg-zinc-900 shadow-xs'
                 : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
             }`}
           >
-            <ImageIcon className="w-4 h-4" />
-            Fotos & Galeria ({mediaList.length})
+            <ImageIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>Fotos ({mediaList.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('variaveis')}
-            className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-t-xl transition whitespace-nowrap flex items-center gap-2 border-b-2 ${
+            className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-t-xl transition whitespace-nowrap flex items-center gap-1.5 sm:gap-2 border-b-2 ${
               activeTab === 'variaveis'
                 ? 'border-pink-600 text-pink-600 dark:text-pink-400 bg-white dark:bg-zinc-900 shadow-xs'
                 : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
             }`}
           >
-            <Layers className="w-4 h-4" />
-            Variáveis do Tema ({variantsList.length})
+            <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>Variáveis ({variantsList.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('kits')}
-            className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-t-xl transition whitespace-nowrap flex items-center gap-2 border-b-2 ${
+            className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-t-xl transition whitespace-nowrap flex items-center gap-1.5 sm:gap-2 border-b-2 ${
               activeTab === 'kits'
                 ? 'border-pink-600 text-pink-600 dark:text-pink-400 bg-white dark:bg-zinc-900 shadow-xs'
                 : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
             }`}
           >
-            <Package className="w-4 h-4" />
-            Kits da Decoração ({kitsList.length})
+            <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>Kits ({kitsList.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('promocoes')}
-            className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-t-xl transition whitespace-nowrap flex items-center gap-2 border-b-2 ${
+            className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-t-xl transition whitespace-nowrap flex items-center gap-1.5 sm:gap-2 border-b-2 ${
               activeTab === 'promocoes'
                 ? 'border-pink-600 text-pink-600 dark:text-pink-400 bg-white dark:bg-zinc-900 shadow-xs'
                 : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
             }`}
           >
-            <Tag className="w-4 h-4" />
-            Promoções
+            <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>Promoção</span>
             {theme.promotional_price && theme.promotional_price < theme.base_price && (
               <span className="w-2 h-2 rounded-full bg-pink-500" />
             )}
@@ -551,7 +550,7 @@ export default function ThemeEditPage({ params }: PageProps) {
 
         {/* TAB 1: DADOS GERAIS */}
         {activeTab === 'dados' && (
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-xs space-y-6">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6 shadow-xs space-y-5 sm:space-y-6">
             <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               Informações do Tema
             </h2>

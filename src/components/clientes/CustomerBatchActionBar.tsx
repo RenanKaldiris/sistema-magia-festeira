@@ -21,7 +21,7 @@ export function CustomerBatchActionBar({
   return (
     <aside
       aria-label="Barra de ações em lote de clientes"
-      className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-xl bg-slate-900/95 dark:bg-slate-900/95 text-white backdrop-blur-md px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl sm:rounded-full border border-slate-700/80 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-5 duration-200"
+      className="fixed bottom-0 sm:bottom-5 inset-x-0 sm:left-1/2 sm:-translate-x-1/2 z-40 w-full sm:w-[92%] max-w-xl bg-slate-900/95 dark:bg-slate-900/95 text-white backdrop-blur-md px-3.5 py-2.5 sm:px-5 sm:py-3.5 rounded-t-2xl sm:rounded-2xl border-t sm:border border-slate-700/80 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-2.5 animate-in fade-in slide-in-from-bottom-4 duration-200"
     >
       {/* Contador de seleção e botão desmarcar */}
       <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-start">

@@ -217,22 +217,22 @@ export default function ItemEditPage({ params }: PageProps) {
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-20">
       {/* Top Header */}
       <div className="sticky top-0 z-30 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="max-w-5xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               type="button"
               onClick={() => router.push('/admin/temas')}
-              className="p-2 -ml-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-1.5 text-xs font-semibold"
+              className="p-1.5 sm:p-2 -ml-1 sm:-ml-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-1 text-xs font-semibold shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Voltar para Itens</span>
+              <span className="hidden sm:inline">Voltar</span>
             </button>
-            <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700" />
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold text-pink-600 bg-pink-50 dark:bg-pink-950/40 px-2 py-0.5 rounded-md">
+            <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700 shrink-0" />
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[10px] sm:text-xs font-mono font-bold text-pink-600 bg-pink-50 dark:bg-pink-950/40 px-2 py-0.5 rounded-md shrink-0">
                 {item.code}
               </span>
-              <h1 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[240px] sm:max-w-md">
+              <h1 className="text-sm sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 truncate">
                 {item.name}
               </h1>
             </div>
@@ -242,10 +242,10 @@ export default function ItemEditPage({ params }: PageProps) {
             type="button"
             onClick={() => handleSave()}
             disabled={isSaving}
-            className="px-4 py-2 bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
+            className="px-3 sm:px-4 py-2 bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs shrink-0"
           >
             <Save className="w-3.5 h-3.5" />
-            <span>{isSaving ? 'Salvando...' : 'Salvar Alterações'}</span>
+            <span>{isSaving ? 'Salvando...' : 'Salvar'}</span>
           </button>
         </div>
       </div>
@@ -253,7 +253,7 @@ export default function ItemEditPage({ params }: PageProps) {
       {/* Toast */}
       {notification && (
         <div
-          className={`fixed top-16 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200 ${
+          className={`fixed top-16 right-4 sm:right-6 z-50 flex items-center gap-2 px-3.5 py-2.5 rounded-xl shadow-lg border text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200 ${
             notification.type === 'success'
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/90 dark:text-emerald-200 dark:border-emerald-800'
               : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/90 dark:text-rose-200 dark:border-rose-800'
@@ -269,9 +269,9 @@ export default function ItemEditPage({ params }: PageProps) {
       )}
 
       {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+      <div className="max-w-5xl mx-auto px-2.5 sm:px-6 pt-4 sm:pt-6 space-y-4 sm:space-y-6">
         {/* Dados do Item */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-xs space-y-5">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6 shadow-xs space-y-4 sm:space-y-5">
           <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
             Dados da Peça / Item
           </h2>

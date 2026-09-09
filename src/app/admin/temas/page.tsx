@@ -541,20 +541,20 @@ function TemasManagementContent() {
 
       {/* Internal Subpage Tabs + Main Action Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-        <div className="flex items-center gap-2 overflow-x-auto select-none py-0.5">
+        <div className="flex items-center gap-1.5 overflow-x-auto select-none py-1 -mx-1 px-1 scrollbar-none">
           <button
             type="button"
             onClick={() => handleTabChange('temas')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
+            className={`flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'temas'
                 ? 'bg-rose-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
             }`}
           >
-            <Palette className="w-4 h-4" />
-            <span>Temas de Decoração</span>
+            <Palette className="w-4 h-4 shrink-0" />
+            <span>Temas</span>
             <span
-              className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+              className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
                 activeTab === 'temas'
                   ? 'bg-white/20 text-white'
                   : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
@@ -567,16 +567,16 @@ function TemasManagementContent() {
           <button
             type="button"
             onClick={() => handleTabChange('itens')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
+            className={`flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'itens'
                 ? 'bg-rose-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
             }`}
           >
-            <Package2 className="w-4 h-4" />
+            <Package2 className="w-4 h-4 shrink-0" />
             <span>Itens & Estoque</span>
             <span
-              className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+              className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
                 activeTab === 'itens'
                   ? 'bg-white/20 text-white'
                   : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
@@ -589,16 +589,17 @@ function TemasManagementContent() {
           <button
             type="button"
             onClick={() => handleTabChange('importacoes')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
+            className={`flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'importacoes'
                 ? 'bg-rose-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
             }`}
           >
-            <UploadCloud className="w-4 h-4" />
-            <span>Histórico e Importações</span>
+            <UploadCloud className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Histórico e</span>
+            <span>Importações</span>
             <span
-              className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+              className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
                 activeTab === 'importacoes'
                   ? 'bg-white/20 text-white'
                   : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
@@ -609,12 +610,12 @@ function TemasManagementContent() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
           {/* Toggle Global de Visibilidade de Preços no Catálogo */}
           <button
             type="button"
             onClick={handleToggleShowPrices}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all shadow-2xs cursor-pointer ${
+            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all shadow-2xs cursor-pointer ${
               showPrices
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100'
                 : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 hover:bg-amber-100'
@@ -623,13 +624,15 @@ function TemasManagementContent() {
           >
             {showPrices ? (
               <>
-                <Eye className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Preços no Catálogo: Visíveis (ON)</span>
+                <Eye className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="hidden sm:inline">Preços no Catálogo: ON</span>
+                <span className="sm:hidden inline">Preços: ON</span>
               </>
             ) : (
               <>
-                <EyeOff className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <span>Preços no Catálogo: Ocultos (OFF)</span>
+                <EyeOff className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="hidden sm:inline">Preços no Catálogo: OFF</span>
+                <span className="sm:hidden inline">Preços: OFF</span>
               </>
             )}
           </button>
@@ -638,10 +641,10 @@ function TemasManagementContent() {
             <button
               type="button"
               onClick={() => setIsNewThemeModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs sm:text-sm font-bold shadow-xs transition-colors shrink-0 cursor-pointer"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs sm:text-sm font-bold shadow-xs transition-colors shrink-0 cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              <span>Cadastrar Novo Tema</span>
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>Novo Tema</span>
             </button>
           )}
         </div>
@@ -794,15 +797,16 @@ function TemasManagementContent() {
           </div>
 
           {/* Helper hint for quick edit */}
+          {/* Helper hint for quick edit */}
           <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 px-1">
-            <Edit3 className="w-3.5 h-3.5 text-rose-500" />
+            <Edit3 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
             <span>
-              <strong>Dica:</strong> Clique em qualquer linha da tabela para abrir o formulário de edição rápida de dados e fotos.
+              <strong>Dica:</strong> Toque no card para abrir a <strong>Edição Rápida</strong> instantânea ou utilize os botões para kits, variações e promoções.
             </span>
           </div>
 
-          {/* Mobile Themes Cards (touch-friendly) */}
-          <div className="md:hidden space-y-4">
+          {/* Mobile Themes Cards (touch-friendly, otimizado e respirável) */}
+          <div className="md:hidden space-y-3.5">
             {filteredThemes.length === 0 ? (
               <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-xs">
                 Nenhum tema encontrado com o termo informado.
@@ -811,20 +815,22 @@ function TemasManagementContent() {
               filteredThemes.map((theme) => {
                 const details = store.getThemeById(theme.id);
                 const isSelected = selectedThemeIds.includes(theme.id);
+                const hasPromo = !!(theme.promotional_price && theme.promotional_price < theme.base_price);
 
                 return (
                   <div
                     key={theme.id}
-                    onClick={() => router.push('/admin/temas/' + theme.id)}
+                    onClick={() => setEditingTheme(theme)}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-3 ${
                       isSelected
-                        ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800 shadow-xs'
+                        ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800 shadow-xs ring-2 ring-rose-500/20'
                         : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
+                    {/* Header do Card: Foto, Código, Nome e Checkbox */}
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
                           {details?.primary_media?.storage_path ? (
                             <img
                               src={details.primary_media.storage_path}
@@ -841,23 +847,48 @@ function TemasManagementContent() {
                             </div>
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                            {theme.code}
-                          </span>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                              {theme.code}
+                            </span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                              {details?.category?.name || 'Geral'}
+                            </span>
+                          </div>
+
                           <h3 className="font-extrabold text-sm text-slate-900 dark:text-white truncate mt-1">
                             {theme.name}
                           </h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                            {details?.category?.name || 'Sem categoria'}
-                          </p>
+
+                          {/* Preços e Estoque */}
+                          <div className="flex items-center gap-2 mt-1">
+                            {hasPromo ? (
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="text-[10px] line-through text-slate-400">
+                                  R$ {theme.base_price.toFixed(2).replace('.', ',')}
+                                </span>
+                                <span className="font-black text-xs text-rose-600 dark:text-rose-400">
+                                  R$ {theme.promotional_price!.toFixed(2).replace('.', ',')}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="font-extrabold text-xs text-slate-900 dark:text-white">
+                                R$ {theme.base_price.toFixed(2).replace('.', ',')}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Checkbox Touch Selection */}
+                      {/* Checkbox Touch Seleção */}
                       <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-1 cursor-pointer shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleSelect(theme.id);
+                        }}
+                        className="p-1.5 -mr-1 -mt-1 cursor-pointer shrink-0 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                         title={isSelected ? 'Desmarcar' : 'Selecionar'}
                       >
                         <input
@@ -870,87 +901,113 @@ function TemasManagementContent() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      <div>
-                        {theme.promotional_price && theme.promotional_price < theme.base_price ? (
-                          <div>
-                            <span className="text-[10px] line-through text-slate-400 block">
-                              De R$ {theme.base_price.toFixed(2).replace('.', ',')}
+                    {/* Faixa intermediária: Status e Tags de Personagens */}
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5 max-w-[200px] sm:max-w-xs">
+                        {theme.characters && theme.characters.length > 0 ? (
+                          theme.characters.map((c, i) => (
+                            <span
+                              key={i}
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 whitespace-nowrap"
+                            >
+                              {c}
                             </span>
-                            <span className="font-black text-rose-600 dark:text-rose-400">
-                              Por R$ {theme.promotional_price.toFixed(2).replace('.', ',')}
-                            </span>
-                          </div>
+                          ))
                         ) : (
-                          <span className="font-black text-slate-900 dark:text-white">
-                            R$ {theme.base_price.toFixed(2).replace('.', ',')}
-                          </span>
+                          <span className="text-[10px] text-slate-400 italic">Sem personagens</span>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                             theme.status === 'active'
                               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                           }`}
                         >
                           {theme.status === 'active' ? 'Ativo' : 'Inativo'}
                         </span>
-                        <span className="text-[11px] text-slate-400 font-medium">
+                        <span className="text-[10px] text-slate-400 font-medium">
                           {theme.stock_quantity || 1} un.
                         </span>
                       </div>
                     </div>
 
-                    {theme.characters && theme.characters.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {theme.characters.map((c, i) => (
-                          <span
-                            key={i}
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 truncate max-w-[120px]"
-                          >
-                            {c}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    {/* Barra de Ações Rápidas Mobile - Paridade 100% com Web */}
+                    <div
+                      className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* Linha 1: Edição Rápida (Gaveta) + Promoção Direta */}
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setEditingTheme(theme)}
+                          className="py-2 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                          title="Edição Rápida de dados e fotos sem sair da página"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                          <span>Edição Rápida</span>
+                        </button>
 
-                    {/* Botões de Ação Touch */}
-                    <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push('/admin/temas/' + theme.id);
-                        }}
-                        className="py-2 px-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors"
-                        title="Editar Tema e Variáveis"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        <span>Editar</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedThemeForKit(theme);
-                        }}
-                        className="py-2 px-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors"
-                      >
-                        <Package className="w-3.5 h-3.5" />
-                        <span>+ Kit</span>
-                      </button>
-                      <Link
-                        href={`/catalogo/${theme.slug}`}
-                        target="_blank"
-                        onClick={(e) => e.stopPropagation()}
-                        className="py-2 px-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Catálogo</span>
-                      </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenSingleDiscount(theme)}
+                          className={`py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                            hasPromo
+                              ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                              : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300'
+                          }`}
+                          title="Gerenciar Desconto / Preço Promocional"
+                        >
+                          <Tag className="w-3.5 h-3.5 shrink-0" />
+                          <span>{hasPromo ? 'Promoção (Ativa)' : 'Aplicar Promo'}</span>
+                        </button>
+                      </div>
+
+                      {/* Linha 2: + Kit, + Variação, Catálogo Público, Config Avançada */}
+                      <div className="grid grid-cols-4 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedThemeForKit(theme)}
+                          className="py-2 px-1 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-300 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer truncate"
+                          title="Adicionar Kit com peças ao tema"
+                        >
+                          <Package className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+                          <span>+ Kit</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedThemeForVariant(theme)}
+                          className="py-2 px-1 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-300 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer truncate"
+                          title="Adicionar Variação temática"
+                        >
+                          <Layers className="w-3.5 h-3.5 shrink-0 text-purple-500" />
+                          <span>+ Var</span>
+                        </button>
+
+                        <Link
+                          href={`/catalogo/${theme.slug}`}
+                          target="_blank"
+                          className="py-2 px-1 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer truncate"
+                          title="Ver tema publicado no catálogo público"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                          <span>Catálogo</span>
+                        </Link>
+
+                        <button
+                          type="button"
+                          onClick={() => router.push('/admin/temas/' + theme.id)}
+                          className="py-2 px-1 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-300 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer truncate"
+                          title="Abrir página completa com todos os módulos de edição"
+                        >
+                          <Settings className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+                          <span>Completo</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -1069,13 +1126,13 @@ function TemasManagementContent() {
                       return (
                         <tr
                           key={theme.id}
-                          onClick={() => router.push('/admin/temas/' + theme.id)}
+                          onClick={() => setEditingTheme(theme)}
                           className={`cursor-pointer transition-colors ${
                             isSelected
                               ? 'bg-rose-50/60 dark:bg-rose-950/25 hover:bg-rose-50/80 dark:hover:bg-rose-950/35'
                               : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
                           }`}
-                          title="Clique para editar este tema"
+                          title="Clique para edição rápida deste tema"
                         >
                           {/* Código / Tema */}
                           <td className="py-4 px-6">
@@ -1188,18 +1245,20 @@ function TemasManagementContent() {
                           {/* Ações & Checkbox adjacente ao botão Ver no Catálogo */}
                           <td className="py-4 px-6 text-right">
                             <div className="flex items-center justify-end gap-2">
+                              {/* Edição Rápida (Gaveta) */}
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  router.push('/admin/temas/' + theme.id);
+                                  setEditingTheme(theme);
                                 }}
-                                title="Editar Tema, Kits, Variáveis e Promoções"
-                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+                                title="Edição Rápida (Dados e Fotos)"
+                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                               >
-                                <Edit3 className="w-3.5 h-3.5" />
+                                <Edit3 className="w-3.5 h-3.5 text-rose-500" />
                               </button>
 
+                              {/* Promoção */}
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -1216,27 +1275,55 @@ function TemasManagementContent() {
                                 <Tag className="w-3.5 h-3.5" />
                               </button>
 
+                              {/* + Kit */}
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedThemeForKit(theme);
                                 }}
-                                title="Adicionar Kit"
-                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+                                title="Adicionar Kit com peças"
+                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                               >
                                 <Package className="w-3.5 h-3.5" />
                               </button>
 
+                              {/* + Variação */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedThemeForVariant(theme);
+                                }}
+                                title="Adicionar Variação temática"
+                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                              >
+                                <Layers className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Ver no Catálogo */}
                               <Link
                                 href={`/catalogo/${theme.slug}`}
                                 target="_blank"
                                 onClick={(e) => e.stopPropagation()}
-                                title="Ver no Catálogo"
+                                title="Ver no Catálogo Público"
                                 className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
                               </Link>
+
+                              {/* Edição Completa */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push('/admin/temas/' + theme.id);
+                                }}
+                                title="Edição Completa (Página Detalhada)"
+                                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                              >
+                                <Settings className="w-3.5 h-3.5" />
+                              </button>
 
                               {/* Checkbox adjacente ao botão Ver no Catálogo */}
                               <div

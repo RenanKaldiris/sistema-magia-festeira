@@ -458,12 +458,12 @@ export function ThemeEditDrawer({
         aria-hidden="true"
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-lg bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col animate-in slide-in-from-right duration-250">
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
+        <div className="w-screen max-w-full sm:max-w-lg bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col animate-in slide-in-from-right duration-250">
           {/* Header */}
-          <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-850">
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-850/80 backdrop-blur-sm shrink-0">
+            <div className="min-w-0 flex-1 pr-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 <span className="px-2 py-0.5 rounded-md bg-slate-900 dark:bg-rose-600 text-white text-[10px] font-bold">
                   {theme.code || 'MF-NOVO'}
                 </span>
@@ -483,19 +483,19 @@ export function ThemeEditDrawer({
                     : 'Inativo (Oculto)'}
                 </span>
               </div>
-              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white mt-1 truncate max-w-[320px]">
+              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white mt-1 truncate">
                 {theme.name || 'Tema Sem Nome'}
               </h2>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 block -mt-0.5">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 block -mt-0.5 truncate">
                 {isPreApproval
-                  ? 'Revisão Pré-Aprovação: ajuste dados e fotos antes de publicar'
+                  ? 'Revisão Pré-Aprovação: ajuste dados e fotos'
                   : 'Edição Rápida de Tema & Acervo'}
               </span>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
               aria-label="Fechar gaveta de edição"
             >
               <X className="w-5 h-5" />
@@ -503,14 +503,15 @@ export function ThemeEditDrawer({
           </div>
 
           {notification && (
-            <div className="mx-5 mt-4 p-3 bg-emerald-600 text-white text-xs font-semibold rounded-xl flex items-center gap-2 shadow-xs animate-in fade-in">
+            <div className="mx-4 sm:mx-5 mt-3 sm:mt-4 p-3 bg-emerald-600 text-white text-xs font-semibold rounded-xl flex items-center gap-2 shadow-xs animate-in fade-in shrink-0">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>{notification}</span>
             </div>
           )}
 
-          {/* Form Content */}
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 text-xs sm:text-sm">
+          {/* Form Content - Usando form tag em volta com flex-1 e overflow-y-auto */}
+          <form id="theme-edit-drawer-form" onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 text-xs sm:text-sm">
             {/* Gestão de Fotos do Tema */}
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
@@ -978,14 +979,15 @@ export function ThemeEditDrawer({
                 )}
               </div>
             )}
+            </div>
 
-            {/* Footer Buttons inside drawer */}
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-end gap-2.5">
+            {/* Sticky Footer Buttons - Sempre acessíveis no mobile sem rolagem */}
+            <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-3.5 sm:px-6 sm:py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2 shrink-0 z-20">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={isSaving}
-                className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-xs sm:text-sm"
+                className="px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-xs sm:text-sm"
               >
                 Cancelar
               </button>
@@ -995,26 +997,26 @@ export function ThemeEditDrawer({
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 rounded-xl font-semibold border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer text-xs sm:text-sm"
+                    className="px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 rounded-xl font-semibold border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer text-xs sm:text-sm"
                   >
                     <Save className="w-4 h-4 text-slate-500" />
-                    <span>Salvar na Fila</span>
+                    <span>Salvar</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleApproveAction}
                     disabled={isSaving}
-                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl font-bold shadow-xs flex items-center gap-2 transition-colors cursor-pointer text-xs sm:text-sm"
+                    className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer text-xs sm:text-sm"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Aprovar & Publicar no Catálogo</span>
+                    <span>Aprovar & Publicar</span>
                   </button>
                 </>
               ) : (
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl font-semibold shadow-xs flex items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer text-xs sm:text-sm"
+                  className="flex-1 sm:flex-none justify-center px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl font-bold shadow-xs flex items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer text-xs sm:text-sm"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSaving ? 'Salvando...' : 'Salvar Alterações'}</span>
