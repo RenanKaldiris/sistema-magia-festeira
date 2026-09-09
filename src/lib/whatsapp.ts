@@ -7,7 +7,8 @@
  * Se não definido, utiliza o número padrão cadastrado da Magia Festeira (+55 11 97782-3876).
  */
 
-export const DEFAULT_WHATSAPP_NUMBER = '5511977823876';
+export const OFFICIAL_MAGIA_WHATSAPP = '5511977823876';
+export const DEFAULT_WHATSAPP_NUMBER = OFFICIAL_MAGIA_WHATSAPP;
 
 /**
  * Normaliza qualquer string de telefone para o formato internacional de link wa.me
@@ -16,7 +17,7 @@ export const DEFAULT_WHATSAPP_NUMBER = '5511977823876';
 export function sanitizeWhatsAppNumber(phone?: string | null): string {
   if (!phone) {
     const envPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
-    phone = envPhone || DEFAULT_WHATSAPP_NUMBER;
+    phone = (envPhone && !envPhone.includes('999998888')) ? envPhone : OFFICIAL_MAGIA_WHATSAPP;
   }
 
   const digits = phone.replace(/\D/g, '');
