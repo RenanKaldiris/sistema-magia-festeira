@@ -22,6 +22,7 @@ import {
   PanelLeftOpen,
   X,
   FileText,
+  Webhook,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -49,6 +50,7 @@ const menuItems: MenuItem[] = [
   { href: '/admin/locacoes', label: 'Locações', icon: ClipboardList },
   { href: '/admin/clientes', label: 'Clientes', icon: Users },
   { href: '/admin/ia', label: 'Agente de IA (WhatsApp)', icon: Bot },
+  { href: '/admin/integracoes', label: 'Integrações & API', icon: Webhook },
   { href: '/admin/relatorios', label: 'Relatórios & Exportação', icon: BarChart3 },
   { href: '/admin/usuarios', label: 'Usuários & Perfis', icon: ShieldCheck },
   { href: '/admin/logs', label: 'Auditoria & Logs', icon: History },
