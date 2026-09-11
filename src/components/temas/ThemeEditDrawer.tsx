@@ -77,7 +77,33 @@ export function ThemeEditDrawer({
 
   const refreshMedia = (themeId: string) => {
     const list = store.getMediaByEntity('theme', themeId);
-    setMediaList(list);
+    if (list && list.length > 0) {
+      setMediaList(list);
+    } else {
+      const details = store.getThemeById(themeId);
+      const fallbackUrl = (theme as any)?.imageUrl || details?.imageUrl || details?.primary_media?.storage_path;
+      if (fallbackUrl) {
+        setMediaList([
+          {
+            id: 'existing-theme-media-' + themeId,
+            tenant_id: 'a0000000-0000-0000-0000-000000000001',
+            entity_type: 'theme',
+            entity_id: themeId,
+            storage_path: fallbackUrl,
+            original_name: `${theme?.name || 'foto'}.webp`,
+            mime_type: 'image/webp',
+            file_size: 50000,
+            fingerprint: `theme-existing-${themeId}`,
+            sort_order: 1,
+            is_primary: true,
+            ai_tags: theme?.characters || [],
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } else {
+        setMediaList([]);
+      }
+    }
   };
 
   const refreshVariants = (themeId: string) => {
@@ -267,49 +293,8 @@ export function ThemeEditDrawer({
         }
         showNotification(`Foto "${uploaded.fileName}" convertida para .WEBP (60%) e vinculada ao tema.`);
       } catch (err) {
-        console.warn('Erro ao usar uploadImageToServer, aplicando fallback local:', err);
-        try {
-          const { file: webpFile, dataUrl: webpDataUrl } = await convertImageToWebP(rawFile, 0.60);
-          const webpMedia: Media = {
-            ...tempMedia,
-            storage_path: webpDataUrl,
-            original_name: webpFile.name,
-            mime_type: 'image/webp',
-            file_size: webpFile.size,
-          };
-
-          setMediaList((prev) =>
-            prev.map((m) => (m.id === mediaId ? webpMedia : m))
-          );
-
-          if (!isPreApproval) {
-            store.addMediaToEntity({
-              ...webpMedia,
-              storage_path: webpDataUrl,
-              original_name: webpFile.name,
-              mime_type: 'image/webp',
-            });
-            refreshMedia(theme.id);
-          }
-          showNotification(`Foto "${webpFile.name}" convertida para .WEBP (60%) e vinculada ao tema.`);
-        } catch {
-          const file = await convertHeicToJpeg(rawFile);
-          const permanentUrl = await fileToDataUrl(file);
-          if (permanentUrl) {
-            setMediaList((prev) =>
-              prev.map((m) => (m.id === mediaId ? { ...m, storage_path: permanentUrl, mime_type: 'image/webp' } : m))
-            );
-            if (!isPreApproval) {
-              store.addMediaToEntity({
-                ...tempMedia,
-                storage_path: permanentUrl,
-                original_name: file.name,
-                mime_type: 'image/webp',
-              });
-              refreshMedia(theme.id);
-            }
-          }
-        }
+        console.error('Erro ao usar uploadImageToServer:', err);
+        showNotification('Falha ao processar upload da foto para a nuvem.');
       }
     });
   };
@@ -406,6 +391,11 @@ export function ThemeEditDrawer({
         return;
       }
 
+      const finalImageUrl =
+        primary?.storage_path ||
+        (theme as any).imageUrl ||
+        store.getThemeById(theme.id)?.primary_media?.storage_path;
+
       const updated = store.updateTheme(theme.id, {
         name: name.trim(),
         base_price: Number(basePrice),
@@ -414,7 +404,7 @@ export function ThemeEditDrawer({
         description: description.trim() || DEFAULT_THEME_DESCRIPTION,
         status: status === 'inactive' ? 'inactive' : 'active',
         featured,
-        imageUrl: primary?.storage_path,
+        imageUrl: finalImageUrl,
       });
 
       onSave(updated);

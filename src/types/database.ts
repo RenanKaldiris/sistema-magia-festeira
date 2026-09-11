@@ -92,6 +92,7 @@ export interface Theme {
   status: EntityStatus;
   stock_quantity: number; // Quantidade de unidades totais deste tema
   featured: boolean;
+  imageUrl?: string;
   created_at: string;
   updated_at: string;
 }

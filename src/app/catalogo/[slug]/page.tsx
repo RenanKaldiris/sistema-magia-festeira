@@ -47,7 +47,9 @@ export default function ThemeDetailPage({ params }: { params: Promise<{ slug: st
 
   const defaultImage =
     theme?.primary_media?.storage_path ||
-    (theme?.media && theme.media.length > 0 ? theme.media[0].storage_path : '');
+    (theme?.media && theme.media.length > 0 ? theme.media[0].storage_path : '') ||
+    (theme as any)?.imageUrl ||
+    '';
 
   const [activeImage, setActiveImage] = useState<string>(defaultImage);
   const [copied, setCopied] = useState(false);

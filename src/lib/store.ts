@@ -963,14 +963,26 @@ class MagiaStore {
         }
         return m;
       });
+      const cleanThemes = this.themes.map((t: any) => {
+        if (t.imageUrl && typeof t.imageUrl === 'string' && t.imageUrl.startsWith('data:')) {
+          return { ...t, imageUrl: '' };
+        }
+        return t;
+      });
+      const cleanItems = this.items.map((it: any) => {
+        if (it.imageUrl && typeof it.imageUrl === 'string' && it.imageUrl.startsWith('data:')) {
+          return { ...it, imageUrl: '' };
+        }
+        return it;
+      });
       const trimmedImportAssets = this.importAssets.slice(-25);
       const trimmedAuditLogs = this.auditLogs.slice(0, 20);
 
       const state = {
-        themes: this.themes,
+        themes: cleanThemes,
         customers: this.customers,
         rentals: this.rentals,
-        items: this.items,
+        items: cleanItems,
         themeVariants: this.themeVariants,
         kits: this.kits,
         kitItems: this.kitItems,
@@ -989,10 +1001,10 @@ class MagiaStore {
       } catch (storageErr) {
         console.warn('[LocalStorage Quota Exceeded, aplicando salvamento seguro]', storageErr);
         const minimalState = {
-          themes: this.themes,
+          themes: cleanThemes,
           customers: this.customers,
           rentals: this.rentals,
-          items: this.items,
+          items: cleanItems,
           themeVariants: this.themeVariants,
           kits: this.kits,
           kitItems: this.kitItems,
@@ -1068,9 +1080,19 @@ class MagiaStore {
       if (parsed.kitItems && Array.isArray(parsed.kitItems)) this.kitItems = parsed.kitItems;
       if (parsed.payments && Array.isArray(parsed.payments)) this.payments = parsed.payments;
       if (parsed.media && Array.isArray(parsed.media)) {
-        const loadedIds = new Set(parsed.media.map((m: any) => m.id));
+        const existingMediaMap = new Map(this.media.map((m) => [m.id, m]));
+        const mergedMedia = parsed.media.map((m: any) => {
+          if ((!m.storage_path || m.storage_path === '') && existingMediaMap.has(m.id)) {
+            const mem = existingMediaMap.get(m.id);
+            if (mem?.storage_path) {
+              return { ...m, storage_path: mem.storage_path, thumbnail_path: mem.thumbnail_path };
+            }
+          }
+          return m;
+        });
+        const loadedIds = new Set(mergedMedia.map((m: any) => m.id));
         const missingSeeds = this.media.filter((m) => !loadedIds.has(m.id));
-        this.media = [...parsed.media, ...missingSeeds];
+        this.media = [...mergedMedia, ...missingSeeds];
       }
       if (parsed.imports && Array.isArray(parsed.imports)) this.imports = parsed.imports;
       if (parsed.importAssets && Array.isArray(parsed.importAssets)) this.importAssets = parsed.importAssets;
@@ -2555,24 +2577,26 @@ class MagiaStore {
     });
 
     if (isSupabaseConfigured && supabase) {
-      safeSupabaseOperation(
-        supabase.from('media').insert({
-          id: newMedia.id,
-          tenant_id: newMedia.tenant_id,
-          entity_type: newMedia.entity_type,
-          entity_id: newMedia.entity_id,
-          storage_path: newMedia.storage_path,
-          thumbnail_path: newMedia.thumbnail_path,
-          original_name: newMedia.original_name,
-          mime_type: newMedia.mime_type,
-          file_size: newMedia.file_size,
-          fingerprint: newMedia.fingerprint,
-          sort_order: newMedia.sort_order,
-          is_primary: newMedia.is_primary,
-          ai_tags: newMedia.ai_tags,
-        }),
-        'Insert Media'
-      );
+      if (!newMedia.storage_path.startsWith('data:')) {
+        safeSupabaseOperation(
+          supabase.from('media').insert({
+            id: newMedia.id,
+            tenant_id: newMedia.tenant_id,
+            entity_type: newMedia.entity_type,
+            entity_id: newMedia.entity_id,
+            storage_path: newMedia.storage_path,
+            thumbnail_path: newMedia.thumbnail_path,
+            original_name: newMedia.original_name,
+            mime_type: newMedia.mime_type,
+            file_size: newMedia.file_size,
+            fingerprint: newMedia.fingerprint,
+            sort_order: newMedia.sort_order,
+            is_primary: newMedia.is_primary,
+            ai_tags: newMedia.ai_tags,
+          }),
+          'Add Media to Entity'
+        );
+      }
     }
 
     this.saveToLocalStorage();

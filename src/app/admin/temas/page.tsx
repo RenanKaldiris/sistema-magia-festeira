@@ -1126,7 +1126,14 @@ function TemasManagementContent() {
                       return (
                         <tr
                           key={theme.id}
-                          onClick={() => setEditingTheme(theme)}
+                          onClick={() => {
+                            const imageUrl = details?.primary_media?.storage_path || details?.imageUrl || (theme as any).imageUrl;
+                            setEditingTheme({
+                              ...theme,
+                              ...(details || {}),
+                              imageUrl,
+                            });
+                          }}
                           className={`cursor-pointer transition-colors ${
                             isSelected
                               ? 'bg-rose-50/60 dark:bg-rose-950/25 hover:bg-rose-50/80 dark:hover:bg-rose-950/35'
@@ -1250,7 +1257,12 @@ function TemasManagementContent() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setEditingTheme(theme);
+                                  const imageUrl = details?.primary_media?.storage_path || details?.imageUrl || (theme as any).imageUrl;
+                                  setEditingTheme({
+                                    ...theme,
+                                    ...(details || {}),
+                                    imageUrl,
+                                  });
                                 }}
                                 title="Edição Rápida (Dados e Fotos)"
                                 className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"

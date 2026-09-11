@@ -7,6 +7,8 @@
  * 4. Pré-visualização instantânea (0ms) e persistência em Supabase Storage CDN
  */
 
+import { supabase } from '@/lib/supabase/client';
+
 export const WEBP_QUALITY = 0.60;
 
 export function ensureWebpExtension(fileName: string): string {
@@ -33,15 +35,18 @@ export function isWebpFile(file: File | Blob, originalFileName?: string): boolea
 
 /**
  * Envia uma foto para a API /api/upload no backend, convertendo automaticamente
- * com Sharp para .WEBP (70% qualidade) e salvando com alta performance sem sobrecarregar o LocalStorage.
+ * com Sharp para .WEBP (60% qualidade) e salvando no Supabase Storage bucket 'photos'.
+ * Possui fallback com upload direto para o Supabase Storage via cliente.
  */
 export async function uploadImageToServer(
   file: File | Blob,
   fileNameOverride?: string
 ): Promise<{ url: string; fileName: string; size: number; originalSize: number }> {
   const originalName = fileNameOverride || (file as File).name || 'foto.webp';
+  const cleanWebpName = ensureWebpExtension(originalName);
 
   if (typeof window !== 'undefined') {
+    // 1. Tentar via backend API /api/upload (com compressão Sharp de alta precisão)
     try {
       const formData = new FormData();
       formData.append('file', file, originalName);
@@ -53,21 +58,60 @@ export async function uploadImageToServer(
 
       if (res.ok) {
         const data = await res.json();
-        if (data.url) {
+        if (data.url && (data.url.startsWith('http://') || data.url.startsWith('https://'))) {
           return {
             url: data.url,
-            fileName: data.fileName || ensureWebpExtension(originalName),
+            fileName: data.fileName || cleanWebpName,
             size: data.size || 0,
             originalSize: data.originalSize || file.size || 0,
           };
         }
       }
     } catch (e) {
-      console.warn('[uploadImageToServer] Falha no upload para /api/upload, usando fallback client:', e);
+      console.warn('[uploadImageToServer] Falha no upload para /api/upload, tentando upload direto Supabase:', e);
+    }
+
+    // 2. Fallback direto no Supabase Storage via cliente JS
+    try {
+      if (supabase) {
+        const converted = await convertImageToWebP(file);
+        const timestamp = Date.now();
+        const randomHex = Math.random().toString(36).substring(2, 7);
+        const baseSlug = cleanWebpName
+          .replace(/\.[^/.]+$/, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '') || 'foto';
+        const storageFilePath = `uploads/${baseSlug}-${timestamp}-${randomHex}.webp`;
+
+        const { data: uploadData, error: uploadErr } = await supabase.storage
+          .from('photos')
+          .upload(storageFilePath, converted.blob, {
+            contentType: 'image/webp',
+            cacheControl: '31536000',
+            upsert: true,
+          });
+
+        if (!uploadErr && uploadData?.path) {
+          const { data: publicUrlData } = supabase.storage
+            .from('photos')
+            .getPublicUrl(uploadData.path);
+          if (publicUrlData?.publicUrl) {
+            return {
+              url: publicUrlData.publicUrl,
+              fileName: `${baseSlug}-${timestamp}-${randomHex}.webp`,
+              size: converted.newSize,
+              originalSize: converted.originalSize,
+            };
+          }
+        }
+      }
+    } catch (directErr) {
+      console.warn('[uploadImageToServer] Falha no fallback Supabase direto:', directErr);
     }
   }
 
-  // Fallback seguro no cliente via canvas WebP
+  // 3. Último recurso (apenas se completamente offline): conversão local
   const converted = await convertImageToWebP(file);
   return {
     url: converted.dataUrl,
