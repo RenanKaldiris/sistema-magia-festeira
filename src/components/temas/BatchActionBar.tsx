@@ -51,7 +51,7 @@ export function BatchActionBar({
         </button>
       </div>
 
-      {/* Action Buttons: Exactly 4 options, compact on mobile */}
+      {/* Action Buttons: Exactly 4 options, compact on mobile (Gerar Orçamento / Compartilhar / Excluir) */}
       <div className="grid grid-cols-4 gap-1.5 w-full md:w-auto md:flex md:items-center md:justify-end">
         {/* 1. Excluir */}
         <button

@@ -2051,51 +2051,76 @@ class MagiaStore {
     return count;
   }
 
-  public deleteTheme(id: string): boolean {
-    const theme = this.themes.find((t) => t.id === id);
-    if (!theme) return false;
+  public deleteTheme(id: string): Promise<boolean> {
+    return (async () => {
+      const theme = this.themes.find((t) => t.id === id);
+      if (!theme) return false;
 
-    this.themes = this.themes.filter((t) => t.id !== id);
-    this.themeVariants = this.themeVariants.filter((v) => v.theme_id !== id);
-    this.kits = this.kits.filter((k) => k.theme_id !== id);
-    this.media = this.media.filter((m) => !(m.entity_type === 'theme' && m.entity_id === id));
+      this.themes = this.themes.filter((t) => t.id !== id);
+      this.themeVariants = this.themeVariants.filter((v) => v.theme_id !== id);
+      this.kits = this.kits.filter((k) => k.theme_id !== id);
+      this.media = this.media.filter((m) => !(m.entity_type === 'theme' && m.entity_id === id));
 
-    this.logAudit('DELETE_THEME', 'themes', id, { name: theme.name, code: theme.code });
+      this.logAudit('DELETE_THEME', 'themes', id, { name: theme.name, code: theme.code });
 
-    if (isSupabaseConfigured && supabase) {
-      safeSupabaseOperation(
-        supabase.from('themes').delete().eq('id', id),
-        'Delete Theme'
-      );
-    }
+      if (isSupabaseConfigured && supabase) {
+        await safeSupabaseOperation(
+          supabase.from('media').delete().eq('entity_type', 'theme').eq('entity_id', id),
+          'Delete Theme Media'
+        );
+        const res = await safeSupabaseOperation(
+          supabase.from('themes').delete().eq('id', id),
+          'Delete Theme'
+        );
+        if (res && res.error) {
+          console.error('[deleteTheme] Erro ao deletar no Supabase:', res.error);
+          throw new Error(res.error.message || 'Falha ao excluir tema no banco de dados');
+        }
+      }
 
-    this.saveToLocalStorage();
-    return true;
+      this.saveToLocalStorage();
+      this.notifyListeners();
+      return true;
+    })();
   }
 
-  public deleteThemes(ids: string[]): number {
-    const toDelete = this.themes.filter((t) => ids.includes(t.id));
-    if (toDelete.length === 0) return 0;
+  public deleteThemes(ids: string[]): Promise<number> {
+    return (async () => {
+      const toDelete = this.themes.filter((t) => ids.includes(t.id));
+      if (toDelete.length === 0) return 0;
 
-    const idsSet = new Set(ids);
-    this.themes = this.themes.filter((t) => !idsSet.has(t.id));
-    this.themeVariants = this.themeVariants.filter((v) => !idsSet.has(v.theme_id));
-    this.kits = this.kits.filter((k) => !idsSet.has(k.theme_id));
-    this.media = this.media.filter((m) => !(m.entity_type === 'theme' && idsSet.has(m.entity_id)));
+      const idsSet = new Set(ids);
+      this.themes = this.themes.filter((t) => !idsSet.has(t.id));
+      this.themeVariants = this.themeVariants.filter((v) => !idsSet.has(v.theme_id));
+      this.kits = this.kits.filter((k) => !idsSet.has(k.theme_id));
+      this.media = this.media.filter((m) => !(m.entity_type === 'theme' && idsSet.has(m.entity_id)));
 
-    for (const theme of toDelete) {
-      this.logAudit('DELETE_THEME', 'themes', theme.id, { name: theme.name, code: theme.code });
-    }
+      for (const theme of toDelete) {
+        this.logAudit('DELETE_THEME', 'themes', theme.id, { name: theme.name, code: theme.code });
+      }
 
-    if (isSupabaseConfigured && supabase) {
-      safeSupabaseOperation(
-        supabase.from('themes').delete().in('id', ids),
-        'Delete Themes Batch'
-      );
-    }
+      if (isSupabaseConfigured && supabase) {
+        // 1. Deletar mídias associadas aos temas
+        await safeSupabaseOperation(
+          supabase.from('media').delete().eq('entity_type', 'theme').in('entity_id', ids),
+          'Delete Themes Media Batch'
+        );
 
-    this.saveToLocalStorage();
-    return toDelete.length;
+        // 2. Deletar temas no Supabase
+        const res = await safeSupabaseOperation(
+          supabase.from('themes').delete().in('id', ids),
+          'Delete Themes Batch'
+        );
+        if (res && res.error) {
+          console.error('[deleteThemes] Erro ao deletar temas no Supabase:', res.error);
+          throw new Error(res.error.message || 'Falha ao excluir temas no banco de dados');
+        }
+      }
+
+      this.saveToLocalStorage();
+      this.notifyListeners();
+      return toDelete.length;
+    })();
   }
 
   public createThemeVariant(themeId: string, name: string, description?: string, imageUrl?: string): ThemeVariant {

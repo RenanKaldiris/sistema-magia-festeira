@@ -392,15 +392,25 @@ function TemasManagementContent() {
   };
 
   // Bulk Delete Execution
-  const handleConfirmDelete = () => {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
     const count = selectedThemeIds.length;
     if (count === 0) return;
 
-    store.deleteThemes(selectedThemeIds);
-    setThemes(store.getThemes());
-    setSelectedThemeIds([]);
-    setIsDeleteModalOpen(false);
-    showNotification(`${count} ${count > 1 ? 'temas excluídos' : 'tema excluído'} com sucesso do acervo.`);
+    setIsDeleting(true);
+    try {
+      await store.deleteThemes(selectedThemeIds);
+      setThemes(store.getThemes());
+      setSelectedThemeIds([]);
+      setIsDeleteModalOpen(false);
+      showNotification(`${count} ${count > 1 ? 'temas excluídos' : 'tema excluído'} com sucesso do acervo.`);
+    } catch (err: any) {
+      console.error('[handleConfirmDelete] Erro ao excluir temas:', err);
+      showNotification(`Erro ao excluir temas: ${err?.message || 'Falha na exclusão'}`);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Create Theme
@@ -1407,9 +1417,12 @@ function TemasManagementContent() {
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
+        onClose={() => {
+          if (!isDeleting) setIsDeleteModalOpen(false);
+        }}
         onConfirm={handleConfirmDelete}
         themeNames={selectedThemeNames}
+        isSubmitting={isDeleting}
       />
 
       {/* Quick Edit Drawer com Status Ativo/Inativo e Gestão de Fotos */}
