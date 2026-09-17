@@ -11,7 +11,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+    <div className="flex h-screen h-[100dvh] min-h-[100dvh] overflow-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
       {/* Sidebar Retrátil & Drawer Mobile */}
       <AdminSidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
 
@@ -67,8 +67,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </header>
 
-        {/* Scrollable Page Body */}
-        <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 md:p-8 bg-slate-100 dark:bg-slate-950 transition-colors">
+        {/* Scrollable Page Body with iOS bounce protection and touch scroll */}
+        <main className="flex-1 overflow-y-auto overscroll-contain p-3.5 sm:p-6 md:p-8 bg-slate-100 dark:bg-slate-950 transition-colors">
           {children}
         </main>
       </div>

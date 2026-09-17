@@ -448,8 +448,8 @@ export function ThemeEditDrawer({
         aria-hidden="true"
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
-        <div className="w-screen max-w-full sm:max-w-lg bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col animate-in slide-in-from-right duration-250">
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10 h-full h-[100dvh]">
+        <div className="w-screen max-w-full sm:max-w-lg bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-250">
           {/* Header */}
           <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-850/80 backdrop-blur-sm shrink-0">
             <div className="min-w-0 flex-1 pr-2">
@@ -972,7 +972,7 @@ export function ThemeEditDrawer({
             </div>
 
             {/* Sticky Footer Buttons - Sempre acessíveis no mobile sem rolagem */}
-            <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-3.5 sm:px-6 sm:py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2 shrink-0 z-20">
+            <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-3.5 sm:px-6 sm:py-4 pb-[max(0.875rem,env(safe-area-inset-bottom))] border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2 shrink-0 z-20">
               <button
                 type="button"
                 onClick={onClose}

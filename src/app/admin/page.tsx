@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Palette,
@@ -16,27 +16,64 @@ import {
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { formatDateBR, formatDateTimeBR } from '@/lib/dateUtils';
+import { ThemeWithDetails, Item, RentalWithDetails } from '@/types/database';
 
 export default function AdminDashboardPage() {
-  const themes = store.getThemes();
-  const items = store.getItems();
-  const rentals = store.getRentals();
-  const imports = store.getImports();
-  const auditLogs = store.getAuditLogs();
+  const [themes, setThemes] = useState<ThemeWithDetails[]>(store.getThemes());
+  const [items, setItems] = useState<Item[]>(store.getItems());
+  const [rentals, setRentals] = useState<RentalWithDetails[]>(store.getRentals());
+  const [imports, setImports] = useState(store.getImports());
+  const [auditLogs, setAuditLogs] = useState(store.getAuditLogs());
+
+  useEffect(() => {
+    const updateState = () => {
+      setThemes(store.getThemes());
+      setItems(store.getItems());
+      setRentals(store.getRentals());
+      setImports(store.getImports());
+      setAuditLogs(store.getAuditLogs());
+    };
+
+    updateState();
+    const unsubscribe = store.subscribe(updateState);
+    return () => unsubscribe();
+  }, []);
 
   const totalThemes = themes.length;
-  const totalItems = items.reduce((acc, i) => acc + i.quantity_total, 0);
+  const totalItems = items.reduce((acc, i) => acc + (i.quantity_total || 0), 0);
   const activeRentals = rentals.filter((r) => r.status === 'reservado' || r.status === 'alugado');
-  const balanceToReceive = rentals.reduce((acc, r) => acc + r.balance, 0);
+  const balanceToReceive = rentals.reduce((acc, r) => acc + (r.balance || 0), 0);
   const pendingImports = imports.filter((i) => i.status === 'review' || i.status === 'processing');
 
-  // Identificação do conflito demonstrativo de estoque para o tema Vingadores entre 14/09 e 16/09
-  const vingadoresCheck = store.checkStockAvailability(
-    'e0000000-0000-0000-0000-000000000001',
-    '2026-09-14',
-    '2026-09-16',
-    1
-  );
+  // Identificação dinâmica de conflito real de estoque entre reservas ativas
+  const stockConflict = useMemo(() => {
+    for (const theme of themes) {
+      const activeForTheme = rentals.filter(
+        (r) => r.theme_id === theme.id && (r.status === 'reservado' || r.status === 'alugado')
+      );
+      if (activeForTheme.length > 0) {
+        for (const r1 of activeForTheme) {
+          const r1Start = new Date(r1.pickup_date).getTime();
+          const r1End = new Date(r1.return_date).getTime();
+          const overlapping = activeForTheme.filter((r2) => {
+            const r2Start = new Date(r2.pickup_date).getTime();
+            const r2End = new Date(r2.return_date).getTime();
+            return r1Start <= r2End && r1End >= r2Start;
+          });
+          if (overlapping.length > (theme.stock_quantity || 1)) {
+            return {
+              hasConflict: true,
+              themeName: theme.name,
+              stockTotal: theme.stock_quantity || 1,
+              stockCommitted: overlapping.length,
+              periodText: `${formatDateBR(r1.pickup_date)} a ${formatDateBR(r1.return_date)}`,
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }, [themes, rentals]);
 
   return (
     <div className="space-y-5 sm:space-y-8 max-w-7xl mx-auto">
@@ -67,8 +104,8 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Stock Conflict Alert Banner (If Any) */}
-      {!vingadoresCheck.available && (
+      {/* Stock Conflict Alert Banner (Dinamico) */}
+      {stockConflict && stockConflict.hasConflict && (
         <div className="p-3.5 sm:p-5 rounded-2xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
           <div className="flex items-center gap-2.5 shrink-0">
             <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -77,7 +114,7 @@ export default function AdminDashboardPage() {
           <div className="flex-1">
             <h4 className="text-sm font-bold hidden sm:block">Atenção: Conflito Potencial de Estoque Detectado</h4>
             <p className="text-xs text-amber-800 dark:text-amber-300/90 leading-relaxed">
-              O tema <strong>{vingadoresCheck.themeName}</strong> possui {vingadoresCheck.stockTotal} unidades no total e está com 100% de ocupação ({vingadoresCheck.stockCommitted} locações ativas) no período de {formatDateBR('2026-09-14')} a {formatDateBR('2026-09-16')}.
+              O tema <strong>{stockConflict.themeName}</strong> possui {stockConflict.stockTotal} unidade(s) no total e está com {stockConflict.stockCommitted} locações ativas com sobreposição no período de {stockConflict.periodText}.
             </p>
           </div>
           <Link
@@ -169,50 +206,58 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="space-y-2.5 sm:space-y-3">
-            {rentals.map((rental) => (
-              <div
-                key={rental.id}
-                className="p-3 sm:p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-colors flex flex-col gap-2 sm:gap-2.5"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-bold text-sm text-slate-900 dark:text-white truncate">{rental.theme?.name}</span>
-                      <span className="px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-[10px] font-semibold border border-rose-200 dark:border-rose-900/40">
-                        {rental.theme_variant?.name || 'Padrão'}
+            {rentals.length === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
+                Nenhuma locação registrada no momento.
+              </div>
+            ) : (
+              rentals.map((rental) => (
+                <div
+                  key={rental.id}
+                  className="p-3 sm:p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-colors flex flex-col gap-2 sm:gap-2.5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                          {rental.theme?.name || 'Tema Desvinculado'}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-[10px] font-semibold border border-rose-200 dark:border-rose-900/40">
+                          {rental.theme_variant?.name || 'Padrão'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Cliente: <strong className="text-slate-700 dark:text-slate-200">{rental.customer?.name || 'Cliente'}</strong>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white block">
+                        R$ {(rental.total || 0).toFixed(2).replace('.', ',')}
+                      </span>
+                      <span
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5 ${
+                          (rental.balance || 0) === 0
+                            ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400'
+                            : 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400'
+                        }`}
+                      >
+                        {(rental.balance || 0) === 0 ? 'Quitado' : `Saldo: R$ ${(rental.balance || 0).toFixed(2).replace('.', ',')}`}
                       </span>
                     </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      Cliente: <strong className="text-slate-700 dark:text-slate-200">{rental.customer?.name}</strong>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-200/60 dark:border-slate-750 text-slate-500 dark:text-slate-400">
+                    <div>
+                      Evento: <span className="font-semibold text-rose-600 dark:text-rose-400">{formatDateBR(rental.event_date)}</span>
+                    </div>
+                    <div className="text-[10px] sm:text-[11px]">
+                      Retirada: <span className="text-slate-700 dark:text-slate-300 font-medium">{formatDateBR(rental.pickup_date)}</span> ➔ Devolução: <span className="text-slate-700 dark:text-slate-300 font-medium">{formatDateBR(rental.return_date)}</span>
                     </div>
                   </div>
-
-                  <div className="text-right shrink-0">
-                    <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white block">
-                      R$ {rental.total.toFixed(2).replace('.', ',')}
-                    </span>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5 ${
-                        rental.balance === 0
-                          ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400'
-                          : 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400'
-                      }`}
-                    >
-                      {rental.balance === 0 ? 'Quitado' : `Saldo: R$ ${rental.balance.toFixed(2)}`}
-                    </span>
-                  </div>
                 </div>
-
-                <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-200/60 dark:border-slate-750 text-slate-500 dark:text-slate-400">
-                  <div>
-                    Evento: <span className="font-semibold text-rose-600 dark:text-rose-400">{formatDateBR(rental.event_date)}</span>
-                  </div>
-                  <div className="text-[10px] sm:text-[11px]">
-                    Retirada: <span className="text-slate-700 dark:text-slate-300 font-medium">{formatDateBR(rental.pickup_date)}</span> ➔ Devolução: <span className="text-slate-700 dark:text-slate-300 font-medium">{formatDateBR(rental.return_date)}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

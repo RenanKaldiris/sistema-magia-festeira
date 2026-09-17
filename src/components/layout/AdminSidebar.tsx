@@ -96,7 +96,7 @@ export function AdminSidebar({ mobileOpen = false, onMobileClose }: AdminSidebar
 
       {/* Mobile Drawer Panel */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 text-slate-300 flex flex-col transform transition-transform duration-300 ease-in-out md:hidden border-r border-slate-800 shadow-2xl ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] h-full h-[100dvh] bg-slate-900 text-slate-300 flex flex-col transform transition-transform duration-300 ease-in-out md:hidden border-r border-slate-800 shadow-2xl overscroll-contain ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

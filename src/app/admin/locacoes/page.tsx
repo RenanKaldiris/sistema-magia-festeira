@@ -118,10 +118,10 @@ export default function AdminLocacoesPage() {
       const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
       const matchesSearch =
         !q ||
-        r.customer?.name.toLowerCase().includes(q) ||
-        r.customer?.phone.includes(q) ||
-        r.theme?.name.toLowerCase().includes(q) ||
-        r.theme?.code.toLowerCase().includes(q) ||
+        (r.customer?.name && r.customer.name.toLowerCase().includes(q)) ||
+        (r.customer?.phone && r.customer.phone.includes(q)) ||
+        (r.theme?.name && r.theme.name.toLowerCase().includes(q)) ||
+        (r.theme?.code && r.theme.code.toLowerCase().includes(q)) ||
         (r.delivery_location && r.delivery_location.toLowerCase().includes(q)) ||
         (r.notes && r.notes.toLowerCase().includes(q));
 
@@ -280,7 +280,7 @@ export default function AdminLocacoesPage() {
   const deleteTargetNames = useMemo(() => {
     return rentals
       .filter((r) => deleteTargetIds.includes(r.id))
-      .map((r) => `${r.customer?.name} - ${r.theme?.name} (${formatDateBR(r.event_date)})`);
+      .map((r) => `${r.customer?.name || 'Cliente'} - ${r.theme?.name || 'Tema Desvinculado'} (${formatDateBR(r.event_date)})`);
   }, [rentals, deleteTargetIds]);
 
   return (
@@ -590,7 +590,7 @@ export default function AdminLocacoesPage() {
                     />
                     <div>
                       <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                        {rental.customer?.name}
+                        {rental.customer?.name || 'Cliente Não Informado'}
                       </h3>
                       {rental.customer?.phone && (
                         <div className="flex items-center gap-2 mt-1">
@@ -642,9 +642,11 @@ export default function AdminLocacoesPage() {
                 {/* Tema e Detalhes */}
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl space-y-1.5 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 dark:text-white">{rental.theme?.name}</span>
+                    <span className="font-bold text-slate-900 dark:text-white">
+                      {rental.theme?.name || 'Tema Desvinculado'}
+                    </span>
                     <span className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-mono font-bold">
-                      {rental.theme?.code}
+                      {rental.theme?.code || 'S/N'}
                     </span>
                   </div>
                   <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
@@ -837,11 +839,11 @@ export default function AdminLocacoesPage() {
 
                       <td className="py-4 px-4">
                         <span className="font-bold text-slate-900 dark:text-white block">
-                          {rental.customer?.name}
+                          {rental.customer?.name || 'Cliente'}
                         </span>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                            {rental.customer?.phone}
+                            {rental.customer?.phone || ''}
                           </span>
                           {rental.customer?.phone && (
                             <a
@@ -866,10 +868,10 @@ export default function AdminLocacoesPage() {
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-1.5">
                           <span className="font-bold text-slate-900 dark:text-white">
-                            {rental.theme?.name}
+                            {rental.theme?.name || 'Tema Desvinculado'}
                           </span>
                           <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold">
-                            {rental.theme?.code}
+                            {rental.theme?.code || 'S/N'}
                           </span>
                         </div>
                         <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">

@@ -94,8 +94,8 @@ export default function AdminClientesPage() {
     let list = customers.filter((c) => {
       if (!q) return true;
       return (
-        c.name.toLowerCase().includes(q) ||
-        c.phone.toLowerCase().includes(q) ||
+        (c.name && c.name.toLowerCase().includes(q)) ||
+        (c.phone && c.phone.toLowerCase().includes(q)) ||
         (c.email && c.email.toLowerCase().includes(q)) ||
         (c.document && c.document.toLowerCase().includes(q)) ||
         (c.address && c.address.toLowerCase().includes(q)) ||
@@ -106,7 +106,7 @@ export default function AdminClientesPage() {
     // Tri-State Sorting: Nome, Quantidade de Festas, Data
     if (sortState.field === 'name' && sortState.order) {
       list = [...list].sort((a, b) => {
-        const cmp = a.name.localeCompare(b.name, 'pt-BR');
+        const cmp = (a.name || '').localeCompare(b.name || '', 'pt-BR');
         return sortState.order === 'asc' ? cmp : -cmp;
       });
     } else if (sortState.field === 'rentals' && sortState.order) {

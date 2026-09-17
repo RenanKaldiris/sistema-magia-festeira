@@ -1456,7 +1456,20 @@ class MagiaStore {
   ): StockCheckResult {
     const theme = this.themes.find((t) => t.id === themeId);
     if (!theme) {
-      throw new Error(`Tema não encontrado: ${themeId}`);
+      return {
+        available: false,
+        themeId,
+        themeName: 'Tema não encontrado',
+        stockTotal: 0,
+        stockCommitted: 0,
+        stockAvailable: 0,
+        requestedQuantity,
+        interval: {
+          pickup: pickupDate,
+          return: returnDate,
+        },
+        conflictingRentals: [],
+      };
     }
 
     const reqStart = new Date(pickupDate).getTime();

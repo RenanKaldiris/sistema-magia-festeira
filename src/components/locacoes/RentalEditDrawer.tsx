@@ -142,7 +142,7 @@ export function RentalEditDrawer({
       />
 
       {/* Drawer Panel */}
-      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-xl bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out animate-in slide-in-from-right duration-300">
+      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-xl h-full h-[100dvh] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out animate-in slide-in-from-right duration-300">
         {/* Drawer Header */}
         <div className="px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-850/80 backdrop-blur-sm shrink-0">
           <div className="min-w-0 flex-1 pr-2">
@@ -216,10 +216,10 @@ export function RentalEditDrawer({
             </span>
             <div className="flex items-center justify-between">
               <span className="text-base font-bold text-slate-900 dark:text-white">
-                {rental.theme?.name}
+                {rental.theme?.name || 'Tema Desvinculado'}
               </span>
               <span className="px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-xs font-mono font-bold">
-                {rental.theme?.code}
+                {rental.theme?.code || 'S/N'}
               </span>
             </div>
             <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -471,7 +471,7 @@ export function RentalEditDrawer({
         </div>
 
         {/* Drawer Footer com Ação de Excluir */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/60">
+        <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 shrink-0">
           {onDelete ? (
             <button
               type="button"
