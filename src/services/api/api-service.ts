@@ -144,6 +144,35 @@ export class ApiService {
     return match || null;
   }
 
+  public async getCustomerByDocument(rawDocument: string): Promise<Customer | null> {
+    const clean = rawDocument.replace(/\D/g, '');
+    if (!clean || clean.length < 5) return null;
+
+    const client = this.getClient();
+    if (client) {
+      try {
+        const { data } = await client.from('customers').select('*');
+        if (data && data.length > 0) {
+          const match = data.find((c: any) => {
+            const cClean = (c.document || '').replace(/\D/g, '');
+            return cClean === clean;
+          });
+          if (match) return match;
+        }
+      } catch (err) {
+        console.error('[ApiService getCustomerByDocument Supabase Error]', err);
+      }
+    }
+
+    const customers = store.getCustomers();
+    const match = customers.find((c) => {
+      const cClean = (c.document || '').replace(/\D/g, '');
+      return cClean === clean;
+    });
+
+    return match || null;
+  }
+
   public async getCustomerById(id: string): Promise<(Customer & { rentals?: Rental[] }) | null> {
     const client = this.getClient();
     if (client) {
@@ -183,17 +212,26 @@ export class ApiService {
     upsert?: boolean;
   }): Promise<{ customer: Customer; isNew: boolean }> {
     const cleanPhone = data.phone.trim();
-    const existing = await this.getCustomerByPhone(cleanPhone);
+    let existing: Customer | null = null;
+
+    // 1. Busca prioritária por CPF/Documento (se fornecido)
+    if (data.document) {
+      existing = await this.getCustomerByDocument(data.document);
+    }
+    // 2. Busca secundária por Telefone
+    if (!existing && cleanPhone) {
+      existing = await this.getCustomerByPhone(cleanPhone);
+    }
 
     const client = this.getClient();
 
     if (existing && data.upsert !== false) {
-      const updatedData = {
+      const updatedData: Partial<Customer> = {
         name: data.name.trim() || existing.name,
-        email: data.email !== undefined ? data.email : existing.email,
-        document: data.document !== undefined ? data.document : existing.document,
-        address: data.address !== undefined ? data.address : existing.address,
-        notes: data.notes !== undefined ? data.notes : existing.notes,
+        email: data.email !== undefined ? (data.email || existing.email) : existing.email,
+        document: data.document !== undefined ? (data.document || existing.document) : existing.document,
+        address: data.address !== undefined ? (data.address || existing.address) : existing.address,
+        notes: data.notes !== undefined ? (data.notes || existing.notes) : existing.notes,
         updated_at: new Date().toISOString(),
       };
 
@@ -336,6 +374,56 @@ export class ApiService {
     if (themes.length > 0) return themes[0];
 
     return null;
+  }
+
+  public async resolveThemeOrCreate(
+    themeIdOrQuery: string,
+    defaultPrice?: number
+  ): Promise<ThemeWithDetails> {
+    const existing = await this.resolveTheme(themeIdOrQuery);
+    if (existing) return existing;
+
+    const trimmed = (themeIdOrQuery || '').trim();
+    const cleanName = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    const slug = cleanName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const code = `MF-AUTO-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newId = crypto.randomUUID();
+    const price = typeof defaultPrice === 'number' && defaultPrice > 0 ? defaultPrice : 179.9;
+
+    const newThemeObj = {
+      id: newId,
+      tenant_id: DEFAULT_TENANT_ID,
+      code,
+      name: cleanName,
+      slug: slug || `tema-${Date.now()}`,
+      characters: [cleanName],
+      piece_count: 1,
+      base_price: price,
+      status: 'active' as const,
+      stock_quantity: 1,
+      featured: false,
+      description: 'Tema cadastrado automaticamente a partir de locação/reserva.',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const client = this.getClient();
+    if (client) {
+      await safeSupabaseServerOp(() => client.from('themes').insert(newThemeObj));
+    }
+
+    try {
+      store.createTheme(newThemeObj);
+    } catch (e) {
+      // fallback caso já exista localmente
+    }
+
+    return this.formatTheme(newThemeObj);
   }
 
   public async checkAvailability(
@@ -518,6 +606,7 @@ export class ApiService {
     customerName?: string;
     customerPhone?: string;
     customerEmail?: string;
+    customerDocument?: string;
     customerAddress?: string;
 
     themeId?: string;
@@ -536,6 +625,13 @@ export class ApiService {
     deliveryLocation?: string | null;
     notes?: string | null;
     forceOverride?: boolean;
+
+    // Campos extras do formulário/mensagem
+    eventName?: string;
+    startTime?: string;
+    endTime?: string;
+    paymentTerms?: string;
+    extraItems?: string;
   }): Promise<{
     success: boolean;
     rental?: Rental;
@@ -559,8 +655,9 @@ export class ApiService {
         name: data.customerName,
         phone: data.customerPhone,
         email: data.customerEmail,
-        address: data.deliveryLocation || data.customerAddress,
-        notes: 'Cadastrado automaticamente via API / Assessor WhatsApp',
+        document: data.customerDocument,
+        address: data.customerAddress || data.deliveryLocation,
+        notes: 'Cadastrado/atualizado via Assessor WhatsApp / API',
       });
       customer = upsertRes.customer;
       customerId = customer.id;
@@ -569,17 +666,24 @@ export class ApiService {
       if (!customer) {
         return { success: false, error: `Cliente com ID ${customerId} não encontrado.` };
       }
+      // Atualiza documento ou endereço se fornecido
+      if (data.customerDocument || data.customerAddress) {
+        await this.updateCustomer(customerId, {
+          ...(data.customerDocument ? { document: data.customerDocument } : {}),
+          ...(data.customerAddress ? { address: data.customerAddress } : {}),
+        });
+      }
     }
 
-    // 2. Resolver Tema diretamente no Supabase
+    // 2. Resolver ou Auto-Criar Tema no Supabase (nunca bloqueia reserva)
     const themeIdentifier = data.themeId || data.themeQuery;
     if (!themeIdentifier) {
       return { success: false, error: 'É obrigatório informar "themeId" ou "themeQuery".' };
     }
 
-    const theme = await this.resolveTheme(themeIdentifier);
+    let theme = await this.resolveTheme(themeIdentifier);
     if (!theme) {
-      return { success: false, error: `Tema "${themeIdentifier}" não localizado no catálogo.` };
+      theme = await this.resolveThemeOrCreate(themeIdentifier, data.total);
     }
 
     // 3. Validação de Disponibilidade no Supabase
@@ -598,6 +702,21 @@ export class ApiService {
     const balanceAmount = Math.max(0, data.total - paidAmount);
     const newRentalId = crypto.randomUUID();
 
+    // Formatação de observações ricas com todos os dados do formulário/mensagem
+    const notesParts: string[] = [];
+    if (data.eventName) notesParts.push(`🎉 Evento: ${data.eventName}`);
+    if (data.startTime || data.endTime) {
+      notesParts.push(`⏰ Horário: ${[data.startTime, data.endTime].filter(Boolean).join(' às ')}`);
+    }
+    if (data.paymentTerms) notesParts.push(`💳 Condição de Pagamento: ${data.paymentTerms}`);
+    if (data.customerAddress && data.deliveryLocation && data.customerAddress !== data.deliveryLocation) {
+      notesParts.push(`🏠 Endereço Residencial: ${data.customerAddress}`);
+    }
+    if (data.extraItems) notesParts.push(`📦 Itens Extras / Opcionais: ${data.extraItems}`);
+    if (data.notes) notesParts.push(`📝 Observações: ${data.notes}`);
+
+    const formattedNotes = notesParts.length > 0 ? notesParts.join('\n') : (data.notes || null);
+
     const rental: Rental = {
       id: newRentalId,
       tenant_id: DEFAULT_TENANT_ID,
@@ -613,7 +732,7 @@ export class ApiService {
       paid: paidAmount,
       balance: balanceAmount,
       delivery_location: data.deliveryLocation || customer.address || null,
-      notes: data.notes || null,
+      notes: formattedNotes,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -792,6 +911,11 @@ export class ApiService {
       const bookedThemeIds = new Set(activeRentals.map((r) => r.theme_id));
       const availableThemes = allThemes.filter((t) => !bookedThemeIds.has(t.id));
 
+      const sortedNames = allThemes
+        .map((t) => t.name)
+        .filter(Boolean)
+        .sort((a: string, b: string) => a.localeCompare('pt-BR'));
+
       return {
         period: 'themes',
         totalThemes: allThemes.length,
@@ -804,6 +928,8 @@ export class ApiService {
           base_price: Number(t.base_price || 0),
           stock_quantity: Number(t.stock_quantity || 1),
         })),
+        allThemeNames: sortedNames,
+        allThemesListText: sortedNames.map((n, i) => `${i + 1}. ${n}`).join('\n'),
         summaryText: `Temos ${allThemes.length} temas cadastrados no acervo da Magia Festeira, sendo ${availableThemes.length} atualmente livres para locação.`,
       };
     }

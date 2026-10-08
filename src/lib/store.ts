@@ -1749,7 +1749,21 @@ class MagiaStore {
   public updateCustomer(id: string, updates: Partial<Customer>): Customer {
     const idx = this.customers.findIndex((c) => c.id === id);
     if (idx === -1) {
-      throw new Error(`Cliente com ID ${id} não encontrado.`);
+      const fallbackCustomer: Customer = {
+        id,
+        tenant_id: DEFAULT_TENANT_ID,
+        name: updates.name || 'Cliente',
+        phone: updates.phone || '',
+        email: updates.email || null,
+        document: updates.document || null,
+        address: updates.address || null,
+        notes: updates.notes || null,
+        ...updates,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      this.customers.push(fallbackCustomer);
+      return fallbackCustomer;
     }
 
     const updated: Customer = {

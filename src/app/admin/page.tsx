@@ -266,16 +266,9 @@ export default function AdminDashboardPage() {
           <div>
             <div className="flex items-center justify-between mb-3.5 sm:mb-4">
               <div>
-                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Atividades & Auditoria</h3>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Atividades Recentes</h3>
                 <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500">Últimos registros operacionais</p>
               </div>
-              <Link
-                href="/admin/logs"
-                className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 flex items-center gap-1 shrink-0"
-              >
-                <span>Histórico</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
             </div>
 
             <div className="space-y-2.5 sm:space-y-3">

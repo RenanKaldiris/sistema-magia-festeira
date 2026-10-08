@@ -105,12 +105,23 @@ export async function POST(request: NextRequest) {
 
     const paid = typeof body.paid === 'number' ? body.paid : 0;
 
+    const customerDocument = body.customerDocument || body.cpf || body.document || null;
+    const customerAddress = body.customerAddress || body.enderecoResidencial || body.enderecoCliente || body.endereco || null;
+    const eventName = body.eventName || body.dadosEvento || body.nomeEvento || null;
+    const startTime = body.startTime || body.horarioInicio || null;
+    const endTime = body.endTime || body.horarioTermino || null;
+    const paymentTerms = body.paymentTerms || body.condicaoPagamento || body.formaPagamento || null;
+    const extraItems = body.extraItems || body.itensExtras || null;
+    const deliveryLocation = body.deliveryLocation || body.eventAddress || body.enderecoEvento || body.localEntrega || body.local || null;
+    const notes = body.notes || body.observacao || body.observacoes || null;
+
     const result = await apiService.createRental({
       customerId: body.customerId,
       customerName: body.customerName,
       customerPhone: body.customerPhone,
       customerEmail: body.customerEmail,
-      customerAddress: body.customerAddress || body.deliveryLocation,
+      customerDocument,
+      customerAddress,
 
       themeId: body.themeId,
       themeQuery: themeIdentifier,
@@ -125,9 +136,15 @@ export async function POST(request: NextRequest) {
       paid,
       paymentMethod: body.paymentMethod || 'pix',
 
-      deliveryLocation: body.deliveryLocation || null,
-      notes: body.notes || null,
+      deliveryLocation,
+      notes,
       forceOverride: body.forceOverride === true,
+
+      eventName,
+      startTime,
+      endTime,
+      paymentTerms,
+      extraItems,
     });
 
     if (!result.success) {

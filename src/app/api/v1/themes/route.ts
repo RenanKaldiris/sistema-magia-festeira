@@ -21,8 +21,20 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || undefined;
     const categoryId = searchParams.get('categoryId') || undefined;
+    const namesOnly = searchParams.get('namesOnly') === 'true' || searchParams.get('format') === 'names';
 
     const themes = await apiService.getThemes({ search, categoryId });
+
+    if (namesOnly) {
+      const themeNames = themes.map((t) => t.name).filter(Boolean).sort((a, b) => a.localeCompare('pt-BR'));
+      return apiResponse({
+        success: true,
+        total: themeNames.length,
+        names: themeNames,
+        formattedList: `Catálogo de Temas Magia Festeira (${themeNames.length} temas cadastrados):\n\n` +
+          themeNames.map((name, idx) => `${idx + 1}. ${name}`).join('\n'),
+      });
+    }
 
     const formatted = themes.map((t) => ({
       id: t.id,
