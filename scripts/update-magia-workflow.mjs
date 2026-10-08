@@ -70,7 +70,7 @@ Como mapear esses dados na ferramenta "lancar_locacao":
 Ao receber a confirmação da ferramenta "lancar_locacao", responda ao gestor com um comprovante completo, bonito e organizado no WhatsApp:
 🎉 *Locação Confirmada no Sistema Magia Festeira!*
 
-📋 *Pedido:* #[ID do pedido]
+📋 *Pedido:* #[Use SEMPRE o número curto de pedido retornado no campo orderNumber ou displayId, por exemplo: #0001, #0002. NUNCA use código longo de UUID]
 👤 *Cliente:* [Nome do Cliente]
 🪪 *CPF:* [CPF do Cliente]
 📞 *Telefone:* [Telefone]
@@ -364,7 +364,12 @@ try {
     body: payload,
     json: true
   });
-  return JSON.stringify(res);
+  const orderNum = res.data?.orderNumber || res.orderNumber || '0001';
+  return JSON.stringify({
+    ...res,
+    orderNumber: orderNum,
+    displayId: '#' + orderNum
+  });
 } catch (err) {
   return JSON.stringify({ success: false, error: err.message });
 }`

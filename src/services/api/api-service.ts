@@ -262,7 +262,7 @@ export class ApiService {
       await safeSupabaseServerOp(() => client.from('customers').insert(newCustomer));
     }
 
-    store.createCustomer(newCustomer);
+    store.createCustomer(newCustomer, true);
     return { customer: newCustomer, isNew: true };
   }
 
@@ -418,7 +418,7 @@ export class ApiService {
     }
 
     try {
-      store.createTheme(newThemeObj);
+      store.createTheme(newThemeObj, true);
     } catch (e) {
       // fallback caso já exista localmente
     }
@@ -638,6 +638,8 @@ export class ApiService {
     customer?: Customer;
     error?: string;
     conflict?: unknown;
+    orderNumber?: string;
+    displayId?: string;
   }> {
     // 1. Resolver ou criar cliente
     let customerId = data.customerId;
@@ -702,8 +704,23 @@ export class ApiService {
     const balanceAmount = Math.max(0, data.total - paidAmount);
     const newRentalId = crypto.randomUUID();
 
+    // Calcular número sequencial de pedido (ex: 0001, 0002)
+    let orderNumber = '0001';
+    const clientDb = this.getClient();
+    if (clientDb) {
+      try {
+        const { count } = await clientDb.from('rentals').select('*', { count: 'exact', head: true });
+        orderNumber = String((count || 0) + 1).padStart(4, '0');
+      } catch (e) {
+        orderNumber = String(store.getRentals().length + 1).padStart(4, '0');
+      }
+    } else {
+      orderNumber = String(store.getRentals().length + 1).padStart(4, '0');
+    }
+
     // Formatação de observações ricas com todos os dados do formulário/mensagem
     const notesParts: string[] = [];
+    notesParts.push(`📋 Pedido: #${orderNumber}`);
     if (data.eventName) notesParts.push(`🎉 Evento: ${data.eventName}`);
     if (data.startTime || data.endTime) {
       notesParts.push(`⏰ Horário: ${[data.startTime, data.endTime].filter(Boolean).join(' às ')}`);
@@ -738,14 +755,13 @@ export class ApiService {
     };
 
     // 4. Inserção no Supabase Cloud
-    const client = this.getClient();
-    if (client) {
-      await safeSupabaseServerOp(() => client.from('rentals').insert(rental));
+    if (clientDb) {
+      await safeSupabaseServerOp(() => clientDb.from('rentals').insert(rental));
 
       if (paidAmount > 0) {
         const paymentId = crypto.randomUUID();
         await safeSupabaseServerOp(() =>
-          client.from('payments').insert({
+          clientDb.from('payments').insert({
             id: paymentId,
             rental_id: rental.id,
             amount: paidAmount,
@@ -758,9 +774,9 @@ export class ApiService {
       }
     }
 
-    // Manter sincronizado no Store local (com proteção contra erros em memória)
+    // Manter sincronizado no Store local (com skipSupabase=true para evitar duplicação)
     try {
-      store.createRental(rental, true);
+      store.createRental(rental, true, true);
       if (paidAmount > 0) {
         store.recordPayment(rental.id, paidAmount, data.paymentMethod || 'pix', 'Sinal inicial');
       }
@@ -772,6 +788,8 @@ export class ApiService {
       success: true,
       rental,
       customer,
+      orderNumber,
+      displayId: `#${orderNumber}`,
     };
   }
 

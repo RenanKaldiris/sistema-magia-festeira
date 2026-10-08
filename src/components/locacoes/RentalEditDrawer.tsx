@@ -91,6 +91,9 @@ export function RentalEditDrawer({
   const rawPhone = rental.customer?.phone?.replace(/\D/g, '') || '';
   const waPhone = rawPhone.startsWith('55') ? rawPhone : `55${rawPhone}`;
 
+  const orderNumberMatch = rental.notes?.match(/Pedido:\s*#([0-9A-Za-z]+)/i);
+  const displayOrderNumber = orderNumberMatch ? `#${orderNumberMatch[1]}` : `#${rental.id.substring(0, 4).toUpperCase()}`;
+
   const payments = rental.payments || [];
   const currentPaid = rental.paid;
   const currentBalance = Math.max(0, Number(total) - Number(currentPaid));
@@ -146,8 +149,8 @@ export function RentalEditDrawer({
         {/* Drawer Header */}
         <div className="px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-850/80 backdrop-blur-sm shrink-0">
           <div className="min-w-0 flex-1 pr-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-rose-600 dark:text-rose-400 font-bold block">
-              Contrato #{rental.id.substring(0, 8)}
+            <span className="text-[11px] font-mono uppercase tracking-wider text-rose-600 dark:text-rose-400 font-bold block">
+              Pedido {displayOrderNumber}
             </span>
             <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
               Detalhes & Edição da Locação

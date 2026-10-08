@@ -165,6 +165,8 @@ export async function POST(request: NextRequest) {
         data: {
           rental: result.rental,
           customer: result.customer,
+          orderNumber: result.orderNumber || '0001',
+          displayId: result.displayId || `#${result.orderNumber || '0001'}`,
         },
       },
       201

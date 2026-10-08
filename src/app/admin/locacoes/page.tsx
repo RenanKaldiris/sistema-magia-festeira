@@ -179,6 +179,20 @@ export default function AdminLocacoesPage() {
     return list;
   }, [rentals, search, statusFilter, sortState]);
 
+  // Mapeamento sequencial de pedidos (#0001, #0002, ...)
+  const rentalOrderNumbers = useMemo(() => {
+    const sorted = [...rentals].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    const map = new Map<string, string>();
+    sorted.forEach((r, idx) => {
+      const match = r.notes?.match(/Pedido:\s*#([0-9A-Za-z]+)/i);
+      const num = match ? `#${match[1]}` : `#${String(idx + 1).padStart(4, '0')}`;
+      map.set(r.id, num);
+    });
+    return map;
+  }, [rentals]);
+
   // Handle Header Sort Toggle (asc -> desc -> null)
   const handleSort = (field: SortField) => {
     setSortState((prev) => {
@@ -589,9 +603,14 @@ export default function AdminLocacoesPage() {
                       className="mt-1 w-4 h-4 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
                     />
                     <div>
-                      <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                        {rental.customer?.name || 'Cliente Não Informado'}
-                      </h3>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-rose-600 dark:text-rose-400 border border-slate-200 dark:border-slate-700">
+                          {rentalOrderNumbers.get(rental.id) || '#0001'}
+                        </span>
+                        <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                          {rental.customer?.name || 'Cliente Não Informado'}
+                        </h3>
+                      </div>
                       {rental.customer?.phone && (
                         <div className="flex items-center gap-2 mt-1">
                           <a
@@ -838,9 +857,14 @@ export default function AdminLocacoesPage() {
                       </td>
 
                       <td className="py-4 px-4">
-                        <span className="font-bold text-slate-900 dark:text-white block">
-                          {rental.customer?.name || 'Cliente'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-rose-600 dark:text-rose-400 border border-slate-200 dark:border-slate-700 shrink-0">
+                            {rentalOrderNumbers.get(rental.id) || '#0001'}
+                          </span>
+                          <span className="font-bold text-slate-900 dark:text-white block">
+                            {rental.customer?.name || 'Cliente'}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[11px] text-slate-500 dark:text-slate-400">
                             {rental.customer?.phone || ''}

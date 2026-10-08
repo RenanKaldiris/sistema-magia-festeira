@@ -1514,8 +1514,9 @@ class MagiaStore {
   // ============================================================================
 
   public createRental(
-    data: Omit<Rental, 'id' | 'created_at' | 'updated_at'>,
-    forceAdminOverride: boolean = false
+    data: Omit<Rental, 'id' | 'created_at' | 'updated_at'> & { id?: string },
+    forceAdminOverride: boolean = false,
+    skipSupabase = false
   ): { success: boolean; rental?: Rental; conflict?: StockCheckResult; error?: string } {
     const check = this.checkStockAvailability(
       data.theme_id,
@@ -1567,7 +1568,7 @@ class MagiaStore {
       overrideUsed: !check.available && forceAdminOverride,
     });
 
-    if (isSupabaseConfigured && supabase) {
+    if (!skipSupabase && isSupabaseConfigured && supabase) {
       safeSupabaseOperation(
         supabase.from('rentals').insert({
           id: newRental.id,
@@ -1711,8 +1712,11 @@ class MagiaStore {
     return toDelete.length;
   }
 
-  public createCustomer(data: Omit<Customer, 'id' | 'created_at' | 'updated_at' | 'tenant_id'>): Customer {
-    const id = generateUUID();
+  public createCustomer(
+    data: Omit<Customer, 'id' | 'created_at' | 'updated_at' | 'tenant_id'> & { id?: string },
+    skipSupabase = false
+  ): Customer {
+    const id = data.id || generateUUID();
     const now = new Date().toISOString();
 
     const customer: Customer = {
@@ -1726,7 +1730,7 @@ class MagiaStore {
     this.customers.push(customer);
     this.logAudit('CREATE_CUSTOMER', 'customers', id, customer);
 
-    if (isSupabaseConfigured && supabase) {
+    if (!skipSupabase && isSupabaseConfigured && supabase) {
       safeSupabaseOperation(
         supabase.from('customers').insert({
           id: customer.id,
@@ -1887,19 +1891,24 @@ class MagiaStore {
     return payment;
   }
 
-  public createTheme(data: {
-    name: string;
-    category_id?: string;
-    characters?: string[];
-    base_price?: number;
-    description?: string;
-    stock_quantity?: number;
-    imageUrl?: string;
-  }): Theme {
+  public createTheme(
+    data: {
+      name: string;
+      category_id?: string;
+      characters?: string[];
+      base_price?: number;
+      description?: string;
+      stock_quantity?: number;
+      imageUrl?: string;
+      id?: string;
+      code?: string;
+    },
+    skipSupabase = false
+  ): Theme {
     const count = this.themes.length + 127;
-    const code = `MF-0${count}`;
+    const code = data.code || `MF-0${count}`;
     const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const id = generateUUID();
+    const id = data.id || generateUUID();
     const now = new Date().toISOString();
 
     const newTheme: Theme & { imageUrl?: string } = {
@@ -1941,7 +1950,7 @@ class MagiaStore {
 
     this.logAudit('CREATE_THEME', 'themes', id, newTheme);
 
-    if (isSupabaseConfigured && supabase) {
+    if (!skipSupabase && isSupabaseConfigured && supabase) {
       safeSupabaseOperation(
         supabase.from('themes').insert({
           id: newTheme.id,
