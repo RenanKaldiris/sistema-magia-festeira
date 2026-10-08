@@ -1532,7 +1532,7 @@ class MagiaStore {
       };
     }
 
-    const id = generateUUID();
+    const id = (data as any).id || generateUUID();
     const now = new Date().toISOString();
 
     const newRental: Rental = {
@@ -1836,7 +1836,6 @@ class MagiaStore {
 
   public recordPayment(rentalId: string, amount: number, method: Payment['method'], note?: string) {
     const rental = this.rentals.find((r) => r.id === rentalId);
-    if (!rental) throw new Error('Reserva não encontrada');
 
     const id = generateUUID();
     const now = new Date().toISOString();
@@ -1852,9 +1851,11 @@ class MagiaStore {
     };
 
     this.payments.push(payment);
-    rental.paid += amount;
-    rental.balance = Math.max(0, rental.total - rental.paid);
-    rental.updated_at = now;
+    if (rental) {
+      rental.paid += amount;
+      rental.balance = Math.max(0, rental.total - rental.paid);
+      rental.updated_at = now;
+    }
 
     this.logAudit('RECORD_PAYMENT', 'payments', payment.id, { rentalId, amount, method });
 
@@ -1870,14 +1871,16 @@ class MagiaStore {
         }),
         'Insert Payment'
       );
-      safeSupabaseOperation(
-        supabase.from('rentals').update({
-          paid: rental.paid,
-          balance: rental.balance,
-          updated_at: rental.updated_at,
-        }).eq('id', rentalId),
-        'Update Rental Balance'
-      );
+      if (rental) {
+        safeSupabaseOperation(
+          supabase.from('rentals').update({
+            paid: rental.paid,
+            balance: rental.balance,
+            updated_at: rental.updated_at,
+          }).eq('id', rentalId),
+          'Update Rental Balance'
+        );
+      }
     }
 
     this.saveToLocalStorage();

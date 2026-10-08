@@ -758,10 +758,14 @@ export class ApiService {
       }
     }
 
-    // Manter sincronizado no Store local
-    store.createRental(rental, true);
-    if (paidAmount > 0) {
-      store.recordPayment(rental.id, paidAmount, data.paymentMethod || 'pix', 'Sinal inicial');
+    // Manter sincronizado no Store local (com proteção contra erros em memória)
+    try {
+      store.createRental(rental, true);
+      if (paidAmount > 0) {
+        store.recordPayment(rental.id, paidAmount, data.paymentMethod || 'pix', 'Sinal inicial');
+      }
+    } catch (storeErr) {
+      console.warn('[ApiService Store Sync Warning]', storeErr);
     }
 
     return {
