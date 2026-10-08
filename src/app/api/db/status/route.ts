@@ -10,31 +10,18 @@ export async function GET() {
   // 1. Verificação do Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase.from('themes').select('id, name, code').limit(5);
+      const { data: themesData, error: themesError } = await supabase.from('themes').select('id, name, code, base_price, stock_quantity, status');
+      const { data: rentalsData } = await supabase.from('rentals').select('id, customer_name, event_date, status, total');
+      const { data: customersData } = await supabase.from('customers').select('id, name, phone');
 
       const latencyMs = Date.now() - start;
 
-      if (error) {
-        // Se a tabela ainda não existe no schema, o banco respondeu (conectou), mas precisa rodar o script SQL
-        if (error.code === 'PGRST205' || error.message?.includes('schema cache') || error.message?.includes('does not exist')) {
-          return NextResponse.json({
-            configured: true,
-            connected: true,
-            tablesReady: false,
-            provider: 'Supabase (São Paulo)',
-            latencyMs,
-            message: 'Conectado ao Supabase! O banco está pronto, aguardando a execução do script SQL no SQL Editor para criar as tabelas.',
-          });
-        }
-
+      if (themesError) {
         return NextResponse.json({
           configured: true,
           connected: false,
-          tablesReady: false,
-          provider: 'Supabase',
-          error: error.message,
+          error: themesError.message,
           latencyMs,
-          message: `Erro na resposta do Supabase: ${error.message}`,
         });
       }
 
@@ -44,8 +31,11 @@ export async function GET() {
         tablesReady: true,
         provider: 'Supabase (São Paulo)',
         latencyMs,
-        themesCount: data?.length || 0,
-        message: `Conectado com sucesso ao Supabase! (${data?.length || 0} temas carregados)`,
+        themesCount: themesData?.length || 0,
+        rentalsCount: rentalsData?.length || 0,
+        customersCount: customersData?.length || 0,
+        themes: themesData,
+        rentals: rentalsData,
       });
     } catch (err: any) {
       return NextResponse.json({
