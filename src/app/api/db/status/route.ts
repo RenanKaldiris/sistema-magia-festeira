@@ -34,8 +34,7 @@ export async function GET() {
         themesCount: themesData?.length || 0,
         rentalsCount: rentalsData?.length || 0,
         customersCount: customersData?.length || 0,
-        themes: themesData,
-        rentals: rentalsData,
+        message: `Conectado com sucesso ao Supabase! (${themesData?.length || 0} temas cadastrados)`,
       });
     } catch (err: any) {
       return NextResponse.json({

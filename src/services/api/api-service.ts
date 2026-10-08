@@ -797,11 +797,6 @@ export class ApiService {
         totalThemes: allThemes.length,
         availableThemesCount: availableThemes.length,
         bookedThemesCount: bookedThemeIds.size,
-        debug: {
-          hasClient: Boolean(client),
-          usedStore,
-          debugError,
-        },
         availableThemes: availableThemes.slice(0, 30).map((t) => ({
           id: t.id,
           code: t.code,
