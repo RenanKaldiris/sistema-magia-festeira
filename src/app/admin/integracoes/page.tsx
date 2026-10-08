@@ -306,6 +306,30 @@ export default function IntegracoesPage() {
       },
     },
     {
+      method: 'GET',
+      path: '/api/v1/reports/summary',
+      category: 'Locações',
+      title: 'Relatório Executivo & Indicadores (Assessor WhatsApp / n8n)',
+      description:
+        'Gera métricas consolidadas instantâneas para perguntas do WhatsApp: próximo final de semana, mês anterior, mês atual ou disponibilidade de temas.',
+      requestExample: null,
+      curlExample: `curl -X GET "${baseUrl}/reports/summary?period=next_weekend" \\
+  -H "x-api-key: ${apiKey}"`,
+      responseExample: {
+        success: true,
+        data: {
+          period: 'next_weekend',
+          periodTitle: 'Próximo Final de Semana (10/10 a 11/10)',
+          totalRentals: 3,
+          totalRevenue: 1030.0,
+          totalPaid: 650.0,
+          totalPending: 380.0,
+          topThemes: [{ name: 'Vingadores', count: 2 }, { name: 'Tardezinha', count: 1 }],
+          summaryText: 'Próximo Final de Semana: 3 locação(ões) totalizando R$ 1030.00.',
+        },
+      },
+    },
+    {
       method: 'POST',
       path: '/api/v1/webhook/whatsapp',
       category: 'WhatsApp & IA',

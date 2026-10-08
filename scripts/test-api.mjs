@@ -160,8 +160,26 @@ async function runTests() {
       );
     }
 
-    // 9. Teste do Webhook WhatsApp
-    console.log('\n--- 6. WEBHOOK DO WHATSAPP & IA ---');
+    // 9. Teste do Relatório Executivo & Indicadores
+    console.log('\n--- 6. RELATÓRIOS EXECUTIVOS & ASSESSOR ---');
+    const reportsRes = await request('/api/v1/reports/summary?period=next_weekend', {
+      headers: { 'x-api-key': API_KEY },
+    });
+    assert(
+      'GET /api/v1/reports/summary retorna métricas de período',
+      reportsRes.status === 200 && reportsRes.data.success === true && typeof reportsRes.data.data?.summaryText === 'string'
+    );
+
+    const reportsThemesRes = await request('/api/v1/reports/summary?period=themes', {
+      headers: { 'x-api-key': API_KEY },
+    });
+    assert(
+      'GET /api/v1/reports/summary?period=themes calcula temas livres',
+      reportsThemesRes.status === 200 && typeof reportsThemesRes.data.data?.availableThemesCount === 'number'
+    );
+
+    // 10. Teste do Webhook WhatsApp
+    console.log('\n--- 7. WEBHOOK DO WHATSAPP & IA ---');
     const webhookRes = await request('/api/v1/webhook/whatsapp', {
       method: 'POST',
       headers: { 'x-api-key': API_KEY },

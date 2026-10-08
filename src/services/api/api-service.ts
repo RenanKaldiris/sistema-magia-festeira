@@ -267,6 +267,8 @@ export class ApiService {
     themeId?: string;
     date?: string;
     pickupDate?: string;
+    startDate?: string;
+    endDate?: string;
     limit?: number;
     offset?: number;
   }) {
@@ -286,6 +288,19 @@ export class ApiService {
     }
     if (filters?.pickupDate) {
       all = all.filter((r) => r.pickup_date === filters.pickupDate);
+    }
+    if (filters?.startDate && filters?.endDate) {
+      const s = filters.startDate;
+      const e = filters.endDate;
+      all = all.filter(
+        (r) =>
+          (r.event_date >= s && r.event_date <= e) ||
+          (r.pickup_date <= e && r.return_date >= s)
+      );
+    } else if (filters?.startDate) {
+      all = all.filter((r) => r.event_date >= filters.startDate! || r.return_date >= filters.startDate!);
+    } else if (filters?.endDate) {
+      all = all.filter((r) => r.event_date <= filters.endDate! || r.pickup_date <= filters.endDate!);
     }
 
     const total = all.length;
@@ -544,6 +559,135 @@ export class ApiService {
 
   public createOrcamento(data: Parameters<typeof store.createOrcamento>[0]): Orcamento {
     return store.createOrcamento(data);
+  }
+
+  // ============================================================================
+  // RELATÓRIOS & MÉTRICAS (REPORTS & ASSESSOR SUMMARY)
+  // ============================================================================
+
+  public async getReportsSummary(params?: {
+    period?: 'next_weekend' | 'last_month' | 'current_month' | 'themes' | 'custom';
+    startDate?: string;
+    endDate?: string;
+    referenceDate?: string;
+  }) {
+    const period = params?.period || 'current_month';
+    const allRentals = store.getRentals();
+    const allThemes = store.getThemes();
+    const refDate = params?.referenceDate ? new Date(params.referenceDate) : new Date();
+
+    const toISODate = (d: Date) => d.toISOString().split('T')[0];
+
+    // 1. Relatório de Temas / Disponibilidade
+    if (period === 'themes') {
+      const activeRentals = allRentals.filter((r) => r.status === 'reservado' || r.status === 'alugado');
+      const bookedThemeIds = new Set(activeRentals.map((r) => r.theme_id));
+      const availableThemes = allThemes.filter((t) => !bookedThemeIds.has(t.id));
+
+      return {
+        period: 'themes',
+        totalThemes: allThemes.length,
+        availableThemesCount: availableThemes.length,
+        bookedThemesCount: bookedThemeIds.size,
+        availableThemes: availableThemes.slice(0, 20).map((t) => ({
+          id: t.id,
+          code: t.code,
+          name: t.name,
+          base_price: t.base_price,
+          stock_quantity: t.stock_quantity,
+        })),
+        summaryText: `Temos ${allThemes.length} temas cadastrados no acervo, sendo ${availableThemes.length} atualmente livres para locação.`,
+      };
+    }
+
+    let startDate = params?.startDate || '';
+    let endDate = params?.endDate || '';
+    let periodTitle = '';
+
+    if (period === 'next_weekend') {
+      const currentDay = refDate.getDay(); // 0 = Domingo, 6 = Sábado
+      const daysUntilSaturday = currentDay === 6 ? 7 : (6 - currentDay + 7) % 7 || 7;
+      const saturday = new Date(refDate);
+      saturday.setDate(refDate.getDate() + (currentDay === 5 || currentDay === 6 || currentDay === 0 ? (currentDay === 5 ? 1 : currentDay === 6 ? 0 : -1) : daysUntilSaturday));
+      
+      const sunday = new Date(saturday);
+      sunday.setDate(saturday.getDate() + 1);
+
+      startDate = toISODate(saturday);
+      endDate = toISODate(sunday);
+      periodTitle = `Próximo Final de Semana (${startDate.split('-').reverse().slice(0,2).join('/')} a ${endDate.split('-').reverse().slice(0,2).join('/')})`;
+    } else if (period === 'last_month') {
+      const year = refDate.getMonth() === 0 ? refDate.getFullYear() - 1 : refDate.getFullYear();
+      const month = refDate.getMonth() === 0 ? 11 : refDate.getMonth() - 1;
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+
+      startDate = toISODate(firstDay);
+      endDate = toISODate(lastDay);
+      const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+      periodTitle = `Mês Passado (${monthNames[month]}/${year})`;
+    } else if (period === 'current_month') {
+      const year = refDate.getFullYear();
+      const month = refDate.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+
+      startDate = toISODate(firstDay);
+      endDate = toISODate(lastDay);
+      const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+      periodTitle = `Mês Atual (${monthNames[month]}/${year})`;
+    } else {
+      periodTitle = `Período Personalizado (${startDate} a ${endDate})`;
+    }
+
+    const filteredRentals = allRentals.filter((r) => {
+      const ev = r.event_date || r.pickup_date;
+      return (ev >= startDate && ev <= endDate) || (r.pickup_date <= endDate && r.return_date >= startDate);
+    });
+
+    const totalCount = filteredRentals.length;
+    const totalRevenue = filteredRentals.reduce((sum, r) => sum + (r.total || 0), 0);
+    const totalPaid = filteredRentals.reduce((sum, r) => sum + (r.paid || 0), 0);
+    const totalPending = filteredRentals.reduce((sum, r) => sum + (r.balance || 0), 0);
+    const averageTicket = totalCount > 0 ? totalRevenue / totalCount : 0;
+
+    const themeCounts: Record<string, { name: string; count: number }> = {};
+    for (const r of filteredRentals) {
+      const tName = r.theme?.name || 'Tema Diversos';
+      if (!themeCounts[tName]) themeCounts[tName] = { name: tName, count: 0 };
+      themeCounts[tName].count++;
+    }
+    const topThemes = Object.values(themeCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+
+    const itemsSummary = filteredRentals.map((r) => ({
+      id: r.id,
+      eventDate: r.event_date,
+      customerName: r.customer?.name || 'Não informado',
+      customerPhone: r.customer?.phone || '',
+      themeName: r.theme?.name || 'Tema sob consulta',
+      status: r.status,
+      total: r.total,
+      paid: r.paid,
+      balance: r.balance,
+      location: r.delivery_location || '',
+    }));
+
+    return {
+      period,
+      periodTitle,
+      startDate,
+      endDate,
+      totalRentals: totalCount,
+      totalRevenue,
+      totalPaid,
+      totalPending,
+      averageTicket,
+      topThemes,
+      rentals: itemsSummary,
+      summaryText: totalCount === 0
+        ? `Nenhuma locação agendada para ${periodTitle}.`
+        : `${periodTitle}: ${totalCount} locação(ões) totalizando R$ ${totalRevenue.toFixed(2)} (R$ ${totalPaid.toFixed(2)} recebidos e R$ ${totalPending.toFixed(2)} pendentes).`,
+    };
   }
 }
 

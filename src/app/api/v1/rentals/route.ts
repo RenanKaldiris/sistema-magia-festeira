@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
     const themeId = searchParams.get('themeId') || undefined;
     const date = searchParams.get('date') || undefined;
     const pickupDate = searchParams.get('pickupDate') || undefined;
+    const startDate = searchParams.get('startDate') || undefined;
+    const endDate = searchParams.get('endDate') || undefined;
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : 50;
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!, 10) : 0;
 
@@ -33,6 +35,8 @@ export async function GET(request: NextRequest) {
       themeId,
       date,
       pickupDate,
+      startDate,
+      endDate,
       limit,
       offset,
     });
