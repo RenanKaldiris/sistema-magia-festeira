@@ -15,6 +15,21 @@ const nextConfig = {
         destination: '/admin/locacoes',
         permanent: true,
       },
+      {
+        source: '/admin/orcamentos',
+        destination: '/admin/locacoes',
+        permanent: false,
+      },
+      {
+        source: '/admin/ia',
+        destination: '/admin',
+        permanent: false,
+      },
+      {
+        source: '/admin/logs',
+        destination: '/admin',
+        permanent: false,
+      },
     ];
   },
 };
