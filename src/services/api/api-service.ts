@@ -752,19 +752,21 @@ export class ApiService {
     if (period === 'themes') {
       let allThemes: any[] = [];
       let activeRentals: any[] = [];
+      let debugError: any = null;
 
       if (client) {
         try {
           const tRes = await client
             .from('themes')
-            .select('id, name, code, base_price, stock_quantity, status')
-            .order('name', { ascending: true });
+            .select('id, name, code, base_price, stock_quantity, status');
 
-          if (tRes.data && tRes.data.length > 0) {
+          if (tRes.error) {
+            debugError = tRes.error;
+          } else if (tRes.data && tRes.data.length > 0) {
             allThemes = tRes.data;
           }
-        } catch (err) {
-          console.error('[ApiService getReportsSummary themes Supabase Error]', err);
+        } catch (err: any) {
+          debugError = err.message;
         }
 
         try {
@@ -781,6 +783,7 @@ export class ApiService {
         }
       }
 
+      const usedStore = allThemes.length === 0;
       if (allThemes.length === 0) {
         allThemes = store.getThemes();
         activeRentals = store.getRentals().filter((r) => r.status === 'reservado' || r.status === 'alugado');
@@ -794,6 +797,11 @@ export class ApiService {
         totalThemes: allThemes.length,
         availableThemesCount: availableThemes.length,
         bookedThemesCount: bookedThemeIds.size,
+        debug: {
+          hasClient: Boolean(client),
+          usedStore,
+          debugError,
+        },
         availableThemes: availableThemes.slice(0, 30).map((t) => ({
           id: t.id,
           code: t.code,
