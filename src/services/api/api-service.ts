@@ -22,11 +22,11 @@ async function safeSupabaseServerOp(operation: () => PromiseLike<unknown>) {
 
 export class ApiService {
   private getClient() {
-    if (isSupabaseServerConfigured && supabaseAdmin) {
-      return supabaseAdmin;
-    }
     if (isSupabaseConfigured && supabase) {
       return supabase;
+    }
+    if (isSupabaseServerConfigured && supabaseAdmin) {
+      return supabaseAdmin;
     }
     return null;
   }
@@ -755,26 +755,29 @@ export class ApiService {
 
       if (client) {
         try {
-          const [tRes, rRes] = await Promise.all([
-            client
-              .from('themes')
-              .select('id, name, code, base_price, stock_quantity, status')
-              .eq('status', 'active')
-              .order('name', { ascending: true }),
-            client
-              .from('rentals')
-              .select('id, theme_id, status, event_date')
-              .in('status', ['reservado', 'alugado']),
-          ]);
+          const tRes = await client
+            .from('themes')
+            .select('id, name, code, base_price, stock_quantity, status')
+            .order('name', { ascending: true });
 
           if (tRes.data && tRes.data.length > 0) {
             allThemes = tRes.data;
           }
+        } catch (err) {
+          console.error('[ApiService getReportsSummary themes Supabase Error]', err);
+        }
+
+        try {
+          const rRes = await client
+            .from('rentals')
+            .select('id, theme_id, status, event_date')
+            .in('status', ['reservado', 'alugado']);
+
           if (rRes.data) {
             activeRentals = rRes.data;
           }
         } catch (err) {
-          console.error('[ApiService getReportsSummary themes Supabase Error]', err);
+          console.error('[ApiService getReportsSummary rentals Supabase Error]', err);
         }
       }
 
