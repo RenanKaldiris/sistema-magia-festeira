@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const check = apiService.checkAvailability(themeIdentifier, pickupDate, returnDate, quantity);
+    const check = await apiService.checkAvailability(themeIdentifier, pickupDate, returnDate, quantity);
 
     if (!check.found) {
       return apiError(check.error || 'Tema não encontrado.', 404);

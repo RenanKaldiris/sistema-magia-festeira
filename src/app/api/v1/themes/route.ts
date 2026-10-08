@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || undefined;
     const categoryId = searchParams.get('categoryId') || undefined;
 
-    const themes = apiService.getThemes({ search, categoryId });
+    const themes = await apiService.getThemes({ search, categoryId });
 
     const formatted = themes.map((t) => ({
       id: t.id,

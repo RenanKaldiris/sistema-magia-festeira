@@ -1,11 +1,13 @@
 import { store } from '@/lib/store';
 import { supabaseAdmin, isSupabaseServerConfigured } from '@/lib/supabase/server';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Customer, Rental, RentalStatus, Payment, ThemeWithDetails, Orcamento } from '@/types/database';
 
 /**
- * SISTEMA MAGIA FESTEIRA - API SERVICE INTEGRATOR
- * Orquestra as operações de dados da API RESTful e Webhooks externos,
- * garantindo consistência entre o Supabase Cloud, PostgreSQL e o Store operacional.
+ * SISTEMA MAGIA FESTEIRA - API SERVICE INTEGRATOR (SUPABASE-FIRST)
+ * Orquestra as operações de dados da API RESTful e Webhooks externos (WhatsApp / n8n),
+ * conectando diretamente ao Supabase Cloud (PostgreSQL) para leituras e escritas em tempo real,
+ * mantendo fallback no Store em memória caso o banco esteja indisponível.
  */
 
 export const DEFAULT_TENANT_ID = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID || 'a0000000-0000-0000-0000-000000000001';
@@ -19,11 +21,42 @@ async function safeSupabaseServerOp(operation: () => PromiseLike<unknown>) {
 }
 
 export class ApiService {
-  private getAdminClient() {
+  private getClient() {
     if (isSupabaseServerConfigured && supabaseAdmin) {
       return supabaseAdmin;
     }
+    if (isSupabaseConfigured && supabase) {
+      return supabase;
+    }
     return null;
+  }
+
+  private formatTheme(t: any): ThemeWithDetails {
+    return {
+      id: t.id,
+      tenant_id: t.tenant_id || DEFAULT_TENANT_ID,
+      code: t.code || '',
+      name: t.name || '',
+      slug: t.slug || (t.name ? t.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : ''),
+      category_id: t.category_id || null,
+      characters: t.characters || [],
+      piece_count: Number(t.piece_count || 0),
+      base_price: Number(t.base_price || 0),
+      promotional_price: t.promotional_price ? Number(t.promotional_price) : null,
+      description: t.description || null,
+      notes: t.notes || null,
+      status: t.status || 'active',
+      stock_quantity: Number(t.stock_quantity || 1),
+      featured: Boolean(t.featured),
+      imageUrl: t.imageUrl || undefined,
+      created_at: t.created_at || new Date().toISOString(),
+      updated_at: t.updated_at || new Date().toISOString(),
+      kits: [],
+      variants: [],
+      items: [],
+      media: [],
+      primary_media: null,
+    };
   }
 
   // ============================================================================
@@ -34,6 +67,27 @@ export class ApiService {
     total: number;
     items: Customer[];
   }> {
+    const client = this.getClient();
+    if (client) {
+      try {
+        let query = client.from('customers').select('*');
+        if (params?.search) {
+          const s = params.search.trim();
+          query = query.or(`name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%,document.ilike.%${s}%`);
+        }
+        const { data, error } = await query.order('name', { ascending: true });
+        if (!error && data) {
+          const total = data.length;
+          const offset = params?.offset || 0;
+          const limit = params?.limit || 50;
+          const items = data.slice(offset, offset + limit);
+          return { total, items };
+        }
+      } catch (err) {
+        console.error('[ApiService getCustomers Supabase Error]', err);
+      }
+    }
+
     const search = params?.search?.trim().toLowerCase();
     let all = store.getCustomers();
 
@@ -59,9 +113,26 @@ export class ApiService {
     const clean = rawPhone.replace(/\D/g, '');
     if (!clean) return null;
 
-    const customers = store.getCustomers();
+    const client = this.getClient();
+    if (client) {
+      try {
+        const { data } = await client.from('customers').select('*');
+        if (data && data.length > 0) {
+          const match = data.find((c: any) => {
+            const cClean = (c.phone || '').replace(/\D/g, '');
+            if (cClean === clean) return true;
+            if (clean.length >= 10 && cClean.endsWith(clean)) return true;
+            if (cClean.length >= 10 && clean.endsWith(cClean)) return true;
+            return false;
+          });
+          if (match) return match;
+        }
+      } catch (err) {
+        console.error('[ApiService getCustomerByPhone Supabase Error]', err);
+      }
+    }
 
-    // 1. Procura exata com ou sem DDI 55
+    const customers = store.getCustomers();
     const match = customers.find((c) => {
       const cClean = c.phone.replace(/\D/g, '');
       if (cClean === clean) return true;
@@ -74,6 +145,24 @@ export class ApiService {
   }
 
   public async getCustomerById(id: string): Promise<(Customer & { rentals?: Rental[] }) | null> {
+    const client = this.getClient();
+    if (client) {
+      try {
+        const [cRes, rRes] = await Promise.all([
+          client.from('customers').select('*').eq('id', id).maybeSingle(),
+          client.from('rentals').select('*').eq('customer_id', id),
+        ]);
+        if (cRes.data) {
+          return {
+            ...cRes.data,
+            rentals: rRes.data || [],
+          };
+        }
+      } catch (err) {
+        console.error('[ApiService getCustomerById Supabase Error]', err);
+      }
+    }
+
     const customer = store.getCustomerById(id);
     if (!customer) return null;
 
@@ -96,142 +185,166 @@ export class ApiService {
     const cleanPhone = data.phone.trim();
     const existing = await this.getCustomerByPhone(cleanPhone);
 
+    const client = this.getClient();
+
     if (existing && data.upsert !== false) {
-      // Atualizar dados do cliente existente se novos campos foram informados
-      const updated = store.updateCustomer(existing.id, {
+      const updatedData = {
         name: data.name.trim() || existing.name,
         email: data.email !== undefined ? data.email : existing.email,
         document: data.document !== undefined ? data.document : existing.document,
         address: data.address !== undefined ? data.address : existing.address,
         notes: data.notes !== undefined ? data.notes : existing.notes,
-      });
+        updated_at: new Date().toISOString(),
+      };
 
-      // Garantir atualização no Supabase Server se configurado
-      const admin = this.getAdminClient();
-      if (admin) {
+      if (client) {
         await safeSupabaseServerOp(() =>
-          admin
-            .from('customers')
-            .update({
-              name: updated.name,
-              email: updated.email,
-              document: updated.document,
-              address: updated.address,
-              notes: updated.notes,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', updated.id)
+          client.from('customers').update(updatedData).eq('id', existing.id)
         );
       }
 
-      return { customer: updated, isNew: false };
+      const updated = store.updateCustomer(existing.id, updatedData);
+      return { customer: { ...existing, ...updatedData, ...updated }, isNew: false };
     }
 
-    // Criar novo cliente
-    const newCustomer = store.createCustomer({
+    const newCustomer: Customer = {
+      id: crypto.randomUUID(),
+      tenant_id: DEFAULT_TENANT_ID,
       name: data.name.trim(),
       phone: cleanPhone,
       email: data.email || null,
       document: data.document || null,
       address: data.address || null,
       notes: data.notes || null,
-    });
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
-    // Salvar diretamente com service_role se disponível no servidor
-    const admin = this.getAdminClient();
-    if (admin) {
-      await safeSupabaseServerOp(() =>
-        admin.from('customers').upsert({
-          id: newCustomer.id,
-          tenant_id: DEFAULT_TENANT_ID,
-          name: newCustomer.name,
-          phone: newCustomer.phone,
-          email: newCustomer.email,
-          document: newCustomer.document,
-          address: newCustomer.address,
-          notes: newCustomer.notes,
-          created_at: newCustomer.created_at,
-          updated_at: newCustomer.updated_at,
-        })
-      );
+    if (client) {
+      await safeSupabaseServerOp(() => client.from('customers').insert(newCustomer));
     }
 
+    store.createCustomer(newCustomer);
     return { customer: newCustomer, isNew: true };
   }
 
-  public async updateCustomer(id: string, updates: Partial<Customer>): Promise<Customer | null> {
-    try {
-      const updated = store.updateCustomer(id, updates);
-      const admin = this.getAdminClient();
-      if (admin) {
-        await safeSupabaseServerOp(() =>
-          admin
-            .from('customers')
-            .update({
-              ...updates,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', id)
-        );
-      }
-      return updated;
-    } catch {
-      return null;
-    }
-  }
+  public async updateCustomer(
+    id: string,
+    updates: Partial<Omit<Customer, 'id' | 'tenant_id' | 'created_at'>>
+  ): Promise<Customer | null> {
+    const client = this.getClient();
+    const updatedData = {
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
 
-  public async deleteCustomer(id: string): Promise<{ success: boolean; error?: string }> {
-    const rentals = store.getRentals().filter((r) => r.customer_id === id);
-    if (rentals.length > 0) {
-      return {
-        success: false,
-        error: `Não é possível excluir o cliente pois ele possui ${rentals.length} locação(ões) vinculada(s).`,
-      };
-    }
-
-    const deleted = store.deleteCustomer(id);
-    const admin = this.getAdminClient();
-    if (deleted && admin) {
+    if (client) {
       await safeSupabaseServerOp(() =>
-        admin.from('customers').delete().eq('id', id)
+        client.from('customers').update(updatedData).eq('id', id)
       );
     }
 
-    return { success: deleted };
+    const updated = store.updateCustomer(id, updatedData);
+    if (!updated) {
+      const existing = await this.getCustomerById(id);
+      if (existing) {
+        return { ...existing, ...updatedData };
+      }
+      return null;
+    }
+    return updated;
+  }
+
+  public async deleteCustomer(id: string): Promise<{ success: boolean; error?: string }> {
+    const client = this.getClient();
+    if (client) {
+      const { data: rentals } = await client.from('rentals').select('id').eq('customer_id', id);
+      if (rentals && rentals.length > 0) {
+        return {
+          success: false,
+          error: `Não é possível excluir o cliente pois ele possui ${rentals.length} locação(ões) vinculada(s).`,
+        };
+      }
+      await safeSupabaseServerOp(() => client.from('customers').delete().eq('id', id));
+    }
+
+    const deleted = store.deleteCustomer(id);
+    return { success: deleted || true };
   }
 
   // ============================================================================
-  // TEMAS & DISPONIBILIDADE (THEMES & AVAILABILITY)
+  // TEMAS & DISPONIBILIDADE (THEMES & AVAILABILITY - SUPABASE DIRECT)
   // ============================================================================
 
-  public resolveTheme(themeIdOrQuery: string): ThemeWithDetails | null {
+  public async getThemes(filters?: { search?: string; categoryId?: string }): Promise<ThemeWithDetails[]> {
+    const client = this.getClient();
+    if (client) {
+      try {
+        let query = client.from('themes').select('*').eq('status', 'active');
+        if (filters?.categoryId) {
+          query = query.eq('category_id', filters.categoryId);
+        }
+        if (filters?.search) {
+          query = query.ilike('name', `%${filters.search}%`);
+        }
+        const { data, error } = await query.order('name', { ascending: true });
+        if (!error && data && data.length > 0) {
+          return data.map((t: any) => this.formatTheme(t));
+        }
+      } catch (err) {
+        console.error('[ApiService getThemes Supabase Error]', err);
+      }
+    }
+    return store.getThemes(filters);
+  }
+
+  public async resolveTheme(themeIdOrQuery: string): Promise<ThemeWithDetails | null> {
     if (!themeIdOrQuery) return null;
     const trimmed = themeIdOrQuery.trim();
+    const client = this.getClient();
 
-    // 1. Por ID
+    if (client) {
+      try {
+        // 1. Por ID (UUID)
+        if (trimmed.length > 20) {
+          const { data: byId } = await client.from('themes').select('*').eq('id', trimmed).maybeSingle();
+          if (byId) return this.formatTheme(byId);
+        }
+
+        // 2. Por código (ex: MF-0136)
+        const { data: byCode } = await client.from('themes').select('*').ilike('code', trimmed).limit(1);
+        if (byCode && byCode.length > 0) return this.formatTheme(byCode[0]);
+
+        // 3. Por slug
+        const { data: bySlug } = await client.from('themes').select('*').ilike('slug', trimmed).limit(1);
+        if (bySlug && bySlug.length > 0) return this.formatTheme(bySlug[0]);
+
+        // 4. Por busca no nome (parcial e flexível)
+        const { data: byName } = await client.from('themes').select('*').ilike('name', `%${trimmed}%`).limit(1);
+        if (byName && byName.length > 0) return this.formatTheme(byName[0]);
+      } catch (err) {
+        console.error('[ApiService resolveTheme Supabase Error]', err);
+      }
+    }
+
+    // Fallback store
     const byId = store.getThemeById(trimmed);
     if (byId) return byId;
-
-    // 2. Por código (ex: MF-0127) ou Slug
     const bySlug = store.getThemeBySlug(trimmed);
     if (bySlug) return bySlug;
-
-    // 3. Por busca no catálogo
     const themes = store.getThemes({ search: trimmed });
-    if (themes.length > 0) {
-      return themes[0];
-    }
+    if (themes.length > 0) return themes[0];
 
     return null;
   }
 
-  public checkAvailability(
+  public async checkAvailability(
     themeIdOrQuery: string,
     pickupDate: string,
     returnDate: string,
     requestedQuantity = 1
   ) {
-    const theme = this.resolveTheme(themeIdOrQuery);
+    const theme = await this.resolveTheme(themeIdOrQuery);
     if (!theme) {
       return {
         found: false,
@@ -239,22 +352,57 @@ export class ApiService {
       };
     }
 
-    const result = store.checkStockAvailability(theme.id, pickupDate, returnDate, requestedQuantity);
+    const client = this.getClient();
+    let conflictingRentals: any[] = [];
+
+    if (client) {
+      try {
+        const { data: rentals } = await client
+          .from('rentals')
+          .select('*')
+          .eq('theme_id', theme.id)
+          .in('status', ['reservado', 'alugado']);
+
+        if (rentals) {
+          conflictingRentals = rentals.filter((r: any) => {
+            const p = r.pickup_date || r.event_date;
+            const ret = r.return_date || r.event_date;
+            return !(returnDate < p || pickupDate > ret);
+          });
+        }
+      } catch (err) {
+        console.error('[ApiService checkAvailability Supabase Error]', err);
+      }
+    } else {
+      const localCheck = store.checkStockAvailability(theme.id, pickupDate, returnDate, requestedQuantity);
+      conflictingRentals = localCheck.conflictingRentals;
+    }
+
+    const totalStock = theme.stock_quantity || 1;
+    const committed = conflictingRentals.length;
+    const availableStock = Math.max(0, totalStock - committed);
+    const isAvailable = availableStock >= requestedQuantity;
+
     return {
       found: true,
+      available: isAvailable,
       theme: {
         id: theme.id,
         code: theme.code,
         name: theme.name,
         base_price: theme.base_price,
-        stock_quantity: theme.stock_quantity,
+        stock_quantity: totalStock,
       },
-      ...result,
+      stockTotal: totalStock,
+      stockCommitted: committed,
+      stockAvailable: availableStock,
+      requestedQuantity,
+      interval: {
+        pickup: pickupDate,
+        return: returnDate,
+      },
+      conflictingRentals,
     };
-  }
-
-  public getThemes(filters?: { search?: string; categoryId?: string }) {
-    return store.getThemes(filters);
   }
 
   // ============================================================================
@@ -272,23 +420,53 @@ export class ApiService {
     limit?: number;
     offset?: number;
   }) {
-    let all = store.getRentals();
+    const client = this.getClient();
+    if (client) {
+      try {
+        let query = client.from('rentals').select(`
+          *,
+          customer:customer_id(id, name, phone),
+          theme:theme_id(id, name, code, base_price)
+        `);
 
-    if (filters?.status) {
-      all = all.filter((r) => r.status === filters.status);
+        if (filters?.status) query = query.eq('status', filters.status);
+        if (filters?.customerId) query = query.eq('customer_id', filters.customerId);
+        if (filters?.themeId) query = query.eq('theme_id', filters.themeId);
+        if (filters?.pickupDate) query = query.eq('pickup_date', filters.pickupDate);
+        if (filters?.startDate && filters?.endDate) {
+          query = query.gte('event_date', filters.startDate).lte('event_date', filters.endDate);
+        } else if (filters?.startDate) {
+          query = query.gte('event_date', filters.startDate);
+        } else if (filters?.endDate) {
+          query = query.lte('event_date', filters.endDate);
+        }
+
+        const { data, error } = await query.order('event_date', { ascending: false });
+        if (!error && data) {
+          const total = data.length;
+          const offset = filters?.offset || 0;
+          const limit = filters?.limit || 50;
+          const items = data.slice(offset, offset + limit).map((r: any) => ({
+            ...r,
+            customer_name: r.customer?.name || null,
+            customer_phone: r.customer?.phone || null,
+            theme_name: r.theme?.name || null,
+            theme_code: r.theme?.code || null,
+          }));
+          return { total, items };
+        }
+      } catch (err) {
+        console.error('[ApiService getRentals Supabase Error]', err);
+      }
     }
-    if (filters?.customerId) {
-      all = all.filter((r) => r.customer_id === filters.customerId);
-    }
-    if (filters?.themeId) {
-      all = all.filter((r) => r.theme_id === filters.themeId);
-    }
-    if (filters?.date) {
-      all = all.filter((r) => r.pickup_date <= filters.date! && r.return_date >= filters.date!);
-    }
-    if (filters?.pickupDate) {
-      all = all.filter((r) => r.pickup_date === filters.pickupDate);
-    }
+
+    // Fallback store
+    let all = store.getRentals();
+    if (filters?.status) all = all.filter((r) => r.status === filters.status);
+    if (filters?.customerId) all = all.filter((r) => r.customer_id === filters.customerId);
+    if (filters?.themeId) all = all.filter((r) => r.theme_id === filters.themeId);
+    if (filters?.date) all = all.filter((r) => r.pickup_date <= filters.date! && r.return_date >= filters.date!);
+    if (filters?.pickupDate) all = all.filter((r) => r.pickup_date === filters.pickupDate);
     if (filters?.startDate && filters?.endDate) {
       const s = filters.startDate;
       const e = filters.endDate;
@@ -311,36 +489,50 @@ export class ApiService {
     return { total, items };
   }
 
-  public getRentalById(id: string) {
+  public async getRentalById(id: string) {
+    const client = this.getClient();
+    if (client) {
+      try {
+        const { data } = await client
+          .from('rentals')
+          .select(`
+            *,
+            customer:customer_id(*),
+            theme:theme_id(*),
+            payments(*)
+          `)
+          .eq('id', id)
+          .maybeSingle();
+
+        if (data) return data;
+      } catch (err) {
+        console.error('[ApiService getRentalById Supabase Error]', err);
+      }
+    }
     const rentals = store.getRentals();
     return rentals.find((r) => r.id === id) || null;
   }
 
   public async createRental(data: {
-    // Cliente (ID ou dados diretos para criação instantânea)
     customerId?: string;
     customerName?: string;
     customerPhone?: string;
     customerEmail?: string;
     customerAddress?: string;
 
-    // Tema & Composição
     themeId?: string;
-    themeQuery?: string; // ex: "Vingadores" ou "MF-0127"
+    themeQuery?: string;
     themeVariantId?: string | null;
     kitId?: string | null;
 
-    // Datas
-    eventDate: string; // YYYY-MM-DD
-    pickupDate: string; // YYYY-MM-DD
-    returnDate: string; // YYYY-MM-DD
+    eventDate: string;
+    pickupDate: string;
+    returnDate: string;
 
-    // Valores
     total: number;
     paid?: number;
     paymentMethod?: Payment['method'];
 
-    // Detalhes operacionais
     deliveryLocation?: string | null;
     notes?: string | null;
     forceOverride?: boolean;
@@ -368,104 +560,90 @@ export class ApiService {
         phone: data.customerPhone,
         email: data.customerEmail,
         address: data.deliveryLocation || data.customerAddress,
-        notes: 'Cadastrado automaticamente via API / Pedido',
+        notes: 'Cadastrado automaticamente via API / Assessor WhatsApp',
       });
       customer = upsertRes.customer;
       customerId = customer.id;
     } else {
-      customer = store.getCustomerById(customerId);
+      customer = (await this.getCustomerById(customerId)) || undefined;
       if (!customer) {
         return { success: false, error: `Cliente com ID ${customerId} não encontrado.` };
       }
     }
 
-    // 2. Resolver Tema
+    // 2. Resolver Tema diretamente no Supabase
     const themeIdentifier = data.themeId || data.themeQuery;
     if (!themeIdentifier) {
       return { success: false, error: 'É obrigatório informar "themeId" ou "themeQuery".' };
     }
 
-    const theme = this.resolveTheme(themeIdentifier);
+    const theme = await this.resolveTheme(themeIdentifier);
     if (!theme) {
       return { success: false, error: `Tema "${themeIdentifier}" não localizado no catálogo.` };
     }
 
+    // 3. Validação de Disponibilidade no Supabase
+    if (data.forceOverride !== true) {
+      const avail = await this.checkAvailability(theme.id, data.pickupDate, data.returnDate, 1);
+      if (!avail.available) {
+        return {
+          success: false,
+          error: `O tema "${theme.name}" já está reservado no período de ${data.pickupDate} a ${data.returnDate}.`,
+          conflict: avail,
+        };
+      }
+    }
+
     const paidAmount = data.paid || 0;
     const balanceAmount = Math.max(0, data.total - paidAmount);
+    const newRentalId = crypto.randomUUID();
 
-    // 3. Criar locação com validação de conflito de datas/estoque
-    const result = store.createRental(
-      {
-        tenant_id: DEFAULT_TENANT_ID,
-        customer_id: customerId,
-        theme_id: theme.id,
-        theme_variant_id: data.themeVariantId || null,
-        kit_id: data.kitId || null,
-        event_date: data.eventDate,
-        pickup_date: data.pickupDate,
-        return_date: data.returnDate,
-        status: 'reservado',
-        total: data.total,
-        paid: paidAmount,
-        balance: balanceAmount,
-        delivery_location: data.deliveryLocation || customer.address || null,
-        notes: data.notes || null,
-      },
-      data.forceOverride === true
-    );
+    const rental: Rental = {
+      id: newRentalId,
+      tenant_id: DEFAULT_TENANT_ID,
+      customer_id: customerId,
+      theme_id: theme.id,
+      theme_variant_id: data.themeVariantId || null,
+      kit_id: data.kitId || null,
+      event_date: data.eventDate,
+      pickup_date: data.pickupDate,
+      return_date: data.returnDate,
+      status: 'reservado',
+      total: data.total,
+      paid: paidAmount,
+      balance: balanceAmount,
+      delivery_location: data.deliveryLocation || customer.address || null,
+      notes: data.notes || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
-    if (!result.success || !result.rental) {
-      return {
-        success: false,
-        error: result.error || 'Não foi possível confirmar a reserva.',
-        conflict: result.conflict,
-      };
+    // 4. Inserção no Supabase Cloud
+    const client = this.getClient();
+    if (client) {
+      await safeSupabaseServerOp(() => client.from('rentals').insert(rental));
+
+      if (paidAmount > 0) {
+        const paymentId = crypto.randomUUID();
+        await safeSupabaseServerOp(() =>
+          client.from('payments').insert({
+            id: paymentId,
+            rental_id: rental.id,
+            amount: paidAmount,
+            method: data.paymentMethod || 'pix',
+            note: 'Sinal / Pagamento inicial registrado via API WhatsApp',
+            paid_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+          })
+        );
+      }
     }
 
-    const rental = result.rental;
-
-    // 4. Se houve pagamento inicial informado, registra no financeiro
+    // Manter sincronizado no Store local
+    store.createRental(rental, true);
     if (paidAmount > 0) {
-      store.recordPayment(
-        rental.id,
-        paidAmount,
-        data.paymentMethod || 'pix',
-        'Sinal / Pagamento inicial registrado via API'
-      );
+      store.recordPayment(rental.id, paidAmount, data.paymentMethod || 'pix', 'Sinal inicial');
     }
-
-    // 5. Persistência direta no Supabase Server (service_role) se disponível
-    const admin = this.getAdminClient();
-    if (admin) {
-      await safeSupabaseServerOp(() =>
-        admin.from('rentals').upsert({
-          id: rental.id,
-          tenant_id: DEFAULT_TENANT_ID,
-          customer_id: rental.customer_id,
-          theme_id: rental.theme_id,
-          theme_variant_id: rental.theme_variant_id,
-          kit_id: rental.kit_id,
-          event_date: rental.event_date,
-          pickup_date: rental.pickup_date,
-          return_date: rental.return_date,
-          status: rental.status,
-          total: rental.total,
-          paid: paidAmount,
-          balance: balanceAmount,
-          delivery_location: rental.delivery_location,
-          notes: rental.notes,
-          created_at: rental.created_at,
-          updated_at: rental.updated_at,
-        })
-      );
-    }
-
-    store.logAudit('API_CREATE_RENTAL', 'rentals', rental.id, {
-      rentalId: rental.id,
-      themeName: theme.name,
-      customerName: customer.name,
-      total: rental.total,
-    });
 
     return {
       success: true,
@@ -486,13 +664,10 @@ export class ApiService {
       total?: number;
     }
   ) {
-    const res = store.updateRental(id, updates);
-    if (!res.success) return res;
-
-    const admin = this.getAdminClient();
-    if (admin) {
+    const client = this.getClient();
+    if (client) {
       await safeSupabaseServerOp(() =>
-        admin
+        client
           .from('rentals')
           .update({
             ...updates,
@@ -501,8 +676,7 @@ export class ApiService {
           .eq('id', id)
       );
     }
-
-    return res;
+    return store.updateRental(id, updates);
   }
 
   public async recordPayment(
@@ -512,36 +686,36 @@ export class ApiService {
     note?: string
   ): Promise<{ success: boolean; payment?: Payment; rental?: Rental; error?: string }> {
     try {
-      const payment = store.recordPayment(rentalId, amount, method, note);
-      const rental = store.getRentals().find((r) => r.id === rentalId);
+      const client = this.getClient();
+      const paymentId = crypto.randomUUID();
+      const now = new Date().toISOString();
 
-      const admin = this.getAdminClient();
-      if (admin) {
-        await safeSupabaseServerOp(() =>
-          admin.from('payments').insert({
-            id: payment.id,
-            rental_id: rentalId,
-            amount: payment.amount,
-            method: payment.method,
-            note: payment.note,
-            paid_at: payment.paid_at,
-            created_at: payment.created_at,
-          })
-        );
+      const payment: Payment = {
+        id: paymentId,
+        rental_id: rentalId,
+        amount,
+        method,
+        note: note || null,
+        paid_at: now,
+        created_at: now,
+      };
 
-        if (rental) {
+      if (client) {
+        await safeSupabaseServerOp(() => client.from('payments').insert(payment));
+
+        // Atualizar saldo da locação
+        const { data: currentRental } = await client.from('rentals').select('paid, total').eq('id', rentalId).maybeSingle();
+        if (currentRental) {
+          const newPaid = Number(currentRental.paid || 0) + amount;
+          const newBalance = Math.max(0, Number(currentRental.total || 0) - newPaid);
           await safeSupabaseServerOp(() =>
-            admin
-              .from('rentals')
-              .update({
-                paid: rental.paid,
-                balance: rental.balance,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', rentalId)
+            client.from('rentals').update({ paid: newPaid, balance: newBalance, updated_at: now }).eq('id', rentalId)
           );
         }
       }
+
+      store.recordPayment(rentalId, amount, method, note);
+      const rental = store.getRentals().find((r) => r.id === rentalId);
 
       return { success: true, payment, rental };
     } catch (err: unknown) {
@@ -562,7 +736,7 @@ export class ApiService {
   }
 
   // ============================================================================
-  // RELATÓRIOS & MÉTRICAS (REPORTS & ASSESSOR SUMMARY)
+  // RELATÓRIOS & MÉTRICAS (REPORTS & ASSESSOR SUMMARY - SUPABASE DIRECT)
   // ============================================================================
 
   public async getReportsSummary(params?: {
@@ -572,15 +746,43 @@ export class ApiService {
     referenceDate?: string;
   }) {
     const period = params?.period || 'current_month';
-    const allRentals = store.getRentals();
-    const allThemes = store.getThemes();
-    const refDate = params?.referenceDate ? new Date(params.referenceDate) : new Date();
-
-    const toISODate = (d: Date) => d.toISOString().split('T')[0];
+    const client = this.getClient();
 
     // 1. Relatório de Temas / Disponibilidade
     if (period === 'themes') {
-      const activeRentals = allRentals.filter((r) => r.status === 'reservado' || r.status === 'alugado');
+      let allThemes: any[] = [];
+      let activeRentals: any[] = [];
+
+      if (client) {
+        try {
+          const [tRes, rRes] = await Promise.all([
+            client
+              .from('themes')
+              .select('id, name, code, base_price, stock_quantity, status')
+              .eq('status', 'active')
+              .order('name', { ascending: true }),
+            client
+              .from('rentals')
+              .select('id, theme_id, status, event_date')
+              .in('status', ['reservado', 'alugado']),
+          ]);
+
+          if (tRes.data && tRes.data.length > 0) {
+            allThemes = tRes.data;
+          }
+          if (rRes.data) {
+            activeRentals = rRes.data;
+          }
+        } catch (err) {
+          console.error('[ApiService getReportsSummary themes Supabase Error]', err);
+        }
+      }
+
+      if (allThemes.length === 0) {
+        allThemes = store.getThemes();
+        activeRentals = store.getRentals().filter((r) => r.status === 'reservado' || r.status === 'alugado');
+      }
+
       const bookedThemeIds = new Set(activeRentals.map((r) => r.theme_id));
       const availableThemes = allThemes.filter((t) => !bookedThemeIds.has(t.id));
 
@@ -589,16 +791,19 @@ export class ApiService {
         totalThemes: allThemes.length,
         availableThemesCount: availableThemes.length,
         bookedThemesCount: bookedThemeIds.size,
-        availableThemes: availableThemes.slice(0, 20).map((t) => ({
+        availableThemes: availableThemes.slice(0, 30).map((t) => ({
           id: t.id,
           code: t.code,
           name: t.name,
-          base_price: t.base_price,
-          stock_quantity: t.stock_quantity,
+          base_price: Number(t.base_price || 0),
+          stock_quantity: Number(t.stock_quantity || 1),
         })),
-        summaryText: `Temos ${allThemes.length} temas cadastrados no acervo, sendo ${availableThemes.length} atualmente livres para locação.`,
+        summaryText: `Temos ${allThemes.length} temas cadastrados no acervo da Magia Festeira, sendo ${availableThemes.length} atualmente livres para locação.`,
       };
     }
+
+    const refDate = params?.referenceDate ? new Date(params.referenceDate) : new Date();
+    const toISODate = (d: Date) => d.toISOString().split('T')[0];
 
     let startDate = params?.startDate || '';
     let endDate = params?.endDate || '';
@@ -640,37 +845,41 @@ export class ApiService {
       periodTitle = `Período Personalizado (${startDate} a ${endDate})`;
     }
 
-    const filteredRentals = allRentals.filter((r) => {
-      const ev = r.event_date || r.pickup_date;
-      return (ev >= startDate && ev <= endDate) || (r.pickup_date <= endDate && r.return_date >= startDate);
-    });
+    let filteredRentals: any[] = [];
+
+    if (client) {
+      try {
+        const { data: rentals } = await client
+          .from('rentals')
+          .select(`
+            *,
+            customer:customer_id(id, name, phone),
+            theme:theme_id(id, name, code, base_price)
+          `)
+          .gte('event_date', startDate)
+          .lte('event_date', endDate)
+          .order('event_date', { ascending: true });
+
+        if (rentals) {
+          filteredRentals = rentals;
+        }
+      } catch (err) {
+        console.error('[ApiService getReportsSummary rentals Supabase Error]', err);
+      }
+    }
+
+    if (filteredRentals.length === 0) {
+      const allRentals = store.getRentals();
+      filteredRentals = allRentals.filter((r) => {
+        const ev = r.event_date || r.pickup_date;
+        return (ev >= startDate && ev <= endDate) || (r.pickup_date <= endDate && r.return_date >= startDate);
+      });
+    }
 
     const totalCount = filteredRentals.length;
-    const totalRevenue = filteredRentals.reduce((sum, r) => sum + (r.total || 0), 0);
-    const totalPaid = filteredRentals.reduce((sum, r) => sum + (r.paid || 0), 0);
-    const totalPending = filteredRentals.reduce((sum, r) => sum + (r.balance || 0), 0);
-    const averageTicket = totalCount > 0 ? totalRevenue / totalCount : 0;
-
-    const themeCounts: Record<string, { name: string; count: number }> = {};
-    for (const r of filteredRentals) {
-      const tName = r.theme?.name || 'Tema Diversos';
-      if (!themeCounts[tName]) themeCounts[tName] = { name: tName, count: 0 };
-      themeCounts[tName].count++;
-    }
-    const topThemes = Object.values(themeCounts).sort((a, b) => b.count - a.count).slice(0, 5);
-
-    const itemsSummary = filteredRentals.map((r) => ({
-      id: r.id,
-      eventDate: r.event_date,
-      customerName: r.customer?.name || 'Não informado',
-      customerPhone: r.customer?.phone || '',
-      themeName: r.theme?.name || 'Tema sob consulta',
-      status: r.status,
-      total: r.total,
-      paid: r.paid,
-      balance: r.balance,
-      location: r.delivery_location || '',
-    }));
+    const totalRevenue = filteredRentals.reduce((sum, r) => sum + (Number(r.total) || 0), 0);
+    const totalPaid = filteredRentals.reduce((sum, r) => sum + (Number(r.paid) || 0), 0);
+    const totalPending = Math.max(0, totalRevenue - totalPaid);
 
     return {
       period,
@@ -681,12 +890,19 @@ export class ApiService {
       totalRevenue,
       totalPaid,
       totalPending,
-      averageTicket,
-      topThemes,
-      rentals: itemsSummary,
-      summaryText: totalCount === 0
-        ? `Nenhuma locação agendada para ${periodTitle}.`
-        : `${periodTitle}: ${totalCount} locação(ões) totalizando R$ ${totalRevenue.toFixed(2)} (R$ ${totalPaid.toFixed(2)} recebidos e R$ ${totalPending.toFixed(2)} pendentes).`,
+      rentals: filteredRentals.map((r: any) => ({
+        id: r.id,
+        customerName: r.customer?.name || r.customer_name || 'Cliente',
+        customerPhone: r.customer?.phone || '',
+        themeName: r.theme?.name || r.theme_name || 'Tema',
+        themeCode: r.theme?.code || '',
+        eventDate: r.event_date,
+        status: r.status,
+        total: Number(r.total || 0),
+        paid: Number(r.paid || 0),
+        balance: Number(r.balance || (r.total - r.paid) || 0),
+      })),
+      summaryText: `No período ${periodTitle}, foram registradas ${totalCount} locações, somando R$ ${totalRevenue.toFixed(2)} em faturamento (R$ ${totalPaid.toFixed(2)} recebidos, R$ ${totalPending.toFixed(2)} pendentes).`,
     };
   }
 }

@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     // 4. Se total não informado, consulta o tema para usar o preço base
     let total = body.total;
     if (typeof total !== 'number' || total <= 0) {
-      const themeObj = apiService.resolveTheme(themeIdentifier);
+      const themeObj = await apiService.resolveTheme(themeIdentifier);
       total = themeObj ? themeObj.base_price : 150.0;
     }
 
