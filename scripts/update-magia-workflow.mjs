@@ -349,7 +349,8 @@ const payload = {
   extraItems: params.extraItems || params.itensExtras || null,
 
   deliveryLocation: params.deliveryLocation || params.enderecoEvento || params.localEntrega || params.local || null,
-  notes: params.notes || params.observacao || params.observacoes || null
+  notes: params.notes || params.observacao || params.observacoes || null,
+  forceOverride: params.forceOverride !== undefined ? params.forceOverride : true
 };
 
 try {
