@@ -23,8 +23,7 @@ export async function generateMetadata({ params }: ThemePageProps): Promise<Meta
   const theme = (await apiService.resolveTheme(cleanSlug)) || store.getThemeBySlug(cleanSlug);
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://sistema-magia-festeira-blond.vercel.app');
+    process.env.NEXT_PUBLIC_APP_URL || 'https://sistema-magia-festeira-blond.vercel.app';
 
   if (!theme) {
     return {
@@ -41,18 +40,6 @@ export async function generateMetadata({ params }: ThemePageProps): Promise<Meta
   // URL da imagem otimizada em JPEG 1200x630 gerada dinamicamente via Sharp
   const ogImageUrl = `${baseUrl}/api/og/theme/${encodeURIComponent(cleanSlug)}`;
 
-  // Imagem direta (se houver)
-  const rawImage =
-    theme.primary_media?.storage_path ||
-    (theme.media && theme.media.length > 0 ? theme.media[0].storage_path : '') ||
-    (theme as any)?.imageUrl ||
-    '';
-  const directImageUrl = rawImage.startsWith('http')
-    ? rawImage
-    : rawImage.startsWith('/')
-    ? `${baseUrl}${rawImage}`
-    : '';
-
   const imagesList = [
     {
       url: ogImageUrl,
@@ -63,17 +50,6 @@ export async function generateMetadata({ params }: ThemePageProps): Promise<Meta
       type: 'image/jpeg',
     },
   ];
-
-  if (directImageUrl && directImageUrl !== ogImageUrl) {
-    imagesList.push({
-      url: directImageUrl,
-      secureUrl: directImageUrl,
-      width: 1200,
-      height: 900,
-      alt: theme.name,
-      type: 'image/jpeg',
-    });
-  }
 
   return {
     metadataBase: new URL(baseUrl),

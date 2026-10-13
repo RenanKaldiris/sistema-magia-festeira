@@ -31,7 +31,17 @@ export class ApiService {
     return null;
   }
 
-  private formatTheme(t: any): ThemeWithDetails {
+  private formatTheme(t: any, mediaRows: any[] = []): ThemeWithDetails {
+    const storeMedia = store.getMediaByEntity('theme', t.id);
+    const combinedMedia = mediaRows.length > 0 ? mediaRows : storeMedia;
+    const sortedMedia = [...combinedMedia].sort((a, b) => {
+      if (a.is_primary && !b.is_primary) return -1;
+      if (!a.is_primary && b.is_primary) return 1;
+      return (a.sort_order || 0) - (b.sort_order || 0);
+    });
+    const primaryMedia = sortedMedia.find((m) => m.is_primary) || sortedMedia[0] || null;
+    const primaryUrl = primaryMedia?.storage_path || t.imageUrl || t.image_url || undefined;
+
     return {
       id: t.id,
       tenant_id: t.tenant_id || DEFAULT_TENANT_ID,
@@ -48,14 +58,14 @@ export class ApiService {
       status: t.status || 'active',
       stock_quantity: Number(t.stock_quantity || 1),
       featured: Boolean(t.featured),
-      imageUrl: t.imageUrl || undefined,
+      imageUrl: primaryUrl,
       created_at: t.created_at || new Date().toISOString(),
       updated_at: t.updated_at || new Date().toISOString(),
       kits: [],
       variants: [],
       items: [],
-      media: [],
-      primary_media: null,
+      media: sortedMedia,
+      primary_media: primaryMedia,
     };
   }
 
@@ -334,7 +344,21 @@ export class ApiService {
         }
         const { data, error } = await query.order('name', { ascending: true });
         if (!error && data && data.length > 0) {
-          return data.map((t: any) => this.formatTheme(t));
+          const themeIds = data.map((t: any) => t.id);
+          const { data: allMedia } = await client
+            .from('media')
+            .select('*')
+            .eq('entity_type', 'theme')
+            .in('entity_id', themeIds);
+
+          const mediaMap = new Map<string, any[]>();
+          (allMedia || []).forEach((m: any) => {
+            const list = mediaMap.get(m.entity_id) || [];
+            list.push(m);
+            mediaMap.set(m.entity_id, list);
+          });
+
+          return data.map((t: any) => this.formatTheme(t, mediaMap.get(t.id) || []));
         }
       } catch (err) {
         console.error('[ApiService getThemes Supabase Error]', err);
@@ -350,29 +374,49 @@ export class ApiService {
 
     if (client) {
       try {
+        let rawTheme: any = null;
+
         // 1. Por ID (UUID)
         if (trimmed.length > 20) {
           const { data: byId } = await client.from('themes').select('*').eq('id', trimmed).maybeSingle();
-          if (byId) return this.formatTheme(byId);
+          if (byId) rawTheme = byId;
         }
 
         // 2. Por código (ex: MF-0136)
-        const { data: byCode } = await client.from('themes').select('*').ilike('code', trimmed).limit(1);
-        if (byCode && byCode.length > 0) return this.formatTheme(byCode[0]);
+        if (!rawTheme) {
+          const { data: byCode } = await client.from('themes').select('*').ilike('code', trimmed).limit(1);
+          if (byCode && byCode.length > 0) rawTheme = byCode[0];
+        }
 
         // 3. Por slug
-        const { data: bySlug } = await client.from('themes').select('*').ilike('slug', trimmed).limit(1);
-        if (bySlug && bySlug.length > 0) return this.formatTheme(bySlug[0]);
+        if (!rawTheme) {
+          const { data: bySlug } = await client.from('themes').select('*').ilike('slug', trimmed).limit(1);
+          if (bySlug && bySlug.length > 0) rawTheme = bySlug[0];
+        }
 
         // 4. Por busca no nome (parcial e flexível com tolerância a espaços e hífens)
-        const altHyphen = trimmed.replace(/\s+/g, '-');
-        const altSpace = trimmed.replace(/-/g, ' ');
-        const { data: byName } = await client
-          .from('themes')
-          .select('*')
-          .or(`name.ilike.%${trimmed}%,name.ilike.%${altHyphen}%,name.ilike.%${altSpace}%`)
-          .limit(1);
-        if (byName && byName.length > 0) return this.formatTheme(byName[0]);
+        if (!rawTheme) {
+          const altHyphen = trimmed.replace(/\s+/g, '-');
+          const altSpace = trimmed.replace(/-/g, ' ');
+          const { data: byName } = await client
+            .from('themes')
+            .select('*')
+            .or(`name.ilike.%${trimmed}%,name.ilike.%${altHyphen}%,name.ilike.%${altSpace}%`)
+            .limit(1);
+          if (byName && byName.length > 0) rawTheme = byName[0];
+        }
+
+        if (rawTheme) {
+          const { data: mediaRows } = await client
+            .from('media')
+            .select('*')
+            .eq('entity_type', 'theme')
+            .eq('entity_id', rawTheme.id)
+            .order('is_primary', { ascending: false })
+            .order('sort_order', { ascending: true });
+
+          return this.formatTheme(rawTheme, mediaRows || []);
+        }
       } catch (err) {
         console.error('[ApiService resolveTheme Supabase Error]', err);
       }

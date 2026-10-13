@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { apiService } from '@/services/api/api-service';
 import { store } from '@/lib/store';
+import { supabase } from '@/lib/supabase/client';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -22,7 +23,7 @@ export async function GET(
     const cleanSlug = decodeURIComponent(slug).trim();
 
     // 1. Busca tema no Supabase Cloud ou Store
-    const theme = (await apiService.resolveTheme(cleanSlug)) || store.getThemeBySlug(cleanSlug);
+    let theme = (await apiService.resolveTheme(cleanSlug)) || store.getThemeBySlug(cleanSlug);
 
     // 2. Determina a imagem principal do tema
     let imageUrl =
@@ -30,6 +31,47 @@ export async function GET(
       (theme?.media && theme.media.length > 0 ? theme.media[0].storage_path : '') ||
       (theme as any)?.imageUrl ||
       '';
+
+    // 2.1 Fallback Direto Supabase: se imageUrl estiver vazia, consulta direto na tabela media
+    if (!imageUrl && supabase) {
+      try {
+        const themeId = theme?.id;
+        if (themeId) {
+          const { data: mediaRow } = await supabase
+            .from('media')
+            .select('storage_path')
+            .eq('entity_id', themeId)
+            .order('is_primary', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (mediaRow?.storage_path) {
+            imageUrl = mediaRow.storage_path;
+          }
+        } else {
+          const { data: foundTheme } = await supabase
+            .from('themes')
+            .select('id, name')
+            .or(`slug.ilike.${cleanSlug},code.ilike.${cleanSlug},name.ilike.%${cleanSlug}%`)
+            .limit(1)
+            .maybeSingle();
+
+          if (foundTheme?.id) {
+            const { data: mediaRow } = await supabase
+              .from('media')
+              .select('storage_path')
+              .eq('entity_id', foundTheme.id)
+              .order('is_primary', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (mediaRow?.storage_path) {
+              imageUrl = mediaRow.storage_path;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[OG Direct Media Fallback Error]', err);
+      }
+    }
 
     let imageBuffer: Buffer | null = null;
 
@@ -97,7 +139,7 @@ export async function GET(
       status: 200,
       headers: {
         'Content-Type': 'image/jpeg',
-        'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
+        'Cache-Control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400',
         'Content-Length': String(processedJpeg.length),
       },
     });

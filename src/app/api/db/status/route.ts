@@ -25,6 +25,8 @@ export async function GET() {
         });
       }
 
+      const { count: mediaCount } = await supabase.from('media').select('*', { count: 'exact', head: true });
+
       return NextResponse.json({
         configured: true,
         connected: true,
@@ -34,6 +36,7 @@ export async function GET() {
         themesCount: themesData?.length || 0,
         rentalsCount: rentalsData?.length || 0,
         customersCount: customersData?.length || 0,
+        mediaCount: mediaCount || 0,
         message: `Conectado com sucesso ao Supabase! (${themesData?.length || 0} temas cadastrados)`,
       });
     } catch (err: any) {
