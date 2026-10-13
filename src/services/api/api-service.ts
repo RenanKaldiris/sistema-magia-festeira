@@ -323,7 +323,14 @@ export class ApiService {
           query = query.eq('category_id', filters.categoryId);
         }
         if (filters?.search) {
-          query = query.ilike('name', `%${filters.search}%`);
+          const s = filters.search.trim();
+          const sHyphen = s.replace(/\s+/g, '-');
+          const sSpace = s.replace(/[-_]+/g, ' ');
+          if (sHyphen !== s || sSpace !== s) {
+            query = query.or(`name.ilike.%${s}%,name.ilike.%${sHyphen}%,name.ilike.%${sSpace}%`);
+          } else {
+            query = query.ilike('name', `%${s}%`);
+          }
         }
         const { data, error } = await query.order('name', { ascending: true });
         if (!error && data && data.length > 0) {
@@ -357,8 +364,14 @@ export class ApiService {
         const { data: bySlug } = await client.from('themes').select('*').ilike('slug', trimmed).limit(1);
         if (bySlug && bySlug.length > 0) return this.formatTheme(bySlug[0]);
 
-        // 4. Por busca no nome (parcial e flexível)
-        const { data: byName } = await client.from('themes').select('*').ilike('name', `%${trimmed}%`).limit(1);
+        // 4. Por busca no nome (parcial e flexível com tolerância a espaços e hífens)
+        const altHyphen = trimmed.replace(/\s+/g, '-');
+        const altSpace = trimmed.replace(/-/g, ' ');
+        const { data: byName } = await client
+          .from('themes')
+          .select('*')
+          .or(`name.ilike.%${trimmed}%,name.ilike.%${altHyphen}%,name.ilike.%${altSpace}%`)
+          .limit(1);
         if (byName && byName.length > 0) return this.formatTheme(byName[0]);
       } catch (err) {
         console.error('[ApiService resolveTheme Supabase Error]', err);
@@ -824,29 +837,57 @@ export class ApiService {
     rentalId: string,
     amount: number,
     method: Payment['method'],
-    note?: string
+    note?: string,
+    status: 'efetivado' | 'pendente' = 'efetivado',
+    paidAt?: string
   ): Promise<{ success: boolean; payment?: Payment; rental?: Rental; error?: string }> {
     try {
       const client = this.getClient();
-      const paymentId = crypto.randomUUID();
       const now = new Date().toISOString();
-
-      const payment: Payment = {
-        id: paymentId,
-        rental_id: rentalId,
-        amount,
-        method,
-        note: note || null,
-        paid_at: now,
-        created_at: now,
-      };
+      const paymentDate = paidAt || now;
 
       if (client) {
+        // Deduplicação inteligente de sinal no Supabase
+        const isSignal = (note || '').toLowerCase().includes('sinal') || (note || '').toLowerCase().includes('api');
+        const { data: existingPayments } = await client
+          .from('payments')
+          .select('*')
+          .eq('rental_id', rentalId);
+
+        const dup = (existingPayments || []).find((p: any) => {
+          if (Math.abs(Number(p.amount) - Number(amount)) > 0.001) return false;
+          const pNote = (p.note || '').toLowerCase();
+          if (isSignal && (pNote.includes('sinal') || pNote.includes('api') || pNote.includes('reserva') || pNote.includes('whatsapp'))) {
+            return true;
+          }
+          const pTime = new Date(p.created_at || p.paid_at).getTime();
+          return !isNaN(pTime) && Math.abs(Date.now() - pTime) < 15 * 60 * 1000;
+        });
+
+        if (dup) {
+          // Já existe sinal registrado: não duplica!
+          const storePayment = store.recordPayment(rentalId, amount, method, note, status, paymentDate);
+          const rental = store.getRentals().find((r) => r.id === rentalId);
+          return { success: true, payment: storePayment, rental };
+        }
+
+        const paymentId = crypto.randomUUID();
+        const payment: Payment = {
+          id: paymentId,
+          rental_id: rentalId,
+          amount,
+          method,
+          note: note || null,
+          status,
+          paid_at: paymentDate,
+          created_at: now,
+        };
+
         await safeSupabaseServerOp(() => client.from('payments').insert(payment));
 
-        // Atualizar saldo da locação
+        // Atualizar saldo da locação no banco
         const { data: currentRental } = await client.from('rentals').select('paid, total').eq('id', rentalId).maybeSingle();
-        if (currentRental) {
+        if (currentRental && status === 'efetivado') {
           const newPaid = Number(currentRental.paid || 0) + amount;
           const newBalance = Math.max(0, Number(currentRental.total || 0) - newPaid);
           await safeSupabaseServerOp(() =>
@@ -855,10 +896,59 @@ export class ApiService {
         }
       }
 
-      store.recordPayment(rentalId, amount, method, note);
+      const payment = store.recordPayment(rentalId, amount, method, note, status, paymentDate);
       const rental = store.getRentals().find((r) => r.id === rentalId);
 
       return { success: true, payment, rental };
+    } catch (err: unknown) {
+      return { success: false, error: (err as Error).message };
+    }
+  }
+
+  public async updatePayment(
+    paymentId: string,
+    updates: {
+      amount?: number;
+      method?: Payment['method'];
+      note?: string | null;
+      paid_at?: string;
+      status?: 'efetivado' | 'pendente';
+    }
+  ): Promise<{ success: boolean; payment?: Payment; rental?: Rental; error?: string }> {
+    try {
+      const client = this.getClient();
+      if (client) {
+        await safeSupabaseServerOp(() =>
+          client
+            .from('payments')
+            .update({
+              ...(updates.amount !== undefined ? { amount: updates.amount } : {}),
+              ...(updates.method !== undefined ? { method: updates.method } : {}),
+              ...(updates.note !== undefined ? { note: updates.note } : {}),
+              ...(updates.paid_at !== undefined ? { paid_at: updates.paid_at } : {}),
+            })
+            .eq('id', paymentId)
+        );
+      }
+
+      return store.updatePayment(paymentId, updates);
+    } catch (err: unknown) {
+      return { success: false, error: (err as Error).message };
+    }
+  }
+
+  public async deletePayment(
+    paymentId: string
+  ): Promise<{ success: boolean; rental?: Rental; error?: string }> {
+    try {
+      const client = this.getClient();
+      if (client) {
+        await safeSupabaseServerOp(() =>
+          client.from('payments').delete().eq('id', paymentId)
+        );
+      }
+
+      return store.deletePayment(paymentId);
     } catch (err: unknown) {
       return { success: false, error: (err as Error).message };
     }

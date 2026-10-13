@@ -12,6 +12,7 @@ import {
   Sparkles,
   Package2,
   Layers,
+  Share2,
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { store, DEFAULT_THEME_DESCRIPTION } from '@/lib/store';
@@ -396,7 +397,35 @@ export default function CatalogoPage() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const shareUrl = themeUrl || `${window.location.origin}/catalogo/${theme.slug}`;
+                            if (typeof navigator !== 'undefined' && navigator.share) {
+                              try {
+                                await navigator.share({
+                                  title: `${theme.name} - Magia Festeira`,
+                                  text: `Confira a decoração do tema ${theme.name} na Magia Festeira:`,
+                                  url: shareUrl,
+                                });
+                                return;
+                              } catch {
+                                // Fallback para clipboard
+                              }
+                            }
+                            if (navigator.clipboard) {
+                              await navigator.clipboard.writeText(shareUrl);
+                              alert('Link do tema copiado com sucesso! Ao colar no WhatsApp, a foto do tema aparecerá na prévia.');
+                            }
+                          }}
+                          title="Compartilhar link do tema com foto"
+                          className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 dark:hover:text-white transition-all shadow-xs border border-slate-200 dark:border-slate-700 cursor-pointer"
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </button>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -409,7 +438,7 @@ export default function CatalogoPage() {
                         >
                           <MessageCircle className="w-4 h-4" />
                         </button>
-                        <div className="inline-flex items-center gap-1 px-3.5 py-2.5 rounded-xl bg-rose-600 group-hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition-colors">
+                        <div className="inline-flex items-center gap-1 px-3 sm:px-3.5 py-2.5 rounded-xl bg-rose-600 group-hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition-colors">
                           <span>{showPrices ? 'Ver Kits' : 'Consultar'}</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </div>

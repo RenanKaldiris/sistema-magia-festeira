@@ -243,6 +243,7 @@ export interface Payment {
   method: 'pix' | 'dinheiro' | 'cartao' | 'transferencia';
   paid_at: string;
   note?: string | null;
+  status?: 'efetivado' | 'pendente';
   created_at: string;
 }
 

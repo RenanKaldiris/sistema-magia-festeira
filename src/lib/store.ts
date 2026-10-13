@@ -795,6 +795,7 @@ class MagiaStore {
   constructor() {
     if (typeof window !== 'undefined') {
       this.loadFromLocalStorage();
+      this.sanitizeDuplicatePayments();
       this.initRealtimeSubscription();
       this.syncWithSupabase();
 
@@ -1192,6 +1193,7 @@ class MagiaStore {
 
       this.isLoaded = true;
       this.isLoading = false;
+      this.sanitizeDuplicatePayments();
       this.saveToLocalStorage();
       this.notifyListeners();
     } catch (err) {
@@ -1838,30 +1840,136 @@ class MagiaStore {
     return toDelete.length;
   }
 
-  public recordPayment(rentalId: string, amount: number, method: Payment['method'], note?: string) {
+  /**
+   * Recalcula de forma consistente o valor pago (paid) e o saldo devedor (balance) da locação
+   * somando exclusivamente os lançamentos com status 'efetivado'.
+   */
+  public recalculateRentalBalance(rentalId: string) {
     const rental = this.rentals.find((r) => r.id === rentalId);
+    if (!rental) return;
+
+    const rentalPayments = this.payments.filter((p) => p.rental_id === rentalId);
+    const paidTotal = rentalPayments
+      .filter((p) => (p.status || 'efetivado') === 'efetivado')
+      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+    rental.paid = Number(paidTotal.toFixed(2));
+    rental.balance = Math.max(0, Number((Number(rental.total || 0) - paidTotal).toFixed(2)));
+    rental.updated_at = new Date().toISOString();
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase
+          .from('rentals')
+          .update({
+            paid: rental.paid,
+            balance: rental.balance,
+            updated_at: rental.updated_at,
+          })
+          .eq('id', rentalId),
+        'Update Rental Balance'
+      );
+    }
+  }
+
+  /**
+   * Sanitiza e deduplica pagamentos idênticos criados em duplicidade (ex: sinal gerado pelo sistema + via API)
+   */
+  public sanitizeDuplicatePayments(): number {
+    let removedCount = 0;
+    const seen = new Map<string, Payment>();
+    const toKeep: Payment[] = [];
+
+    for (const p of this.payments) {
+      const key = `${p.rental_id}_${Number(p.amount).toFixed(2)}`;
+      const existing = seen.get(key);
+
+      if (existing) {
+        const pNote = (p.note || '').toLowerCase();
+        const exNote = (existing.note || '').toLowerCase();
+        const isDuplicateSignal =
+          (pNote.includes('sinal') || pNote.includes('api') || pNote.includes('whatsapp') || pNote.includes('reserva')) &&
+          (exNote.includes('sinal') || exNote.includes('api') || exNote.includes('whatsapp') || exNote.includes('reserva'));
+
+        if (isDuplicateSignal) {
+          removedCount++;
+          continue;
+        }
+      }
+
+      seen.set(key, p);
+      toKeep.push(p);
+    }
+
+    if (removedCount > 0) {
+      this.payments = toKeep;
+      for (const r of this.rentals) {
+        this.recalculateRentalBalance(r.id);
+      }
+      this.saveToLocalStorage();
+      this.notifyListeners();
+    }
+
+    return removedCount;
+  }
+
+  /**
+   * Registra uma nova entrada ou pagamento com deduplicação de sinal e recálculo dinâmico
+   */
+  public recordPayment(
+    rentalId: string,
+    amount: number,
+    method: Payment['method'],
+    note?: string,
+    status: 'efetivado' | 'pendente' = 'efetivado',
+    paidAt?: string
+  ): Payment {
+    const isSignal = (note || '').toLowerCase().includes('sinal') || (note || '').toLowerCase().includes('api');
+    
+    // Deduplicação inteligente de sinal: não duplica se já existir pagamento idêntico recente
+    const existingDuplicate = this.payments.find((p) => {
+      if (p.rental_id !== rentalId) return false;
+      if (Math.abs(Number(p.amount) - Number(amount)) > 0.001) return false;
+      const pNote = (p.note || '').toLowerCase();
+      if (isSignal && (pNote.includes('sinal') || pNote.includes('api') || pNote.includes('reserva') || pNote.includes('whatsapp'))) {
+        return true;
+      }
+      const pTime = new Date(p.created_at).getTime();
+      const nowTime = Date.now();
+      if (!isNaN(pTime) && Math.abs(nowTime - pTime) < 15 * 60 * 1000) {
+        return true;
+      }
+      return false;
+    });
+
+    if (existingDuplicate) {
+      if (note && !existingDuplicate.note) existingDuplicate.note = note;
+      existingDuplicate.status = status;
+      this.recalculateRentalBalance(rentalId);
+      this.saveToLocalStorage();
+      this.notifyListeners();
+      return existingDuplicate;
+    }
 
     const id = generateUUID();
     const now = new Date().toISOString();
+    const paymentDate = paidAt || now;
 
     const payment: Payment = {
       id,
       rental_id: rentalId,
-      amount,
+      amount: Number(amount),
       method,
-      paid_at: now,
+      paid_at: paymentDate,
       note: note || null,
+      status,
       created_at: now,
     };
 
     this.payments.push(payment);
-    if (rental) {
-      rental.paid += amount;
-      rental.balance = Math.max(0, rental.total - rental.paid);
-      rental.updated_at = now;
-    }
+    this.recalculateRentalBalance(rentalId);
 
-    this.logAudit('RECORD_PAYMENT', 'payments', payment.id, { rentalId, amount, method });
+    this.logAudit('RECORD_PAYMENT', 'payments', payment.id, { rentalId, amount, method, status });
 
     if (isSupabaseConfigured && supabase) {
       safeSupabaseOperation(
@@ -1875,20 +1983,97 @@ class MagiaStore {
         }),
         'Insert Payment'
       );
-      if (rental) {
-        safeSupabaseOperation(
-          supabase.from('rentals').update({
-            paid: rental.paid,
-            balance: rental.balance,
-            updated_at: rental.updated_at,
-          }).eq('id', rentalId),
-          'Update Rental Balance'
-        );
-      }
     }
 
     this.saveToLocalStorage();
+    this.notifyListeners();
     return payment;
+  }
+
+  /**
+   * Atualiza um pagamento existente (valor, data, forma, status efetivado/pendente, nota)
+   */
+  public updatePayment(
+    paymentId: string,
+    updates: {
+      amount?: number;
+      method?: Payment['method'];
+      note?: string | null;
+      paid_at?: string;
+      status?: 'efetivado' | 'pendente';
+    }
+  ): { success: boolean; payment?: Payment; rental?: Rental; error?: string } {
+    const idx = this.payments.findIndex((p) => p.id === paymentId);
+    if (idx === -1) {
+      return { success: false, error: 'Pagamento não encontrado.' };
+    }
+
+    const current = this.payments[idx];
+    const updatedPayment: Payment = {
+      ...current,
+      ...(updates.amount !== undefined ? { amount: Number(updates.amount) } : {}),
+      ...(updates.method !== undefined ? { method: updates.method } : {}),
+      ...(updates.note !== undefined ? { note: updates.note } : {}),
+      ...(updates.paid_at !== undefined ? { paid_at: updates.paid_at } : {}),
+      ...(updates.status !== undefined ? { status: updates.status } : {}),
+    };
+
+    this.payments[idx] = updatedPayment;
+    this.recalculateRentalBalance(updatedPayment.rental_id);
+
+    const rental = this.rentals.find((r) => r.id === updatedPayment.rental_id);
+
+    this.logAudit('UPDATE_PAYMENT', 'payments', paymentId, { updates, updatedPayment });
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase
+          .from('payments')
+          .update({
+            amount: updatedPayment.amount,
+            method: updatedPayment.method,
+            paid_at: updatedPayment.paid_at,
+            note: updatedPayment.note,
+          })
+          .eq('id', paymentId),
+        'Update Payment'
+      );
+    }
+
+    this.saveToLocalStorage();
+    this.notifyListeners();
+
+    return { success: true, payment: updatedPayment, rental };
+  }
+
+  /**
+   * Exclui um pagamento do histórico e recalcula o saldo da locação
+   */
+  public deletePayment(paymentId: string): { success: boolean; rental?: Rental; error?: string } {
+    const idx = this.payments.findIndex((p) => p.id === paymentId);
+    if (idx === -1) {
+      return { success: false, error: 'Pagamento não encontrado.' };
+    }
+
+    const removed = this.payments[idx];
+    this.payments.splice(idx, 1);
+    this.recalculateRentalBalance(removed.rental_id);
+
+    const rental = this.rentals.find((r) => r.id === removed.rental_id);
+
+    this.logAudit('DELETE_PAYMENT', 'payments', paymentId, { removed });
+
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase.from('payments').delete().eq('id', paymentId),
+        'Delete Payment'
+      );
+    }
+
+    this.saveToLocalStorage();
+    this.notifyListeners();
+
+    return { success: true, rental };
   }
 
   public createTheme(
