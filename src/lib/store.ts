@@ -1481,7 +1481,7 @@ class MagiaStore {
     const activeRentals = this.rentals.filter((r) => {
       if (r.id === ignoreRentalId) return false;
       if (r.theme_id !== themeId) return false;
-      if (r.status === 'cancelado' || r.status === 'devolvido') return false;
+      if (r.status === 'cancelado' || r.status === 'devolvido' || r.status === 'historico') return false;
 
       const rStart = new Date(r.pickup_date).getTime();
       const rEnd = new Date(r.return_date).getTime();

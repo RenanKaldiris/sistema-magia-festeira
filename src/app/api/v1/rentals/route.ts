@@ -132,6 +132,8 @@ export async function POST(request: NextRequest) {
       pickupDate,
       returnDate,
 
+      status: body.status || (body.historico || body.isHistorico ? 'historico' : undefined),
+
       total,
       paid,
       paymentMethod: body.paymentMethod || 'pix',

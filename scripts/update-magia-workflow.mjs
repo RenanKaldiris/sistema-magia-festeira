@@ -77,6 +77,7 @@ Ao receber a confirmação da ferramenta "lancar_locacao", responda ao gestor co
 🏠 *Endereço Cliente:* [Endereço residencial]
 
 🎈 *Tema:* [Nome do tema]
+💰 *Valor Registrado:* R$ [Total]
 🎂 *Evento:* [Nome do evento]
 📅 *Data da Festa:* [Data DD/MM/AAAA]
 ⏰ *Horário:* [Horário início às término]
@@ -89,6 +90,11 @@ Ao receber a confirmação da ferramenta "lancar_locacao", responda ao gestor co
 
 📝 *Observação de Retirada:* [Observação]
 ✨ _Cliente vinculado no histórico sem duplicidade e estoque reservado com sucesso!_
+
+Se for um lançamento de histórico / festa antiga (data anterior a 01/10/2026 ou se o texto mencionar 'histórico', 'festa passada', 'cliente antigo'):
+- O sistema e a ferramenta classificarão automaticamente com status "historico".
+- No comprovante, adicione a linha:
+🏷️ *Categoria:* Histórico / Passado (Registrado no CRM para remarketing sem impactar caixa atual)
 
 ============================================================
 2. LISTA E NOMES DOS TEMAS (CATÁLOGO COMPLETO):
@@ -350,6 +356,7 @@ const payload = {
 
   deliveryLocation: params.deliveryLocation || params.enderecoEvento || params.localEntrega || params.local || null,
   notes: params.notes || params.observacao || params.observacoes || null,
+  status: params.status || (params.historico || params.isHistorico ? 'historico' : undefined),
   forceOverride: params.forceOverride !== undefined ? params.forceOverride : true
 };
 

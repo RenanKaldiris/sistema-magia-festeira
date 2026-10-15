@@ -5,7 +5,7 @@
 
 export type EntityStatus = 'active' | 'inactive' | 'archived';
 
-export type RentalStatus = 'reservado' | 'alugado' | 'devolvido' | 'cancelado';
+export type RentalStatus = 'reservado' | 'alugado' | 'devolvido' | 'cancelado' | 'historico';
 
 export type SyncStatus = 'pending' | 'synced' | 'error';
 

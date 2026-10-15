@@ -130,12 +130,19 @@ export function CustomerEditDrawer({
         return 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-900/50';
       case 'devolvido':
         return 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60';
+      case 'historico':
+        return 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900/50';
       case 'cancelado':
         return 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/50';
       default:
         return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
     }
   };
+
+  // Métricas do Cliente (Ticket Médio e Total Gasto)
+  const validRentals = customerRentals.filter((r) => r.status !== 'cancelado');
+  const totalSpent = validRentals.reduce((sum, r) => sum + (r.total || 0), 0);
+  const averageTicket = validRentals.length > 0 ? totalSpent / validRentals.length : 0;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -186,7 +193,35 @@ export function CustomerEditDrawer({
           {/* Form Body com Scroll e Sticky Footer */}
           <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-            {/* Seção 1: Dados Pessoais & Contato */}
+              {/* Card de Métricas do Cliente (Ticket Médio & Faturamento Histórico) */}
+              <div className="grid grid-cols-3 gap-2.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
+                    Total Gasto
+                  </span>
+                  <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white block truncate">
+                    R$ {totalSpent.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
+                    Festas
+                  </span>
+                  <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white block">
+                    {validRentals.length}
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
+                    Ticket Médio
+                  </span>
+                  <span className="text-xs sm:text-sm font-extrabold text-emerald-600 dark:text-emerald-400 block truncate">
+                    R$ {averageTicket.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Seção 1: Dados Pessoais & Contato */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
                 <User className="w-4 h-4 text-rose-500" />
@@ -349,7 +384,7 @@ export function CustomerEditDrawer({
                             r.status
                           )}`}
                         >
-                          {r.status}
+                          {r.status === 'historico' ? 'Histórico' : r.status}
                         </span>
                       </div>
 

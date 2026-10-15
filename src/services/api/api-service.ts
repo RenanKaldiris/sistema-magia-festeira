@@ -675,6 +675,8 @@ export class ApiService {
     pickupDate: string;
     returnDate: string;
 
+    status?: RentalStatus;
+
     total: number;
     paid?: number;
     paymentMethod?: Payment['method'];
@@ -698,6 +700,17 @@ export class ApiService {
     orderNumber?: string;
     displayId?: string;
   }> {
+    // Detecção inteligente de status histórico:
+    // Se data do evento for anterior a 01/10/2026, ou notas/termos contiverem indicação de histórico/passado, ou solicitado explicitamente
+    const isHistoricalByDate = Boolean(data.eventDate && data.eventDate < '2026-10-01');
+    const isHistoricalByText = Boolean(
+      (data.notes && /hist[oó]rico|passad[oa]|legado/i.test(data.notes)) ||
+      (data.paymentTerms && /hist[oó]rico|passad[oa]|legado/i.test(data.paymentTerms)) ||
+      (data.eventName && /hist[oó]rico|passad[oa]|legado/i.test(data.eventName))
+    );
+    const isHistorical = data.status === 'historico' || isHistoricalByDate || isHistoricalByText;
+    const resolvedStatus: RentalStatus = isHistorical ? 'historico' : (data.status || 'reservado');
+
     // 1. Resolver ou criar cliente
     let customerId = data.customerId;
     let customer: Customer | undefined;
@@ -716,7 +729,9 @@ export class ApiService {
         email: data.customerEmail,
         document: data.customerDocument,
         address: data.customerAddress || data.deliveryLocation,
-        notes: 'Cadastrado/atualizado via Assessor WhatsApp / API',
+        notes: isHistorical
+          ? 'Cliente histórico / importado via WhatsApp / API'
+          : 'Cadastrado/atualizado via Assessor WhatsApp / API',
       });
       customer = upsertRes.customer;
       customerId = customer.id;
@@ -745,8 +760,8 @@ export class ApiService {
       theme = await this.resolveThemeOrCreate(themeIdentifier, data.total);
     }
 
-    // 3. Validação de Disponibilidade no Supabase
-    if (data.forceOverride !== true) {
+    // 3. Validação de Disponibilidade no Supabase (não bloqueia para históricos ou forceOverride)
+    if (data.forceOverride !== true && !isHistorical) {
       const avail = await this.checkAvailability(theme.id, data.pickupDate, data.returnDate, 1);
       if (!avail.available) {
         return {
@@ -801,7 +816,7 @@ export class ApiService {
       event_date: data.eventDate,
       pickup_date: data.pickupDate,
       return_date: data.returnDate,
-      status: 'reservado',
+      status: resolvedStatus,
       total: data.total,
       paid: paidAmount,
       balance: balanceAmount,
@@ -823,7 +838,9 @@ export class ApiService {
             rental_id: rental.id,
             amount: paidAmount,
             method: data.paymentMethod || 'pix',
-            note: 'Sinal / Pagamento inicial registrado via API WhatsApp',
+            note: isHistorical
+              ? 'Pagamento registrado para histórico'
+              : 'Sinal / Pagamento inicial registrado via API WhatsApp',
             paid_at: new Date().toISOString(),
             created_at: new Date().toISOString(),
           })

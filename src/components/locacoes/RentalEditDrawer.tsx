@@ -138,6 +138,19 @@ export function RentalEditDrawer({
 
   const handleSaveChanges = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Se o valor total foi zerado e existem pagamentos ativos registrados
+    if (Number(total) === 0 && currentPaid > 0) {
+      const confirmZeroPayments = window.confirm(
+        `Você definiu o valor total desta locação como R$ 0,00.\n\nExistem R$ ${currentPaid.toFixed(2).replace('.', ',')} em pagamentos registrados.\n\nDeseja zerar também os pagamentos desta locação para não constarem como dinheiro recebido no caixa atual?`
+      );
+      if (confirmZeroPayments) {
+        payments.forEach((p) => {
+          store.deletePayment(p.id);
+        });
+      }
+    }
+
     const res = store.updateRental(rental.id, {
       status,
       event_date: eventDate,
@@ -301,8 +314,14 @@ export function RentalEditDrawer({
                   {rental.customer?.name}
                 </h3>
               </div>
-              <span className="px-2.5 py-1 rounded-full text-xs font-bold capitalize bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                {status}
+              <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${
+                status === 'historico' ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300' :
+                status === 'reservado' ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300' :
+                status === 'alugado' ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' :
+                status === 'devolvido' ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300' :
+                'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'
+              }`}>
+                {status === 'historico' ? 'Histórico / Passado' : status}
               </span>
             </div>
 
@@ -362,6 +381,7 @@ export function RentalEditDrawer({
                   <option value="reservado">Reservado</option>
                   <option value="alugado">Alugado (Em Andamento)</option>
                   <option value="devolvido">Devolvido (Concluído)</option>
+                  <option value="historico">Histórico / Passado (Sem impacto no caixa atual)</option>
                   <option value="cancelado">Cancelado</option>
                 </select>
               </div>

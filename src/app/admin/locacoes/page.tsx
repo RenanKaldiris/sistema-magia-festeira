@@ -22,6 +22,9 @@ import {
   Clock,
   Layers,
   Sparkles,
+  TrendingUp,
+  Filter,
+  RotateCcw,
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { RentalWithDetails, RentalStatus, Payment } from '@/types/database';
@@ -41,18 +44,28 @@ interface SortState {
   order: SortOrder;
 }
 
-// Ordem prioritária de status: Alugados -> Reservados -> Devolvidos -> Cancelados
+export type PeriodFilter = 'current_month' | 'next_60_days' | 'last_60_days' | 'prev_month' | 'next_month' | 'all';
+export type FinancialFilter = 'all' | 'pending' | 'paid' | 'historico' | 'zero';
+export type OperationalFilter = 'all' | 'waiting' | 'in_progress' | 'returned' | 'historico' | 'cancelled';
+
+// Ordem prioritária de status: Alugados -> Reservados -> Devolvidos -> Cancelados -> Histórico
 const STATUS_ORDER: Record<string, number> = {
   alugado: 1,
   reservado: 2,
   devolvido: 3,
   cancelado: 4,
+  historico: 5,
 };
 
 export default function AdminLocacoesPage() {
   const [rentals, setRentals] = useState<RentalWithDetails[]>(store.getRentals());
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  
+  // Três Filtros Combinados Inteligentes
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('current_month');
+  const [financialFilter, setFinancialFilter] = useState<FinancialFilter>('all');
+  const [operationalFilter, setOperationalFilter] = useState<OperationalFilter>('all');
+
   const [notification, setNotification] = useState<string | null>(null);
 
   // Tri-State Sorting: Por padrão, já abre ordenado por Status (Alugados -> Reservados -> Devolvidos)
@@ -90,18 +103,79 @@ export default function AdminLocacoesPage() {
     setTimeout(() => setNotification(null), 3500);
   };
 
-  // Somatórias Financeiras do Topo
+  // Helper de cálculo de datas
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const todayTime = new Date(currentYear, currentMonth, now.getDate()).getTime();
+  const in60Days = todayTime + 60 * 24 * 60 * 60 * 1000;
+  const past60Days = todayTime - 60 * 24 * 60 * 60 * 1000;
+
+  // 1. Locações que pertencem ao Período Selecionado
+  const periodRentals = useMemo(() => {
+    return rentals.filter((r) => {
+      if (periodFilter === 'all') return true;
+      const evtDate = new Date(r.event_date + 'T12:00:00Z');
+      const evtYear = evtDate.getUTCFullYear();
+      const evtMonth = evtDate.getUTCMonth();
+      const evtTime = evtDate.getTime();
+
+      if (periodFilter === 'current_month') {
+        return evtYear === currentYear && evtMonth === currentMonth;
+      }
+      if (periodFilter === 'prev_month') {
+        const targetMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        const targetYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+        return evtYear === targetYear && evtMonth === targetMonth;
+      }
+      if (periodFilter === 'next_month') {
+        const targetMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+        const targetYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+        return evtYear === targetYear && evtMonth === targetMonth;
+      }
+      if (periodFilter === 'next_60_days') {
+        return evtTime >= todayTime && evtTime <= in60Days;
+      }
+      if (periodFilter === 'last_60_days') {
+        return evtTime <= todayTime && evtTime >= past60Days;
+      }
+      return true;
+    });
+  }, [rentals, periodFilter, currentYear, currentMonth, todayTime, in60Days, past60Days]);
+
+  // 2. Somatórias Financeiras do Período (Isola cancelados e locações puramente de histórico quando no mês atual)
   const totalPaidSum = useMemo(() => {
-    return rentals.reduce((acc, r) => acc + (r.paid || 0), 0);
-  }, [rentals]);
+    return periodRentals
+      .filter((r) => r.status !== 'cancelado' && (periodFilter === 'all' || r.status !== 'historico'))
+      .reduce((acc, r) => acc + (r.paid || 0), 0);
+  }, [periodRentals, periodFilter]);
 
   const totalBalanceSum = useMemo(() => {
-    return rentals.reduce((acc, r) => acc + (r.balance || 0), 0);
-  }, [rentals]);
+    return periodRentals
+      .filter((r) => r.status !== 'cancelado' && r.status !== 'historico')
+      .reduce((acc, r) => acc + (r.balance || 0), 0);
+  }, [periodRentals]);
 
   const totalContractedSum = useMemo(() => {
-    return rentals.reduce((acc, r) => acc + (r.total || 0), 0);
-  }, [rentals]);
+    return periodRentals
+      .filter((r) => r.status !== 'cancelado' && (periodFilter === 'all' || r.status !== 'historico'))
+      .reduce((acc, r) => acc + (r.total || 0), 0);
+  }, [periodRentals, periodFilter]);
+
+  // 3. Ticket Médio Comercial do Período
+  const averageTicket = useMemo(() => {
+    const validEvents = periodRentals.filter(
+      (r) => r.status !== 'cancelado' && r.total > 0 && (periodFilter === 'all' || r.status !== 'historico')
+    );
+    if (validEvents.length === 0) return 0;
+    return totalContractedSum / validEvents.length;
+  }, [periodRentals, totalContractedSum, periodFilter]);
+
+  const periodEventsCount = useMemo(() => {
+    return periodRentals.filter(
+      (r) => r.status !== 'cancelado' && (periodFilter === 'all' || r.status !== 'historico')
+    ).length;
+  }, [periodRentals, periodFilter]);
 
   const currentlyRentedCount = useMemo(() => {
     return rentals.filter((r) => r.status === 'alugado').length;
@@ -111,11 +185,70 @@ export default function AdminLocacoesPage() {
     return rentals.filter((r) => r.status === 'reservado').length;
   }, [rentals]);
 
-  // Filtragem e Ordenação
+  // Filtragem Combinada (Período + Financeiro + Operacional + Busca) e Ordenação
   const filteredRentals = useMemo(() => {
     const q = search.toLowerCase().trim();
     let list = rentals.filter((r) => {
-      const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
+      // 1. Filtro de Período
+      if (periodFilter !== 'all') {
+        const evtDate = new Date(r.event_date + 'T12:00:00Z');
+        const evtYear = evtDate.getUTCFullYear();
+        const evtMonth = evtDate.getUTCMonth();
+        const evtTime = evtDate.getTime();
+
+        if (periodFilter === 'current_month' && !(evtYear === currentYear && evtMonth === currentMonth)) {
+          return false;
+        }
+        if (periodFilter === 'prev_month') {
+          const targetMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+          const targetYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+          if (!(evtYear === targetYear && evtMonth === targetMonth)) return false;
+        }
+        if (periodFilter === 'next_month') {
+          const targetMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+          const targetYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+          if (!(evtYear === targetYear && evtMonth === targetMonth)) return false;
+        }
+        if (periodFilter === 'next_60_days' && !(evtTime >= todayTime && evtTime <= in60Days)) {
+          return false;
+        }
+        if (periodFilter === 'last_60_days' && !(evtTime <= todayTime && evtTime >= past60Days)) {
+          return false;
+        }
+      }
+
+      // 2. Filtro Financeiro
+      if (financialFilter === 'pending' && (r.balance <= 0 || r.status === 'cancelado' || r.status === 'historico')) {
+        return false;
+      }
+      if (financialFilter === 'paid' && (r.balance > 0 || r.total <= 0 || r.status === 'cancelado' || r.status === 'historico')) {
+        return false;
+      }
+      if (financialFilter === 'historico' && r.status !== 'historico') {
+        return false;
+      }
+      if (financialFilter === 'zero' && r.total > 0) {
+        return false;
+      }
+
+      // 3. Filtro Operacional
+      if (operationalFilter === 'waiting' && r.status !== 'reservado') {
+        return false;
+      }
+      if (operationalFilter === 'in_progress' && r.status !== 'alugado') {
+        return false;
+      }
+      if (operationalFilter === 'returned' && r.status !== 'devolvido') {
+        return false;
+      }
+      if (operationalFilter === 'historico' && r.status !== 'historico') {
+        return false;
+      }
+      if (operationalFilter === 'cancelled' && r.status !== 'cancelado') {
+        return false;
+      }
+
+      // 4. Busca textual
       const matchesSearch =
         !q ||
         (r.customer?.name && r.customer.name.toLowerCase().includes(q)) ||
@@ -125,7 +258,7 @@ export default function AdminLocacoesPage() {
         (r.delivery_location && r.delivery_location.toLowerCase().includes(q)) ||
         (r.notes && r.notes.toLowerCase().includes(q));
 
-      return matchesStatus && matchesSearch;
+      return matchesSearch;
     });
 
     // Tri-State Sorting
@@ -166,7 +299,7 @@ export default function AdminLocacoesPage() {
         return sortState.order === 'asc' ? a.balance - b.balance : b.balance - a.balance;
       });
     } else {
-      // Fallback padrão da página: Alugados -> Reservados -> Devolvidos -> Cancelados
+      // Fallback padrão da página: Alugados -> Reservados -> Devolvidos -> Cancelados -> Histórico
       list = [...list].sort((a, b) => {
         const aRank = STATUS_ORDER[a.status] ?? 99;
         const bRank = STATUS_ORDER[b.status] ?? 99;
@@ -177,7 +310,7 @@ export default function AdminLocacoesPage() {
     }
 
     return list;
-  }, [rentals, search, statusFilter, sortState]);
+  }, [rentals, search, periodFilter, financialFilter, operationalFilter, sortState, currentYear, currentMonth, todayTime, in60Days, past60Days]);
 
   // Mapeamento sequencial de pedidos (#0001, #0002, ...)
   const rentalOrderNumbers = useMemo(() => {
@@ -350,7 +483,7 @@ export default function AdminLocacoesPage() {
         </div>
       </div>
 
-      {/* Somatória dos Valores no Topo da Página (KPI Cards) */}
+      {/* Somatória dos Valores no Topo da Página (KPI Cards com Ticket Médio) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* 1. Somatória dos Valores Pagos */}
         <div className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
@@ -367,7 +500,7 @@ export default function AdminLocacoesPage() {
               R$ {totalPaidSum.toFixed(2).replace('.', ',')}
             </span>
             <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate">
-              Já liquidado PIX/Cartão
+              Já liquidado no período
             </span>
           </div>
         </div>
@@ -407,35 +540,29 @@ export default function AdminLocacoesPage() {
               R$ {totalContractedSum.toFixed(2).replace('.', ',')}
             </span>
             <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate">
-              Faturamento global
+              Faturamento do período
             </span>
           </div>
         </div>
 
-        {/* 4. Temas Alugados vs. Reservados */}
+        {/* 4. Ticket Médio Comercial por Locação */}
         <div className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between gap-1">
             <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
-              Ocupação Temas
+              Ticket Médio
             </span>
-            <div className="p-1.5 sm:p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
-              <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <div className="p-1.5 sm:p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 shrink-0">
+              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3 flex items-baseline gap-1.5">
-            <span className="text-base sm:text-2xl font-extrabold text-amber-600 dark:text-amber-400">
-              {currentlyRentedCount}
+          <div className="mt-2 sm:mt-3">
+            <span className="text-base sm:text-2xl font-extrabold text-purple-600 dark:text-purple-400 tracking-tight block truncate">
+              R$ {averageTicket.toFixed(2).replace('.', ',')}
             </span>
-            <span className="text-[10px] sm:text-xs text-slate-400 font-semibold">alug.</span>
-            <span className="text-slate-300 dark:text-slate-700">|</span>
-            <span className="text-base sm:text-2xl font-extrabold text-blue-600 dark:text-blue-400">
-              {currentlyReservedCount}
+            <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate">
+              {periodEventsCount} {periodEventsCount === 1 ? 'locação ativa' : 'locações ativas'}
             </span>
-            <span className="text-[10px] sm:text-xs text-slate-400 font-semibold">res.</span>
           </div>
-          <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate">
-            Status do acervo
-          </span>
         </div>
       </div>
 
@@ -447,41 +574,95 @@ export default function AdminLocacoesPage() {
         </div>
       )}
 
-      {/* Barra de Busca & Filtros por Status */}
-      <div className="bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3">
-        <div className="flex items-center gap-2.5 w-full sm:w-auto flex-1">
-          <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por cliente, telefone, tema ou local..."
-            className="w-full text-xs sm:text-sm bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
-          />
+      {/* Barra de Filtros Inteligente e Combinada */}
+      <div className="bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+        {/* Linha 1: Busca Textual e Botão de Limpar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 w-full flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80">
+            <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por cliente, telefone, tema, pedido # ou local..."
+              className="w-full text-xs sm:text-sm bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
+            />
+          </div>
+
+          {(periodFilter !== 'current_month' || financialFilter !== 'all' || operationalFilter !== 'all' || search) && (
+            <button
+              type="button"
+              onClick={() => {
+                setPeriodFilter('current_month');
+                setFinancialFilter('all');
+                setOperationalFilter('all');
+                setSearch('');
+              }}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors cursor-pointer shrink-0"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Limpar Filtros</span>
+            </button>
+          )}
         </div>
 
-        {/* Status Filter Chips */}
-        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto scrollbar-none pb-0.5 sm:pb-0">
-          {[
-            { key: 'all', label: 'Todos' },
-            { key: 'reservado', label: 'Reservado' },
-            { key: 'alugado', label: 'Alugado' },
-            { key: 'devolvido', label: 'Devolvido' },
-            { key: 'cancelado', label: 'Cancelado' },
-          ].map((st) => (
-            <button
-              key={st.key}
-              type="button"
-              onClick={() => setStatusFilter(st.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                statusFilter === st.key
-                  ? 'bg-slate-900 dark:bg-rose-600 text-white shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
+        {/* Linha 2: Os Três Filtros Combinados */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 border-t border-slate-100 dark:border-slate-800/80">
+          {/* 1. Filtro de Período Temporal */}
+          <div>
+            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+              📅 Período
+            </label>
+            <select
+              value={periodFilter}
+              onChange={(e) => setPeriodFilter(e.target.value as PeriodFilter)}
+              className="w-full px-3 py-2 rounded-xl text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
             >
-              {st.label}
-            </button>
-          ))}
+              <option value="current_month">Mês Atual (Outubro/2026)</option>
+              <option value="next_60_days">Próximos 60 Dias</option>
+              <option value="last_60_days">Últimos 60 Dias</option>
+              <option value="prev_month">Mês Anterior (Setembro)</option>
+              <option value="next_month">Próximo Mês (Novembro)</option>
+              <option value="all">Geral (Todo o Histórico)</option>
+            </select>
+          </div>
+
+          {/* 2. Filtro de Situação Financeira */}
+          <div>
+            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+              💰 Situação Financeira
+            </label>
+            <select
+              value={financialFilter}
+              onChange={(e) => setFinancialFilter(e.target.value as FinancialFilter)}
+              className="w-full px-3 py-2 rounded-xl text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
+            >
+              <option value="all">Todas as Situações</option>
+              <option value="pending">⚠️ Falta Receber (Com Saldo Devedor)</option>
+              <option value="paid">✅ Quitados (100% Pagos)</option>
+              <option value="historico">🏷️ Histórico / Passado (Isentos)</option>
+              <option value="zero">🎁 Cortesias (R$ 0,00)</option>
+            </select>
+          </div>
+
+          {/* 3. Filtro de Estágio Operacional */}
+          <div>
+            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+              📦 Estágio Operacional
+            </label>
+            <select
+              value={operationalFilter}
+              onChange={(e) => setOperationalFilter(e.target.value as OperationalFilter)}
+              className="w-full px-3 py-2 rounded-xl text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
+            >
+              <option value="all">Todos os Estágios</option>
+              <option value="waiting">📦 No Depósito (Aguardando Saída)</option>
+              <option value="in_progress">🚚 Na Rua (Em Andamento)</option>
+              <option value="returned">🔄 Devolvidos</option>
+              <option value="historico">📁 Histórico / Concluído</option>
+              <option value="cancelled">❌ Cancelados</option>
+            </select>
+          </div>
         </div>
 
         {/* Mobile Quick-Sort Chips */}
@@ -648,12 +829,15 @@ export default function AdminLocacoesPage() {
                         ? 'bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-900/60 text-amber-700 dark:text-amber-300'
                         : rental.status === 'devolvido'
                         ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-300'
+                        : rental.status === 'historico'
+                        ? 'bg-purple-50 dark:bg-purple-950/50 border-purple-200 dark:border-purple-900/60 text-purple-700 dark:text-purple-300'
                         : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     <option value="reservado">Reservado</option>
                     <option value="alugado">Alugado</option>
                     <option value="devolvido">Devolvido</option>
+                    <option value="historico">Histórico / Passado</option>
                     <option value="cancelado">Cancelado</option>
                   </select>
                 </div>
@@ -696,17 +880,27 @@ export default function AdminLocacoesPage() {
                     <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-semibold block">
                       Total: R$ {rental.total.toFixed(2).replace('.', ',')}
                     </span>
-                    <span
-                      className={`text-xs font-extrabold ${
-                        rental.balance === 0
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-amber-600 dark:text-amber-400'
-                      }`}
-                    >
-                      {rental.balance === 0
-                        ? 'Quitado'
-                        : `Saldo devedor: R$ ${rental.balance.toFixed(2).replace('.', ',')}`}
-                    </span>
+                    {rental.status === 'historico' ? (
+                      <span className="text-xs font-extrabold text-purple-600 dark:text-purple-400">
+                        Histórico / Passado
+                      </span>
+                    ) : rental.total === 0 ? (
+                      <span className="text-xs font-extrabold text-slate-500 dark:text-slate-400">
+                        Cortesia (R$ 0,00)
+                      </span>
+                    ) : (
+                      <span
+                        className={`text-xs font-extrabold ${
+                          rental.balance === 0
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-amber-600 dark:text-amber-400'
+                        }`}
+                      >
+                        {rental.balance === 0
+                          ? 'Quitado'
+                          : `Saldo devedor: R$ ${rental.balance.toFixed(2).replace('.', ',')}`}
+                      </span>
+                    )}
                   </div>
 
                   <button
@@ -916,17 +1110,27 @@ export default function AdminLocacoesPage() {
                         <span className="font-bold text-slate-900 dark:text-white block">
                           R$ {rental.total.toFixed(2).replace('.', ',')}
                         </span>
-                        <span
-                          className={`text-[11px] font-semibold block mt-0.5 ${
-                            rental.balance === 0
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : 'text-amber-600 dark:text-amber-400'
-                          }`}
-                        >
-                          {rental.balance === 0
-                            ? 'Quitado'
-                            : `Saldo: R$ ${rental.balance.toFixed(2).replace('.', ',')}`}
-                        </span>
+                        {rental.status === 'historico' ? (
+                          <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400 block mt-0.5">
+                            Histórico / Passado
+                          </span>
+                        ) : rental.total === 0 ? (
+                          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block mt-0.5">
+                            Cortesia (R$ 0,00)
+                          </span>
+                        ) : (
+                          <span
+                            className={`text-[11px] font-semibold block mt-0.5 ${
+                              rental.balance === 0
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-amber-600 dark:text-amber-400'
+                            }`}
+                          >
+                            {rental.balance === 0
+                              ? 'Quitado'
+                              : `Saldo: R$ ${rental.balance.toFixed(2).replace('.', ',')}`}
+                          </span>
+                        )}
                       </td>
 
                       <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
@@ -940,12 +1144,15 @@ export default function AdminLocacoesPage() {
                               ? 'bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-900/60 text-amber-700 dark:text-amber-300'
                               : rental.status === 'devolvido'
                               ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-300'
+                              : rental.status === 'historico'
+                              ? 'bg-purple-50 dark:bg-purple-950/50 border-purple-200 dark:border-purple-900/60 text-purple-700 dark:text-purple-300'
                               : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
                           }`}
                         >
                           <option value="reservado">Reservado</option>
                           <option value="alugado">Alugado</option>
                           <option value="devolvido">Devolvido</option>
+                          <option value="historico">Histórico / Passado</option>
                           <option value="cancelado">Cancelado</option>
                         </select>
                       </td>
