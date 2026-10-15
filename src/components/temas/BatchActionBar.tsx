@@ -1,12 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Trash2, X, CheckSquare, Tag, Sparkles, TagIcon } from 'lucide-react';
+import { Trash2, X, CheckSquare, Tag, Sparkles, TagIcon, FolderPlus } from 'lucide-react';
 
 interface BatchActionBarProps {
   selectedCount: number;
   onClearSelection: () => void;
   onDelete: () => void;
+  onApplyCategory?: () => void;
   onApplyPromotion: () => void;
   onRemovePromotion: () => void;
   onGenerateCustomCatalog: () => void;
@@ -17,6 +18,7 @@ export function BatchActionBar({
   selectedCount,
   onClearSelection,
   onDelete,
+  onApplyCategory,
   onApplyPromotion,
   onRemovePromotion,
   onGenerateCustomCatalog,
@@ -27,7 +29,7 @@ export function BatchActionBar({
   return (
     <aside
       aria-label="Barra de ações em lote"
-      className="fixed bottom-0 sm:bottom-5 inset-x-0 sm:left-1/2 sm:-translate-x-1/2 z-40 w-full sm:w-[96%] max-w-3xl bg-slate-900/95 dark:bg-slate-900/95 text-white backdrop-blur-md px-3.5 py-2.5 sm:px-5 sm:py-3.5 rounded-t-2xl sm:rounded-2xl border-t sm:border border-slate-700/80 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-2.5 animate-in fade-in slide-in-from-bottom-4 duration-200"
+      className="fixed bottom-0 sm:bottom-5 inset-x-0 sm:left-1/2 sm:-translate-x-1/2 z-40 w-full sm:w-[96%] max-w-4xl bg-slate-900/95 dark:bg-slate-900/95 text-white backdrop-blur-md px-3.5 py-2.5 sm:px-5 sm:py-3.5 rounded-t-2xl sm:rounded-2xl border-t sm:border border-slate-700/80 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-2.5 animate-in fade-in slide-in-from-bottom-4 duration-200"
     >
       {/* Selection counter & clear button */}
       <div className="flex items-center gap-2.5 w-full md:w-auto justify-between md:justify-start">
@@ -51,8 +53,8 @@ export function BatchActionBar({
         </button>
       </div>
 
-      {/* Action Buttons: Exactly 4 options, compact on mobile (Gerar Orçamento / Compartilhar / Excluir) */}
-      <div className="grid grid-cols-4 gap-1.5 w-full md:w-auto md:flex md:items-center md:justify-end">
+      {/* Action Buttons: Excluir / Aplicar Categoria / Aplicar Promoção / Remover Promoção / Catálogo Custom */}
+      <div className="grid grid-cols-5 gap-1.5 w-full md:w-auto md:flex md:items-center md:justify-end">
         {/* 1. Excluir */}
         <button
           type="button"
@@ -64,7 +66,21 @@ export function BatchActionBar({
           <span>Excluir</span>
         </button>
 
-        {/* 2. Aplicar promoção */}
+        {/* 2. Aplicar Categoria / Tags */}
+        {onApplyCategory && (
+          <button
+            type="button"
+            onClick={onApplyCategory}
+            className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-xl bg-blue-600/30 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 text-[11px] sm:text-xs font-semibold transition-colors cursor-pointer shadow-xs truncate"
+            title="Alterar ou incluir categoria e tags nos temas selecionados"
+          >
+            <FolderPlus className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+            <span className="md:inline hidden">Aplicar Categoria</span>
+            <span className="md:hidden inline">Categoria</span>
+          </button>
+        )}
+
+        {/* 3. Aplicar promoção */}
         <button
           type="button"
           onClick={onApplyPromotion}
@@ -76,7 +92,7 @@ export function BatchActionBar({
           <span className="md:hidden inline">+ Promo</span>
         </button>
 
-        {/* 3. Remover promoção */}
+        {/* 4. Remover promoção */}
         <button
           type="button"
           onClick={onRemovePromotion}
@@ -88,7 +104,7 @@ export function BatchActionBar({
           <span className="md:hidden inline">- Promo</span>
         </button>
 
-        {/* 4. Gerar catálogo personalizado */}
+        {/* 5. Gerar catálogo personalizado */}
         <button
           type="button"
           onClick={onGenerateCustomCatalog}

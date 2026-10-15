@@ -43,6 +43,7 @@ import { ImportacoesTabContent } from '@/components/temas/ImportacoesTabContent'
 import { ApplyDiscountModal } from '@/components/temas/ApplyDiscountModal';
 import { ManageCategoriesModal } from '@/components/temas/ManageCategoriesModal';
 import { CustomCatalogModal } from '@/components/temas/CustomCatalogModal';
+import { ApplyCategoryModal } from '@/components/temas/ApplyCategoryModal';
 import { fileToDataUrl, detectEntityFromFilename, convertHeicToJpeg, convertImageToWebP, uploadImageToServer, getFallbackImageDataUrl, isHeicFile } from '@/lib/imageUtils';
 
 type TabType = 'temas' | 'itens' | 'importacoes';
@@ -108,6 +109,7 @@ function TemasManagementContent() {
   const [isOrcamentoOpen, setIsOrcamentoOpen] = useState(false);
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
   const [isCustomCatalogOpen, setIsCustomCatalogOpen] = useState(false);
+  const [isApplyCategoryModalOpen, setIsApplyCategoryModalOpen] = useState(false);
   const [selectedThemeForKit, setSelectedThemeForKit] = useState<Theme | null>(null);
   const [selectedThemeForVariant, setSelectedThemeForVariant] = useState<Theme | null>(null);
 
@@ -830,14 +832,14 @@ function TemasManagementContent() {
                 return (
                   <div
                     key={theme.id}
-                    onClick={() => setEditingTheme(theme)}
+                    onClick={() => router.push('/admin/temas/' + theme.id)}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-3 ${
                       isSelected
                         ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800 shadow-xs ring-2 ring-rose-500/20'
                         : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
-                    {/* Header do Card: Foto, Código, Nome e Checkbox */}
+                    {/* Header do Card: Foto, Categoria, Nome e Checkbox */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 min-w-0 flex-1">
                         <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
@@ -860,10 +862,7 @@ function TemasManagementContent() {
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                              {theme.code}
-                            </span>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                            <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md truncate">
                               {details?.category?.name || 'Geral'}
                             </span>
                           </div>
@@ -953,12 +952,12 @@ function TemasManagementContent() {
                       <div className="grid grid-cols-2 gap-1.5">
                         <button
                           type="button"
-                          onClick={() => setEditingTheme(theme)}
+                          onClick={() => router.push('/admin/temas/' + theme.id)}
                           className="py-2 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                          title="Edição Rápida de dados e fotos sem sair da página"
+                          title="Abrir página completa com todos os módulos de edição"
                         >
                           <Edit3 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                          <span>Edição Rápida</span>
+                          <span>Editar Tema</span>
                         </button>
 
                         <button
@@ -1039,7 +1038,7 @@ function TemasManagementContent() {
                         className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[11px] hover:text-slate-900 dark:hover:text-white transition-colors group cursor-pointer select-none"
                         title="Ordenar por Nome (1º clique: A-Z, 2º clique: Z-A, 3º clique: ordem de cadastro)"
                       >
-                        <span>Código / Tema</span>
+                        <span>Tema</span>
                         {sortState.field === 'name' ? (
                           sortState.order === 'asc' ? (
                             <ArrowUp className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 font-bold" />
@@ -1136,22 +1135,15 @@ function TemasManagementContent() {
                       return (
                         <tr
                           key={theme.id}
-                          onClick={() => {
-                            const imageUrl = details?.primary_media?.storage_path || details?.imageUrl || (theme as any).imageUrl;
-                            setEditingTheme({
-                              ...theme,
-                              ...(details || {}),
-                              imageUrl,
-                            });
-                          }}
+                          onClick={() => router.push('/admin/temas/' + theme.id)}
                           className={`cursor-pointer transition-colors ${
                             isSelected
                               ? 'bg-rose-50/60 dark:bg-rose-950/25 hover:bg-rose-50/80 dark:hover:bg-rose-950/35'
                               : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
                           }`}
-                          title="Clique para edição rápida deste tema"
+                          title="Clique para abrir a página de edição deste tema"
                         >
-                          {/* Código / Tema */}
+                          {/* Tema */}
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-3">
                               <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
@@ -1177,9 +1169,11 @@ function TemasManagementContent() {
                                   <span className="font-bold text-slate-900 dark:text-white">
                                     {theme.name}
                                   </span>
-                                  <span className="px-2 py-0.5 rounded-md bg-slate-900 dark:bg-rose-600 text-white text-[10px] font-bold">
-                                    {theme.code}
-                                  </span>
+                                  {details?.category?.name && (
+                                    <span className="px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-[10px] font-semibold border border-rose-100 dark:border-rose-900/40">
+                                      {details.category.name}
+                                    </span>
+                                  )}
                                 </div>
                                 <span className="text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5">
                                   {theme.slug}
@@ -1262,19 +1256,14 @@ function TemasManagementContent() {
                           {/* Ações & Checkbox adjacente ao botão Ver no Catálogo */}
                           <td className="py-4 px-6 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              {/* Edição Rápida (Gaveta) */}
+                              {/* Editar Tema */}
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const imageUrl = details?.primary_media?.storage_path || details?.imageUrl || (theme as any).imageUrl;
-                                  setEditingTheme({
-                                    ...theme,
-                                    ...(details || {}),
-                                    imageUrl,
-                                  });
+                                  router.push('/admin/temas/' + theme.id);
                                 }}
-                                title="Edição Rápida (Dados e Fotos)"
+                                title="Editar Tema (Página Completa)"
                                 className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                               >
                                 <Edit3 className="w-3.5 h-3.5 text-rose-500" />
@@ -1380,15 +1369,31 @@ function TemasManagementContent() {
       {/* TAB 3: HISTÓRICO E IMPORTAÇÕES */}
       {activeTab === 'importacoes' && <ImportacoesTabContent />}
 
-      {/* Floating Batch Action Bar com exatamente as 4 opções solicitadas */}
+      {/* Floating Batch Action Bar */}
       <BatchActionBar
         selectedCount={selectedThemeIds.length}
         onClearSelection={() => setSelectedThemeIds([])}
         onDelete={() => setIsDeleteModalOpen(true)}
+        onApplyCategory={() => setIsApplyCategoryModalOpen(true)}
         onApplyPromotion={handleOpenBatchDiscount}
         onRemovePromotion={handleBatchRemoveDiscount}
         onGenerateCustomCatalog={handleOpenCustomCatalog}
         itemTypeLabel={selectedThemeIds.length > 1 ? 'temas selecionados' : 'tema selecionado'}
+      />
+
+      {/* Modal de Aplicar Categoria e Tags em Lote */}
+      <ApplyCategoryModal
+        isOpen={isApplyCategoryModalOpen}
+        onClose={() => setIsApplyCategoryModalOpen(false)}
+        selectedThemeIds={selectedThemeIds}
+        themeNames={themes.filter((t) => selectedThemeIds.includes(t.id)).map((t) => t.name)}
+        categories={categories}
+        onApplied={(msg) => {
+          setThemes(store.getThemes());
+          setCategories(store.getCategories());
+          setSelectedThemeIds([]);
+          showNotification(msg);
+        }}
       />
 
       {/* Modal de Promoção em Lote ou Individual */}

@@ -44,7 +44,7 @@ interface SortState {
   order: SortOrder;
 }
 
-export type PeriodFilter = 'current_month' | 'next_60_days' | 'last_60_days' | 'prev_month' | 'next_month' | 'all';
+export type PeriodFilter = 'current_month' | 'next_60_days' | 'last_60_days' | 'prev_month' | 'next_month' | 'custom' | 'all';
 export type FinancialFilter = 'all' | 'pending' | 'paid' | 'historico' | 'zero';
 export type OperationalFilter = 'all' | 'waiting' | 'in_progress' | 'returned' | 'historico' | 'cancelled';
 
@@ -63,6 +63,8 @@ export default function AdminLocacoesPage() {
   
   // Três Filtros Combinados Inteligentes
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('current_month');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [financialFilter, setFinancialFilter] = useState<FinancialFilter>('all');
   const [operationalFilter, setOperationalFilter] = useState<OperationalFilter>('all');
 
@@ -111,81 +113,7 @@ export default function AdminLocacoesPage() {
   const in60Days = todayTime + 60 * 24 * 60 * 60 * 1000;
   const past60Days = todayTime - 60 * 24 * 60 * 60 * 1000;
 
-  // 1. Locações que pertencem ao Período Selecionado
-  const periodRentals = useMemo(() => {
-    return rentals.filter((r) => {
-      if (periodFilter === 'all') return true;
-      const evtDate = new Date(r.event_date + 'T12:00:00Z');
-      const evtYear = evtDate.getUTCFullYear();
-      const evtMonth = evtDate.getUTCMonth();
-      const evtTime = evtDate.getTime();
-
-      if (periodFilter === 'current_month') {
-        return evtYear === currentYear && evtMonth === currentMonth;
-      }
-      if (periodFilter === 'prev_month') {
-        const targetMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-        const targetYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-        return evtYear === targetYear && evtMonth === targetMonth;
-      }
-      if (periodFilter === 'next_month') {
-        const targetMonth = currentMonth === 11 ? 0 : currentMonth + 1;
-        const targetYear = currentMonth === 11 ? currentYear + 1 : currentYear;
-        return evtYear === targetYear && evtMonth === targetMonth;
-      }
-      if (periodFilter === 'next_60_days') {
-        return evtTime >= todayTime && evtTime <= in60Days;
-      }
-      if (periodFilter === 'last_60_days') {
-        return evtTime <= todayTime && evtTime >= past60Days;
-      }
-      return true;
-    });
-  }, [rentals, periodFilter, currentYear, currentMonth, todayTime, in60Days, past60Days]);
-
-  // 2. Somatórias Financeiras do Período (Isola cancelados e locações puramente de histórico quando no mês atual)
-  const totalPaidSum = useMemo(() => {
-    return periodRentals
-      .filter((r) => r.status !== 'cancelado' && (periodFilter === 'all' || r.status !== 'historico'))
-      .reduce((acc, r) => acc + (r.paid || 0), 0);
-  }, [periodRentals, periodFilter]);
-
-  const totalBalanceSum = useMemo(() => {
-    return periodRentals
-      .filter((r) => r.status !== 'cancelado' && r.status !== 'historico')
-      .reduce((acc, r) => acc + (r.balance || 0), 0);
-  }, [periodRentals]);
-
-  const totalContractedSum = useMemo(() => {
-    return periodRentals
-      .filter((r) => r.status !== 'cancelado' && (periodFilter === 'all' || r.status !== 'historico'))
-      .reduce((acc, r) => acc + (r.total || 0), 0);
-  }, [periodRentals, periodFilter]);
-
-  // 3. Ticket Médio Comercial do Período
-  const averageTicket = useMemo(() => {
-    const validEvents = periodRentals.filter(
-      (r) => r.status !== 'cancelado' && r.total > 0 && (periodFilter === 'all' || r.status !== 'historico')
-    );
-    if (validEvents.length === 0) return 0;
-    return totalContractedSum / validEvents.length;
-  }, [periodRentals, totalContractedSum, periodFilter]);
-
-  const periodEventsCount = useMemo(() => {
-    return periodRentals.filter(
-      (r) => r.status !== 'cancelado' && (periodFilter === 'all' || r.status !== 'historico')
-    ).length;
-  }, [periodRentals, periodFilter]);
-
-  const currentlyRentedCount = useMemo(() => {
-    return rentals.filter((r) => r.status === 'alugado').length;
-  }, [rentals]);
-
-  const currentlyReservedCount = useMemo(() => {
-    return rentals.filter((r) => r.status === 'reservado').length;
-  }, [rentals]);
-
-  // Filtragem Combinada (Período + Financeiro + Operacional + Busca) e Ordenação
+  // 1. Filtragem Combinada (Período + Financeiro + Operacional + Busca) e Ordenação
   const filteredRentals = useMemo(() => {
     const q = search.toLowerCase().trim();
     let list = rentals.filter((r) => {
@@ -215,13 +143,17 @@ export default function AdminLocacoesPage() {
         if (periodFilter === 'last_60_days' && !(evtTime <= todayTime && evtTime >= past60Days)) {
           return false;
         }
+        if (periodFilter === 'custom') {
+          if (customStartDate && r.event_date < customStartDate) return false;
+          if (customEndDate && r.event_date > customEndDate) return false;
+        }
       }
 
       // 2. Filtro Financeiro
       if (financialFilter === 'pending' && (r.balance <= 0 || r.status === 'cancelado' || r.status === 'historico')) {
         return false;
       }
-      if (financialFilter === 'paid' && (r.balance > 0 || r.total <= 0 || r.status === 'cancelado' || r.status === 'historico')) {
+      if (financialFilter === 'paid' && (r.balance > 0 || r.total <= 0 || r.status === 'cancelado')) {
         return false;
       }
       if (financialFilter === 'historico' && r.status !== 'historico') {
@@ -310,7 +242,47 @@ export default function AdminLocacoesPage() {
     }
 
     return list;
-  }, [rentals, search, periodFilter, financialFilter, operationalFilter, sortState, currentYear, currentMonth, todayTime, in60Days, past60Days]);
+  }, [rentals, search, periodFilter, customStartDate, customEndDate, financialFilter, operationalFilter, sortState, currentYear, currentMonth, todayTime, in60Days, past60Days]);
+
+  // 2. Somatórias Financeiras e Sub-totais do Filtro Selecionado
+  const totalPaidSum = useMemo(() => {
+    return filteredRentals
+      .filter((r) => r.status !== 'cancelado')
+      .reduce((acc, r) => acc + (r.status === 'historico' ? (r.paid || r.total || 0) : (r.paid || 0)), 0);
+  }, [filteredRentals]);
+
+  const totalBalanceSum = useMemo(() => {
+    return filteredRentals
+      .filter((r) => r.status !== 'cancelado' && r.status !== 'historico')
+      .reduce((acc, r) => acc + (r.balance || 0), 0);
+  }, [filteredRentals]);
+
+  const totalContractedSum = useMemo(() => {
+    return filteredRentals
+      .filter((r) => r.status !== 'cancelado')
+      .reduce((acc, r) => acc + (r.total || 0), 0);
+  }, [filteredRentals]);
+
+  const periodEventsCount = useMemo(() => {
+    return filteredRentals.filter((r) => r.status !== 'cancelado').length;
+  }, [filteredRentals]);
+
+  // 3. Ticket Médio Comercial do Filtro Selecionado
+  const averageTicket = useMemo(() => {
+    const validEvents = filteredRentals.filter(
+      (r) => r.status !== 'cancelado' && r.total > 0
+    );
+    if (validEvents.length === 0) return 0;
+    return totalContractedSum / validEvents.length;
+  }, [filteredRentals, totalContractedSum]);
+
+  const currentlyRentedCount = useMemo(() => {
+    return rentals.filter((r) => r.status === 'alugado').length;
+  }, [rentals]);
+
+  const currentlyReservedCount = useMemo(() => {
+    return rentals.filter((r) => r.status === 'reservado').length;
+  }, [rentals]);
 
   // Mapeamento sequencial de pedidos (#0001, #0002, ...)
   const rentalOrderNumbers = useMemo(() => {
@@ -500,7 +472,7 @@ export default function AdminLocacoesPage() {
               R$ {totalPaidSum.toFixed(2).replace('.', ',')}
             </span>
             <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate">
-              Já liquidado no período
+              Já liquidado no filtro
             </span>
           </div>
         </div>
@@ -540,7 +512,7 @@ export default function AdminLocacoesPage() {
               R$ {totalContractedSum.toFixed(2).replace('.', ',')}
             </span>
             <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate">
-              Faturamento do período
+              Faturamento no filtro
             </span>
           </div>
         </div>
@@ -560,7 +532,7 @@ export default function AdminLocacoesPage() {
               R$ {averageTicket.toFixed(2).replace('.', ',')}
             </span>
             <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate">
-              {periodEventsCount} {periodEventsCount === 1 ? 'locação ativa' : 'locações ativas'}
+              {periodEventsCount} {periodEventsCount === 1 ? 'locação no filtro' : 'locações no filtro'}
             </span>
           </div>
         </div>
@@ -589,11 +561,13 @@ export default function AdminLocacoesPage() {
             />
           </div>
 
-          {(periodFilter !== 'current_month' || financialFilter !== 'all' || operationalFilter !== 'all' || search) && (
+          {(periodFilter !== 'current_month' || financialFilter !== 'all' || operationalFilter !== 'all' || search || customStartDate || customEndDate) && (
             <button
               type="button"
               onClick={() => {
                 setPeriodFilter('current_month');
+                setCustomStartDate('');
+                setCustomEndDate('');
                 setFinancialFilter('all');
                 setOperationalFilter('all');
                 setSearch('');
@@ -623,8 +597,36 @@ export default function AdminLocacoesPage() {
               <option value="last_60_days">Últimos 60 Dias</option>
               <option value="prev_month">Mês Anterior (Setembro)</option>
               <option value="next_month">Próximo Mês (Novembro)</option>
+              <option value="custom">📅 Período Personalizado...</option>
               <option value="all">Geral (Todo o Histórico)</option>
             </select>
+
+            {periodFilter === 'custom' && (
+              <div className="grid grid-cols-2 gap-2 pt-2 animate-in fade-in duration-150">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+                    De:
+                  </label>
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+                    Até:
+                  </label>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 2. Filtro de Situação Financeira */}

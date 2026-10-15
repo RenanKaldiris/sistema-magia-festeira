@@ -2275,6 +2275,51 @@ class MagiaStore {
     return count;
   }
 
+  public applyCategoryToThemes(
+    themeIds: string[],
+    categoryId: string | null,
+    tagsToAdd?: string[]
+  ): number {
+    let count = 0;
+    const now = new Date().toISOString();
+    const updatedPayloads: { id: string; category_id: string | null; characters: string[] }[] = [];
+
+    for (const t of this.themes) {
+      if (themeIds.includes(t.id)) {
+        if (categoryId !== undefined) {
+          t.category_id = categoryId;
+        }
+        if (tagsToAdd && tagsToAdd.length > 0) {
+          const current = t.characters || [];
+          const merged = Array.from(new Set([...current, ...tagsToAdd]));
+          t.characters = merged;
+        }
+        t.updated_at = now;
+        updatedPayloads.push({ id: t.id, category_id: t.category_id ?? null, characters: t.characters || [] });
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      this.logAudit('APPLY_CATEGORY_THEMES', 'themes', undefined, { count, themeIds, categoryId, tagsToAdd });
+      if (isSupabaseConfigured && supabase) {
+        for (const item of updatedPayloads) {
+          safeSupabaseOperation(
+            supabase.from('themes').update({
+              category_id: item.category_id,
+              characters: item.characters,
+              updated_at: now,
+            }).eq('id', item.id),
+            'Update Theme Category Batch'
+          );
+        }
+      }
+      this.saveToLocalStorage();
+      this.notifyListeners();
+    }
+    return count;
+  }
+
   public deleteTheme(id: string): Promise<boolean> {
     return (async () => {
       const theme = this.themes.find((t) => t.id === id);

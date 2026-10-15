@@ -782,7 +782,7 @@ export class ApiService {
       }
     }
 
-    const paidAmount = data.paid || 0;
+    const paidAmount = isHistorical ? (data.paid !== undefined ? data.paid : data.total) : (data.paid || 0);
     const balanceAmount = Math.max(0, data.total - paidAmount);
     const newRentalId = crypto.randomUUID();
 

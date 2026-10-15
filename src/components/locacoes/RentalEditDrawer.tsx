@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Save,
@@ -264,6 +264,14 @@ export function RentalEditDrawer({
     setShowPayForm(true);
   };
 
+  // Métricas do Cliente específico
+  const customerRentals = useMemo(() => {
+    if (!rental?.customer_id) return [];
+    return store.getRentals().filter((r) => r.customer_id === rental.customer_id && r.status !== 'cancelado');
+  }, [rental?.customer_id]);
+  const customerTotalSpent = customerRentals.reduce((sum, r) => sum + (r.total || 0), 0);
+  const customerAvgTicket = customerRentals.length > 0 ? customerTotalSpent / customerRentals.length : 0;
+
   return (
     <>
       {/* Backdrop */}
@@ -343,6 +351,21 @@ export function RentalEditDrawer({
                   <MessageCircle className="w-3.5 h-3.5" />
                   <span>Conversar WhatsApp</span>
                 </a>
+              </div>
+            )}
+
+            {/* Ticket Médio & Festas do Cliente */}
+            {customerRentals.length > 0 && (
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex-wrap text-xs">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                  Histórico do Cliente:
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-extrabold border border-emerald-200 dark:border-emerald-900/40">
+                  Ticket Médio: R$ {customerAvgTicket.toFixed(2).replace('.', ',')}
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  ({customerRentals.length} {customerRentals.length === 1 ? 'festa' : 'festas'} • Total: R$ {customerTotalSpent.toFixed(2).replace('.', ',')})
+                </span>
               </div>
             )}
           </div>
