@@ -8,6 +8,7 @@ import {
   Filter,
   MessageCircle,
   ArrowRight,
+  ArrowUp,
   Tag,
   Sparkles,
   Package2,
@@ -30,7 +31,13 @@ export default function CatalogoPage() {
   const [categories, setCategories] = useState<Category[]>(store.getCategories());
   const [allThemes, setAllThemes] = useState<Theme[]>(store.getThemes({ status: 'active' }));
   const [allItems, setAllItems] = useState<Item[]>(store.getItems().filter((i) => i.status !== 'inactive'));
-  const [showPrices, setShowPrices] = useState<boolean>(store.getShowPrices());
+  const [showPrices, setShowPrices] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('magia_festeira_show_prices');
+      if (saved !== null) return saved === 'true';
+    }
+    return store.getShowPrices();
+  });
 
   useEffect(() => {
     const syncData = () => {
@@ -42,7 +49,18 @@ export default function CatalogoPage() {
 
     syncData();
     const unsubscribe = store.subscribe(syncData);
-    return () => unsubscribe();
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'magia_festeira_show_prices') {
+        setShowPrices(e.newValue === 'true');
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   // Distinct item categories
@@ -139,14 +157,14 @@ export default function CatalogoPage() {
             />
           </div>
 
-          {/* 3 Main Navigation Buttons (Todos os Produtos / Temas / Itens) */}
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto w-full">
+          {/* 3 Main Navigation Buttons (Todos os Produtos / Temas / Itens) - Compactos e lado a lado */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 max-w-xl mx-auto w-full px-2">
             <button
               type="button"
               onClick={() => handleTabChange('all')}
-              className={`w-full h-12 flex items-center justify-center text-center px-4 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer whitespace-nowrap ${
                 activeTab === 'all'
-                  ? 'bg-rose-600 text-white shadow-md ring-2 ring-rose-300 dark:ring-rose-900'
+                  ? 'bg-rose-600 text-white shadow-sm ring-1 ring-rose-400'
                   : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
@@ -155,9 +173,9 @@ export default function CatalogoPage() {
             <button
               type="button"
               onClick={() => handleTabChange('themes')}
-              className={`w-full h-12 flex items-center justify-center text-center px-4 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer whitespace-nowrap ${
                 activeTab === 'themes'
-                  ? 'bg-rose-600 text-white shadow-md ring-2 ring-rose-300 dark:ring-rose-900'
+                  ? 'bg-rose-600 text-white shadow-sm ring-1 ring-rose-400'
                   : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
@@ -166,9 +184,9 @@ export default function CatalogoPage() {
             <button
               type="button"
               onClick={() => handleTabChange('items')}
-              className={`w-full h-12 flex items-center justify-center text-center px-4 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer whitespace-nowrap ${
                 activeTab === 'items'
-                  ? 'bg-rose-600 text-white shadow-md ring-2 ring-rose-300 dark:ring-rose-900'
+                  ? 'bg-rose-600 text-white shadow-sm ring-1 ring-rose-400'
                   : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
@@ -311,20 +329,14 @@ export default function CatalogoPage() {
                       className="group-hover:scale-105 transition-transform duration-500"
                     />
 
-                    {/* Badge Badges */}
-                    <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5 z-10">
-                      <span className="px-2.5 py-1 rounded-full bg-slate-900/85 backdrop-blur text-white text-[11px] font-bold tracking-wide">
-                        {theme.code}
-                      </span>
-                      <span className="px-2.5 py-1 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur text-rose-700 dark:text-rose-300 text-[11px] font-semibold">
-                        {categoryName}
-                      </span>
-                      {hasPromo && (
+                    {/* Badge de Promoção (se houver) */}
+                    {hasPromo && (
+                      <div className="absolute top-3 left-3 z-10">
                         <span className="px-2 py-1 rounded-full bg-rose-600 text-white text-[10px] font-extrabold tracking-wide uppercase shadow-sm">
                           Promoção
                         </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Card Body */}
@@ -473,20 +485,14 @@ export default function CatalogoPage() {
                       className="group-hover:scale-105 transition-transform duration-500"
                     />
 
-                    {/* Badge Badges */}
-                    <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5 z-10">
-                      <span className="px-2.5 py-1 rounded-full bg-slate-900/85 backdrop-blur text-white text-[11px] font-bold tracking-wide">
-                        {item.code}
-                      </span>
-                      <span className="px-2.5 py-1 rounded-full bg-amber-500/90 backdrop-blur text-white text-[11px] font-bold">
-                        {item.category || 'Peça Avulsa'}
-                      </span>
-                      {hasPromo && (
+                    {/* Badge de Promoção (se houver) */}
+                    {hasPromo && (
+                      <div className="absolute top-3 left-3 z-10">
                         <span className="px-2 py-1 rounded-full bg-rose-600 text-white text-[10px] font-extrabold tracking-wide uppercase shadow-sm">
                           Promoção
                         </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Card Body */}
@@ -597,19 +603,31 @@ export default function CatalogoPage() {
         </div>
       </footer>
 
-      {/* Floating WhatsApp Action Button - Magia Festeira Oficial */}
-      <a
-        href={getWhatsAppUrl('Olá! Estou no catálogo da Magia Festeira e gostaria de tirar uma dúvida.')}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Falar no WhatsApp Oficial da Magia Festeira (${formatWhatsAppDisplay()})`}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-lg hover:shadow-2xl hover:scale-105 active:scale-95 transition-all group border border-emerald-500/50"
-      >
-        <MessageCircle className="w-5 h-5 fill-white/20 shrink-0" />
-        <span className="text-xs sm:text-sm font-bold tracking-wide pr-1">
-          WhatsApp Oficial
-        </span>
-      </a>
+      {/* Floating Action Container: Voltar ao Topo + WhatsApp Oficial */}
+      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5">
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Voltar ao topo da página"
+          title="Voltar ao topo do catálogo"
+          className="p-3 bg-white/95 dark:bg-slate-900/95 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-full shadow-lg hover:shadow-2xl hover:scale-105 active:scale-95 transition-all border border-slate-200 dark:border-slate-800 cursor-pointer flex items-center justify-center"
+        >
+          <ArrowUp className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+        </button>
+
+        <a
+          href={getWhatsAppUrl('Olá! Estou no catálogo da Magia Festeira e gostaria de tirar uma dúvida.')}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Falar no WhatsApp Oficial da Magia Festeira (${formatWhatsAppDisplay()})`}
+          className="flex items-center gap-2.5 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-lg hover:shadow-2xl hover:scale-105 active:scale-95 transition-all group border border-emerald-500/50"
+        >
+          <MessageCircle className="w-5 h-5 fill-white/20 shrink-0" />
+          <span className="text-xs sm:text-sm font-bold tracking-wide pr-1">
+            WhatsApp Oficial
+          </span>
+        </a>
+      </div>
     </div>
   );
 }

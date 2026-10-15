@@ -30,7 +30,13 @@ export function ThemeDetailClient({ slug, initialTheme }: ThemeDetailClientProps
   const [theme, setTheme] = useState<ThemeWithDetails | null>(
     initialTheme || store.getThemeBySlug(slug)
   );
-  const [showPrices, setShowPrices] = useState<boolean>(store.getShowPrices());
+  const [showPrices, setShowPrices] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('magia_festeira_show_prices');
+      if (saved !== null) return saved === 'true';
+    }
+    return store.getShowPrices();
+  });
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
@@ -50,7 +56,18 @@ export function ThemeDetailClient({ slug, initialTheme }: ThemeDetailClientProps
     };
     sync();
     const unsubscribe = store.subscribe(sync);
-    return () => unsubscribe();
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'magia_festeira_show_prices') {
+        setShowPrices(e.newValue === 'true');
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('storage', handleStorage);
+    };
   }, [slug]);
 
   const defaultImage =
@@ -298,17 +315,7 @@ export function ThemeDetailClient({ slug, initialTheme }: ThemeDetailClientProps
                   </div>
                 )}
 
-                {/* Badge Flutuante de Código */}
-                <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-white text-xs font-bold tracking-wider">
-                    {theme.code}
-                  </span>
-                  {theme.category && (
-                    <span className="px-3 py-1 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-rose-600 dark:text-rose-400 text-xs font-semibold">
-                      {theme.category.name}
-                    </span>
-                  )}
-                </div>
+
 
                 {/* Botão de Zoom */}
                 <div className="absolute bottom-4 right-4 z-10 p-2.5 rounded-2xl bg-slate-950/70 backdrop-blur-md text-white/90 hover:text-white hover:bg-slate-950/90 transition-all shadow-lg pointer-events-none group-hover:scale-110">

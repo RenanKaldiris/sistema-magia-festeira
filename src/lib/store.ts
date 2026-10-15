@@ -929,6 +929,21 @@ class MagiaStore {
       case 'calendar_sync':
         updateCollection(this.calendarSync);
         break;
+      case 'tenants':
+        if (newRecord && newRecord.show_prices !== undefined) {
+          this.show_prices = Boolean(newRecord.show_prices);
+          if (this.tenants[0]) {
+            this.tenants[0].show_prices = this.show_prices;
+          }
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('magia_festeira_show_prices', String(this.show_prices));
+            } catch {
+              // ignore
+            }
+          }
+        }
+        break;
       default:
         break;
     }
@@ -1044,10 +1059,17 @@ class MagiaStore {
   public loadFromLocalStorage() {
     if (typeof window === 'undefined') return;
     try {
+      const dedicatedPrices = localStorage.getItem('magia_festeira_show_prices');
+      if (dedicatedPrices !== null) {
+        this.show_prices = dedicatedPrices === 'true';
+        if (this.tenants[0]) {
+          this.tenants[0].show_prices = this.show_prices;
+        }
+      }
       const raw = localStorage.getItem('magia_festeira_local_store');
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (parsed.show_prices !== undefined) {
+      if (parsed.show_prices !== undefined && dedicatedPrices === null) {
         this.show_prices = Boolean(parsed.show_prices);
         if (this.tenants[0]) {
           this.tenants[0].show_prices = this.show_prices;
@@ -1121,6 +1143,7 @@ class MagiaStore {
         mediaRes,
         paymentsRes,
         calendarRes,
+        tenantRes,
       ] = await Promise.all([
         supabase.from('categories').select('*').order('sort_order', { ascending: true }),
         supabase.from('themes').select('*'),
@@ -1133,6 +1156,7 @@ class MagiaStore {
         supabase.from('media').select('*'),
         supabase.from('payments').select('*'),
         supabase.from('calendar_sync').select('*'),
+        supabase.from('tenants').select('show_prices').eq('id', DEFAULT_TENANT_ID).maybeSingle(),
       ]);
 
       if (categoriesRes.data) {
@@ -1190,6 +1214,20 @@ class MagiaStore {
       if (calendarRes.data) {
         this.calendarSync = calendarRes.data;
       }
+      const tenantData = tenantRes?.data as any;
+      if (tenantData && tenantData.show_prices !== undefined && tenantData.show_prices !== null) {
+        this.show_prices = Boolean(tenantData.show_prices);
+        if (this.tenants[0]) {
+          this.tenants[0].show_prices = this.show_prices;
+        }
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('magia_festeira_show_prices', String(this.show_prices));
+          } catch {
+            // ignore
+          }
+        }
+      }
 
       this.isLoaded = true;
       this.isLoading = false;
@@ -1212,6 +1250,12 @@ class MagiaStore {
   }
 
   public getShowPrices(): boolean {
+    if (typeof window !== 'undefined') {
+      const direct = localStorage.getItem('magia_festeira_show_prices');
+      if (direct !== null) {
+        return direct === 'true';
+      }
+    }
     return this.show_prices;
   }
 
@@ -1220,8 +1264,26 @@ class MagiaStore {
     if (this.tenants[0]) {
       this.tenants[0].show_prices = this.show_prices;
     }
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('magia_festeira_show_prices', String(this.show_prices));
+      } catch (e) {
+        console.warn('Erro ao salvar show_prices no localStorage:', e);
+      }
+    }
     this.logAudit('TOGGLE_SHOW_PRICES', 'tenant', this.tenants[0]?.id, { show_prices: this.show_prices });
     this.saveToLocalStorage();
+
+    // Sincroniza em tempo real com o banco de dados Supabase para que reflita instantaneamente para todos os clientes
+    if (isSupabaseConfigured && supabase) {
+      safeSupabaseOperation(
+        supabase
+          .from('tenants')
+          .update({ show_prices: this.show_prices, updated_at: new Date().toISOString() })
+          .eq('id', DEFAULT_TENANT_ID),
+        'Update Tenant Show Prices'
+      );
+    }
   }
 
   public getCategories() {

@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MessageSquare, LayoutDashboard } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { getWhatsAppUrl } from '@/lib/whatsapp';
 
@@ -52,15 +52,6 @@ export function Navbar() {
             <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400" />
             <span className="hidden sm:inline">WhatsApp</span>
           </a>
-
-          <Link
-            href="/admin"
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors border border-rose-200/60 dark:border-rose-900/40"
-            title="Acessar Painel do Administrador"
-          >
-            <LayoutDashboard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600 dark:text-rose-400" />
-            <span>Painel</span>
-          </Link>
 
           {/* Theme Toggle Button */}
           <ThemeToggle className="ml-0.5 sm:ml-1" />
