@@ -231,6 +231,16 @@ export class ApiService {
     // 2. Busca secundária por Telefone
     if (!existing && cleanPhone) {
       existing = await this.getCustomerByPhone(cleanPhone);
+      // Se encontrou apenas por telefone, valida se o nome é compatível
+      // Se forem nomes totalmente diferentes (ex: Débora Rebuá vs Caio Licciardi), não sobrescreve
+      if (existing) {
+        const n1 = (existing.name || '').toLowerCase().trim().split(' ')[0];
+        const n2 = data.name.toLowerCase().trim().split(' ')[0];
+        const compatible = n1 === n2 || existing.name.toLowerCase().includes(n2) || data.name.toLowerCase().includes(n1);
+        if (!compatible) {
+          existing = null; // Cria novo cliente, protegendo o cadastro existente
+        }
+      }
     }
 
     const client = this.getClient();
