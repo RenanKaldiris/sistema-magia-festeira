@@ -809,11 +809,10 @@ function TemasManagementContent() {
           </div>
 
           {/* Helper hint for quick edit */}
-          {/* Helper hint for quick edit */}
           <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 px-1">
             <Edit3 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
             <span>
-              <strong>Dica:</strong> Toque no card para abrir a <strong>Edição Rápida</strong> instantânea ou utilize os botões para kits, variações e promoções.
+              <strong>Dica:</strong> Toque no tema para abrir a <strong>Página Completa</strong> ou clique no lápis (<span className="text-rose-500 font-bold">✎</span>) para a <strong>Edição Rápida lateral</strong>.
             </span>
           </div>
 
@@ -952,12 +951,19 @@ function TemasManagementContent() {
                       <div className="grid grid-cols-2 gap-1.5">
                         <button
                           type="button"
-                          onClick={() => router.push('/admin/temas/' + theme.id)}
+                          onClick={() => {
+                            const imageUrl = details?.primary_media?.storage_path || details?.imageUrl || (theme as any).imageUrl;
+                            setEditingTheme({
+                              ...theme,
+                              ...(details || {}),
+                              imageUrl,
+                            });
+                          }}
                           className="py-2 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                          title="Abrir página completa com todos os módulos de edição"
+                          title="Abrir gaveta de edição rápida lateral"
                         >
                           <Edit3 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                          <span>Editar Tema</span>
+                          <span>Edição Rápida</span>
                         </button>
 
                         <button
@@ -1256,14 +1262,19 @@ function TemasManagementContent() {
                           {/* Ações & Checkbox adjacente ao botão Ver no Catálogo */}
                           <td className="py-4 px-6 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              {/* Editar Tema */}
+                              {/* Editar Tema - Edição Rápida (Gaveta Lateral) */}
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  router.push('/admin/temas/' + theme.id);
+                                  const imageUrl = details?.primary_media?.storage_path || details?.imageUrl || (theme as any).imageUrl;
+                                  setEditingTheme({
+                                    ...theme,
+                                    ...(details || {}),
+                                    imageUrl,
+                                  });
                                 }}
-                                title="Editar Tema (Página Completa)"
+                                title="Edição Rápida (Gaveta Lateral)"
                                 className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                               >
                                 <Edit3 className="w-3.5 h-3.5 text-rose-500" />
