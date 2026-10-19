@@ -35,17 +35,46 @@ export default function AdminDashboardPage() {
   }, []);
 
   const totalThemes = themes.length;
-  const totalItems = items.reduce((acc, i) => acc + (i.quantity_total || 0), 0);
-  
-  // Reservas ativas no momento (reservadas ou alugadas)
-  const activeRentals = useMemo(() => {
-    return rentals.filter((r) => r.status === 'reservado' || r.status === 'alugado');
+
+  // Quantidades operacionais de temas
+  const reservedRentalsCount = useMemo(() => {
+    return rentals.filter((r) => r.status === 'reservado').length;
   }, [rentals]);
 
-  // Saldo real a receber: somente das locações ativas que ainda possuem saldo devedor
-  const balanceToReceive = useMemo(() => {
-    return activeRentals.reduce((acc, r) => acc + (r.balance || 0), 0);
-  }, [activeRentals]);
+  const rentedRentalsCount = useMemo(() => {
+    return rentals.filter((r) => r.status === 'alugado').length;
+  }, [rentals]);
+
+  const returnedRentalsCount = useMemo(() => {
+    return rentals.filter((r) => r.status === 'devolvido').length;
+  }, [rentals]);
+
+  // Locações do mês vigente (para cálculos de saldo recebido e saldo a receber do mês)
+  const currentMonthRentals = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    return rentals.filter((r) => {
+      if (!r.event_date || r.status === 'cancelado') return false;
+      const evtDate = new Date(r.event_date.split('T')[0] + 'T12:00:00Z');
+      return evtDate.getUTCFullYear() === currentYear && evtDate.getUTCMonth() === currentMonth;
+    });
+  }, [rentals]);
+
+  // Saldo Recebido no mês vigente (seguindo o mesmo cálculo da tela de locações)
+  const currentMonthReceived = useMemo(() => {
+    return currentMonthRentals.reduce(
+      (acc, r) => acc + (r.status === 'historico' ? (r.paid || r.total || 0) : (r.paid || 0)),
+      0
+    );
+  }, [currentMonthRentals]);
+
+  // Saldo a Receber no mês vigente (seguindo o mesmo cálculo da tela de locações)
+  const currentMonthBalanceToReceive = useMemo(() => {
+    return currentMonthRentals
+      .filter((r) => r.status !== 'historico')
+      .reduce((acc, r) => acc + (r.balance || 0), 0);
+  }, [currentMonthRentals]);
 
   // Próximos Eventos: considerando a data vigente do sistema, apenas eventos futuros limitados aos próximos 15 dias
   const upcomingRentals = useMemo(() => {
@@ -159,8 +188,8 @@ export default function AdminDashboardPage() {
       )}
 
       {/* 4 Primary KPI Cards com Links Diretos */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6">
-        {/* Total Themes -> Leva para página de Temas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        {/* 1. Total Themes -> Leva para página de Temas */}
         <Link
           href="/admin/temas"
           className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-rose-300 dark:hover:border-rose-700 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
@@ -179,64 +208,100 @@ export default function AdminDashboardPage() {
               {totalThemes}
             </div>
             <span className="text-[10px] sm:text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold block sm:inline mt-0.5 sm:mt-0 sm:ml-2">
-              100% ativos
+              cadastrados no acervo
             </span>
           </div>
         </Link>
 
-        {/* Total Items Stock -> Leva para página de Itens / Acervo */}
-        <Link
-          href="/admin/itens"
-          className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
-          title="Clique para ver o acervo de peças"
-        >
+        {/* 2. Status dos Temas: Reservados, Alugados e Devolvidos em um único card */}
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between gap-1">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-              Peças no Acervo
-            </span>
-            <div className="p-1.5 sm:p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 shrink-0 group-hover:scale-105 transition-transform">
-              <Package2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
-          </div>
-          <div className="mt-2 sm:mt-3">
-            <div className="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-tight">
-              {totalItems}
-            </div>
-            <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block sm:inline mt-0.5 sm:mt-0 sm:ml-2 truncate">
-              unidades físicas
-            </span>
-          </div>
-        </Link>
-
-        {/* Active Reservations -> Leva para reservas ativas */}
-        <Link
-          href="/admin/locacoes?period=all&operational=active"
-          className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
-          title="Clique para ver todas as Reservas Ativas"
-        >
-          <div className="flex items-center justify-between gap-1">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-              Reservas Ativas
-            </span>
-            <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 shrink-0 group-hover:scale-105 transition-transform">
+            <Link
+              href="/admin/locacoes?period=all&operational=all"
+              className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+              title="Clique para ver todas as locações"
+            >
+              Status das Locações
+            </Link>
+            <div className="p-1.5 sm:p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 shrink-0">
               <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3">
-            <div className="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-tight">
-              {activeRentals.length}
+
+          <div className="mt-2 sm:mt-2.5 grid grid-cols-3 gap-1.5 sm:gap-2">
+            {/* Reservados */}
+            <Link
+              href="/admin/locacoes?period=all&operational=waiting"
+              className="p-1.5 sm:p-2 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200/60 dark:border-blue-900/40 transition-colors flex flex-col items-center text-center cursor-pointer group"
+              title="Filtrar temas reservados"
+            >
+              <span className="text-base sm:text-xl font-black text-blue-700 dark:text-blue-300 leading-none group-hover:scale-105 transition-transform">
+                {reservedRentalsCount}
+              </span>
+              <span className="text-[9px] sm:text-[10px] font-bold text-blue-600/90 dark:text-blue-400/90 mt-1 uppercase tracking-tight truncate w-full">
+                Reservados
+              </span>
+            </Link>
+
+            {/* Alugados */}
+            <Link
+              href="/admin/locacoes?period=all&operational=in_progress"
+              className="p-1.5 sm:p-2 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200/60 dark:border-emerald-900/40 transition-colors flex flex-col items-center text-center cursor-pointer group"
+              title="Filtrar temas alugados (na rua)"
+            >
+              <span className="text-base sm:text-xl font-black text-emerald-700 dark:text-emerald-300 leading-none group-hover:scale-105 transition-transform">
+                {rentedRentalsCount}
+              </span>
+              <span className="text-[9px] sm:text-[10px] font-bold text-emerald-600/90 dark:text-emerald-400/90 mt-1 uppercase tracking-tight truncate w-full">
+                Alugados
+              </span>
+            </Link>
+
+            {/* Devolvidos */}
+            <Link
+              href="/admin/locacoes?period=all&operational=returned"
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-colors flex flex-col items-center text-center cursor-pointer group"
+              title="Filtrar temas devolvidos"
+            >
+              <span className="text-base sm:text-xl font-black text-slate-700 dark:text-slate-300 leading-none group-hover:scale-105 transition-transform">
+                {returnedRentalsCount}
+              </span>
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-tight truncate w-full">
+                Devolvidos
+              </span>
+            </Link>
+          </div>
+        </div>
+
+        {/* 3. Saldo Recebido (Mês Vigente) -> Leva para locações do mês recebidas */}
+        <Link
+          href="/admin/locacoes?period=current_month&financial=paid"
+          className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+          title="Clique para ver as locações quitadas do mês vigente"
+        >
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+              Saldo Recebido
+            </span>
+            <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 shrink-0 group-hover:scale-105 transition-transform">
+              <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
-            <span className="text-[10px] sm:text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold block sm:inline mt-0.5 sm:mt-0 sm:ml-2 truncate">
-              sincronizadas GCal
+          </div>
+          <div className="mt-2 sm:mt-3">
+            <div className="text-base sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 leading-tight truncate">
+              R$ {currentMonthReceived.toFixed(2).replace('.', ',')}
+            </div>
+            <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block sm:inline mt-0.5 sm:mt-0 sm:ml-2">
+              mês vigente
             </span>
           </div>
         </Link>
 
-        {/* Balance to Receive -> Leva para locações com saldo a receber */}
+        {/* 4. Saldo a Receber (Mês Vigente) -> Leva para locações com saldo pendente do mês */}
         <Link
-          href="/admin/locacoes?period=all&financial=pending"
+          href="/admin/locacoes?period=current_month&financial=pending"
           className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
-          title="Clique para ver todas as locações com Saldo a Receber"
+          title="Clique para ver as locações com saldo a receber no mês vigente"
         >
           <div className="flex items-center justify-between gap-1">
             <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
@@ -248,10 +313,10 @@ export default function AdminDashboardPage() {
           </div>
           <div className="mt-2 sm:mt-3">
             <div className="text-base sm:text-2xl font-extrabold text-amber-600 dark:text-amber-400 leading-tight truncate">
-              R$ {balanceToReceive.toFixed(2).replace('.', ',')}
+              R$ {currentMonthBalanceToReceive.toFixed(2).replace('.', ',')}
             </div>
             <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 block sm:inline mt-0.5 sm:mt-0 sm:ml-2">
-              pendente ativo
+              mês vigente
             </span>
           </div>
         </Link>
@@ -357,21 +422,23 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Caixa de diálogo com informações completas da locação e cliente */}
-      <RentalEditDrawer
-        rental={selectedRental}
-        isOpen={!!selectedRental}
-        onClose={() => setSelectedRental(null)}
-        onSave={(updated) => {
-          store.updateRental(updated.id, updated);
-          setRentals(store.getRentals());
-          setSelectedRental(null);
-        }}
-        onDelete={(id) => {
-          store.deleteRental(id);
-          setRentals(store.getRentals());
-          setSelectedRental(null);
-        }}
-      />
+      {selectedRental && (
+        <RentalEditDrawer
+          rental={selectedRental}
+          isOpen={!!selectedRental}
+          onClose={() => setSelectedRental(null)}
+          onSave={(updated) => {
+            store.updateRental(updated.id, updated);
+            setRentals(store.getRentals());
+            setSelectedRental(null);
+          }}
+          onDelete={(id) => {
+            store.deleteRental(id);
+            setRentals(store.getRentals());
+            setSelectedRental(null);
+          }}
+        />
+      )}
     </div>
   );
 }

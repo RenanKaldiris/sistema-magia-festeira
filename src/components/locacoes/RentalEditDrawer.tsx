@@ -115,6 +115,14 @@ export function RentalEditDrawer({
     setTimeout(() => setNotification(null), 3500);
   };
 
+  // Métricas do Cliente específico (declarado no topo para respeitar as Regras de Hooks do React)
+  const customerRentals = useMemo(() => {
+    if (!rental?.customer_id) return [];
+    return store.getRentals().filter((r) => r.customer_id === rental.customer_id && r.status !== 'cancelado');
+  }, [rental?.customer_id]);
+  const customerTotalSpent = customerRentals.reduce((sum, r) => sum + (r.total || 0), 0);
+  const customerAvgTicket = customerRentals.length > 0 ? customerTotalSpent / customerRentals.length : 0;
+
   if (!isOpen || !rental) return null;
 
   const rawPhone = rental.customer?.phone?.replace(/\D/g, '') || '';
@@ -263,14 +271,6 @@ export function RentalEditDrawer({
     setQuickPayDate(todayStr);
     setShowPayForm(true);
   };
-
-  // Métricas do Cliente específico
-  const customerRentals = useMemo(() => {
-    if (!rental?.customer_id) return [];
-    return store.getRentals().filter((r) => r.customer_id === rental.customer_id && r.status !== 'cancelado');
-  }, [rental?.customer_id]);
-  const customerTotalSpent = customerRentals.reduce((sum, r) => sum + (r.total || 0), 0);
-  const customerAvgTicket = customerRentals.length > 0 ? customerTotalSpent / customerRentals.length : 0;
 
   return (
     <>
