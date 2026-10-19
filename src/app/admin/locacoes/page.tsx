@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   ClipboardList,
   Search,
@@ -46,7 +47,7 @@ interface SortState {
 
 export type PeriodFilter = 'current_month' | 'next_60_days' | 'last_60_days' | 'prev_month' | 'next_month' | 'custom' | 'all';
 export type FinancialFilter = 'all' | 'pending' | 'paid' | 'historico' | 'zero';
-export type OperationalFilter = 'all' | 'waiting' | 'in_progress' | 'returned' | 'historico' | 'cancelled';
+export type OperationalFilter = 'all' | 'active' | 'waiting' | 'in_progress' | 'returned' | 'historico' | 'cancelled';
 
 // Ordem prioritária de status: Alugados -> Reservados -> Devolvidos -> Cancelados -> Histórico
 const STATUS_ORDER: Record<string, number> = {
@@ -57,16 +58,36 @@ const STATUS_ORDER: Record<string, number> = {
   historico: 5,
 };
 
-export default function AdminLocacoesPage() {
+function LocacoesManagementContent() {
+  const searchParams = useSearchParams();
   const [rentals, setRentals] = useState<RentalWithDetails[]>(store.getRentals());
   const [search, setSearch] = useState('');
   
   // Três Filtros Combinados Inteligentes
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('current_month');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>(() => {
+    const p = searchParams.get('period');
+    return (p as PeriodFilter) || 'current_month';
+  });
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
-  const [financialFilter, setFinancialFilter] = useState<FinancialFilter>('all');
-  const [operationalFilter, setOperationalFilter] = useState<OperationalFilter>('all');
+  const [financialFilter, setFinancialFilter] = useState<FinancialFilter>(() => {
+    const f = searchParams.get('financial');
+    return (f as FinancialFilter) || 'all';
+  });
+  const [operationalFilter, setOperationalFilter] = useState<OperationalFilter>(() => {
+    const op = searchParams.get('operational');
+    return (op as OperationalFilter) || 'all';
+  });
+
+  // Sincroniza filtros caso a rota seja alterada com query params
+  useEffect(() => {
+    const p = searchParams.get('period') as PeriodFilter | null;
+    const f = searchParams.get('financial') as FinancialFilter | null;
+    const op = searchParams.get('operational') as OperationalFilter | null;
+    if (p) setPeriodFilter(p);
+    if (f) setFinancialFilter(f);
+    if (op) setOperationalFilter(op);
+  }, [searchParams]);
 
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -164,6 +185,9 @@ export default function AdminLocacoesPage() {
       }
 
       // 3. Filtro Operacional
+      if (operationalFilter === 'active' && r.status !== 'reservado' && r.status !== 'alugado') {
+        return false;
+      }
       if (operationalFilter === 'waiting' && r.status !== 'reservado') {
         return false;
       }
@@ -658,6 +682,7 @@ export default function AdminLocacoesPage() {
               className="w-full px-3 py-2 rounded-xl text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
             >
               <option value="all">Todos os Estágios</option>
+              <option value="active">✨ Reservas Ativas (No Depósito + Na Rua)</option>
               <option value="waiting">📦 No Depósito (Aguardando Saída)</option>
               <option value="in_progress">🚚 Na Rua (Em Andamento)</option>
               <option value="returned">🔄 Devolvidos</option>
@@ -1316,5 +1341,19 @@ export default function AdminLocacoesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdminLocacoesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-12 text-center text-slate-500 dark:text-slate-400">
+          Carregando gestão de locações e agenda...
+        </div>
+      }
+    >
+      <LocacoesManagementContent />
+    </Suspense>
   );
 }
