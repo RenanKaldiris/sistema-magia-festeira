@@ -838,65 +838,15 @@ function TemasManagementContent() {
                         : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
-                    {/* Header do Card: Foto, Categoria, Nome e Checkbox */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
-                          {details?.primary_media?.storage_path ? (
-                            <img
-                              src={details.primary_media.storage_path}
-                              alt={theme.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = getFallbackImageDataUrl(theme.name);
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
-                              <ImageIcon className="w-5 h-5" />
-                              <span className="text-[9px] mt-0.5">Sem Foto</span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md truncate">
-                              {details?.category?.name || 'Geral'}
-                            </span>
-                          </div>
-
-                          <h3 className="font-extrabold text-sm text-slate-900 dark:text-white truncate mt-1">
-                            {theme.name}
-                          </h3>
-
-                          {/* Preços e Estoque */}
-                          <div className="flex items-center gap-2 mt-1">
-                            {hasPromo ? (
-                              <div className="flex items-baseline gap-1.5">
-                                <span className="text-[10px] line-through text-slate-400">
-                                  R$ {theme.base_price.toFixed(2).replace('.', ',')}
-                                </span>
-                                <span className="font-black text-xs text-rose-600 dark:text-rose-400">
-                                  R$ {theme.promotional_price!.toFixed(2).replace('.', ',')}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="font-extrabold text-xs text-slate-900 dark:text-white">
-                                R$ {theme.base_price.toFixed(2).replace('.', ',')}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Checkbox Touch Seleção */}
+                    {/* Header do Card: Checkbox no início, Foto, Categoria e Nome */}
+                    <div className="flex items-start gap-3">
+                      {/* Checkbox Touch Seleção no Início da Linha */}
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
                           handleToggleSelect(theme.id);
                         }}
-                        className="p-1.5 -mr-1 -mt-1 cursor-pointer shrink-0 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        className="pt-4 pr-0.5 cursor-pointer shrink-0 rounded-lg transition-colors"
                         title={isSelected ? 'Desmarcar' : 'Selecionar'}
                       >
                         <input
@@ -906,6 +856,54 @@ function TemasManagementContent() {
                           className="w-5 h-5 text-rose-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-rose-500 cursor-pointer"
                           aria-label={`Selecionar ${theme.name}`}
                         />
+                      </div>
+
+                      <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                        {details?.primary_media?.storage_path ? (
+                          <img
+                            src={details.primary_media.storage_path}
+                            alt={theme.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = getFallbackImageDataUrl(theme.name);
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
+                            <ImageIcon className="w-5 h-5" />
+                            <span className="text-[9px] mt-0.5">Sem Foto</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md truncate">
+                            {details?.category?.name || 'Geral'}
+                          </span>
+                        </div>
+
+                        <h3 className="font-extrabold text-sm text-slate-900 dark:text-white truncate mt-1">
+                          {theme.name}
+                        </h3>
+
+                        {/* Preços e Estoque */}
+                        <div className="flex items-center gap-2 mt-1">
+                          {hasPromo ? (
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-[10px] line-through text-slate-400">
+                                R$ {theme.base_price.toFixed(2).replace('.', ',')}
+                              </span>
+                              <span className="font-black text-xs text-rose-600 dark:text-rose-400">
+                                R$ {theme.promotional_price!.toFixed(2).replace('.', ',')}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="font-extrabold text-xs text-slate-900 dark:text-white">
+                              R$ {theme.base_price.toFixed(2).replace('.', ',')}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -1036,6 +1034,23 @@ function TemasManagementContent() {
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold">
                   <tr>
+                    {/* Checkbox Mestre no Início da Linha */}
+                    <th className="py-3.5 pl-6 pr-2 w-12 text-center">
+                      <label
+                        className="inline-flex items-center justify-center cursor-pointer select-none"
+                        title="Selecionar todos os temas visíveis"
+                      >
+                        <input
+                          type="checkbox"
+                          ref={masterCheckboxRef}
+                          checked={allVisibleSelected}
+                          onChange={handleToggleSelectAll}
+                          className="w-4 h-4 text-rose-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-rose-500 cursor-pointer"
+                        />
+                        <span className="sr-only">Selecionar todos</span>
+                      </label>
+                    </th>
+
                     {/* Sortable: Nome / Código */}
                     <th className="py-3.5 px-6">
                       <button
@@ -1104,24 +1119,9 @@ function TemasManagementContent() {
 
                     <th className="py-3.5 px-6">Variações / Kits</th>
 
-                    {/* Checkbox Mestre & Ações */}
+                    {/* Ações */}
                     <th className="py-3.5 px-6 text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        <span>Ações</span>
-                        <label
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold cursor-pointer select-none"
-                          title="Selecionar todos os temas visíveis"
-                        >
-                          <input
-                            type="checkbox"
-                            ref={masterCheckboxRef}
-                            checked={allVisibleSelected}
-                            onChange={handleToggleSelectAll}
-                            className="w-4 h-4 text-rose-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-rose-500 cursor-pointer"
-                          />
-                          <span className="sr-only">Selecionar todos</span>
-                        </label>
-                      </div>
+                      <span>Ações</span>
                     </th>
                   </tr>
                 </thead>
@@ -1129,7 +1129,7 @@ function TemasManagementContent() {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                   {filteredThemes.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-slate-500 dark:text-slate-400 text-xs">
+                      <td colSpan={8} className="py-8 text-center text-slate-500 dark:text-slate-400 text-xs">
                         Nenhum tema encontrado com o termo pesquisado.
                       </td>
                     </tr>
@@ -1149,6 +1149,25 @@ function TemasManagementContent() {
                           }`}
                           title="Clique para abrir a página de edição deste tema"
                         >
+                          {/* Checkbox de Seleção no Início da Linha */}
+                          <td
+                            className="py-4 pl-6 pr-2 w-12 text-center"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <label
+                              className="inline-flex items-center justify-center cursor-pointer select-none"
+                              title={isSelected ? 'Desmarcar tema' : 'Selecionar tema'}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleToggleSelect(theme.id)}
+                                className="w-4 h-4 text-rose-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-rose-500 cursor-pointer transition-all"
+                                aria-label={`Selecionar ${theme.name}`}
+                              />
+                            </label>
+                          </td>
+
                           {/* Tema */}
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-3">
@@ -1346,21 +1365,6 @@ function TemasManagementContent() {
                               >
                                 <Settings className="w-3.5 h-3.5" />
                               </button>
-
-                              {/* Checkbox adjacente ao botão Ver no Catálogo */}
-                              <div
-                                onClick={(e) => e.stopPropagation()}
-                                className="pl-1.5 flex items-center"
-                                title={isSelected ? 'Desmarcar tema' : 'Selecionar tema'}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => handleToggleSelect(theme.id)}
-                                  className="w-4 h-4 text-rose-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-rose-500 cursor-pointer transition-all"
-                                  aria-label={`Selecionar ${theme.name}`}
-                                />
-                              </div>
                             </div>
                           </td>
                         </tr>
