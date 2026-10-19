@@ -593,9 +593,9 @@ export function RentalEditDrawer({
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Valor (R$)
                     </label>
                     <input
@@ -605,17 +605,17 @@ export function RentalEditDrawer({
                       required
                       value={quickPayAmount}
                       onChange={(e) => setQuickPayAmount(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold"
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-black focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
-                      Forma
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Forma de Pagamento
                     </label>
                     <select
                       value={quickPayMethod}
                       onChange={(e) => setQuickPayMethod(e.target.value as Payment['method'])}
-                      className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold"
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                     >
                       <option value="pix">PIX</option>
                       <option value="dinheiro">Dinheiro</option>
@@ -623,25 +623,25 @@ export function RentalEditDrawer({
                       <option value="transferencia">Transferência</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
-                      Data
+                  <div className="min-w-0">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Data do Pagamento
                     </label>
                     <input
                       type="date"
                       value={quickPayDate}
                       onChange={(e) => setQuickPayDate(e.target.value)}
-                      className="w-full px-2 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"
+                      className="w-full min-w-0 px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
-                      Status
+                  <div className="min-w-0">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Status do Pagamento
                     </label>
                     <select
                       value={quickPayStatus}
                       onChange={(e) => setQuickPayStatus(e.target.value as 'efetivado' | 'pendente')}
-                      className="w-full px-2 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold"
+                      className="w-full min-w-0 px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                     >
                       <option value="efetivado">Efetivado (Pago)</option>
                       <option value="pendente">Pendente</option>
@@ -720,9 +720,9 @@ export function RentalEditDrawer({
                             </button>
                           </div>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                             <div>
-                              <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
+                              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                                 Valor (R$)
                               </label>
                               <input
@@ -732,17 +732,17 @@ export function RentalEditDrawer({
                                 required
                                 value={editAmount}
                                 onChange={(e) => setEditAmount(Number(e.target.value))}
-                                className="w-full px-2 py-1 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold"
+                                className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-black focus:outline-none focus:ring-2 focus:ring-emerald-500"
                               />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
-                                Forma
+                              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Forma de Pagamento
                               </label>
                               <select
                                 value={editMethod}
                                 onChange={(e) => setEditMethod(e.target.value as Payment['method'])}
-                                className="w-full px-2 py-1 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"
+                                className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                               >
                                 <option value="pix">PIX</option>
                                 <option value="dinheiro">Dinheiro</option>
@@ -750,25 +750,25 @@ export function RentalEditDrawer({
                                 <option value="transferencia">Transferência</option>
                               </select>
                             </div>
-                            <div>
-                              <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
-                                Data
+                            <div className="min-w-0">
+                              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Data do Pagamento
                               </label>
                               <input
                                 type="date"
                                 value={editDate}
                                 onChange={(e) => setEditDate(e.target.value)}
-                                className="w-full px-2 py-1 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"
+                                className="w-full min-w-0 px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                               />
                             </div>
-                            <div>
-                              <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
-                                Status
+                            <div className="min-w-0">
+                              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Status do Pagamento
                               </label>
                               <select
                                 value={editStatus}
                                 onChange={(e) => setEditStatus(e.target.value as 'efetivado' | 'pendente')}
-                                className="w-full px-2 py-1 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold"
+                                className="w-full min-w-0 px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                               >
                                 <option value="efetivado">Efetivado (Pago)</option>
                                 <option value="pendente">Voltar para Pendente</option>

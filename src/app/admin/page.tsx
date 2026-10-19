@@ -9,6 +9,9 @@ import {
   AlertTriangle,
   DollarSign,
   ArrowRight,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
   Sparkles,
   Clock,
   MessageCircle,
@@ -145,6 +148,76 @@ export default function AdminDashboardPage() {
     }
     return monthRentalsList;
   }, [monthRentalsList, statusFilter]);
+
+  // Ordenação de colunas da tabela: tema, intervalo de datas, saldo e status
+  type SortField = 'theme' | 'date' | 'balance' | 'status';
+  type SortOrder = 'asc' | 'desc';
+
+  interface SortState {
+    field: SortField | null;
+    order: SortOrder;
+  }
+
+  const [sortState, setSortState] = useState<SortState>({ field: null, order: 'asc' });
+
+  const handleSort = (field: SortField) => {
+    setSortState((prev) => {
+      if (prev.field === field) {
+        if (prev.order === 'asc') return { field, order: 'desc' };
+        if (prev.order === 'desc') return { field: null, order: 'asc' };
+      }
+      return { field, order: 'asc' };
+    });
+  };
+
+  const STATUS_PRIORITY: Record<string, number> = {
+    reservado: 1, // Aguardando
+    alugado: 2,   // Alugado
+    devolvido: 3, // Concluído
+    historico: 3, // Concluído
+    cancelado: 4,
+  };
+
+  // Lista final combinando filtro de status + ordenação por coluna
+  const sortedAndFilteredMonthRentals = useMemo(() => {
+    const list = [...filteredMonthRentals];
+    if (!sortState.field) return list;
+
+    return list.sort((a, b) => {
+      if (sortState.field === 'theme') {
+        const nameA = a.theme?.name || '';
+        const nameB = b.theme?.name || '';
+        const cmp = nameA.localeCompare(nameB, 'pt-BR', { sensitivity: 'base' });
+        return sortState.order === 'asc' ? cmp : -cmp;
+      }
+
+      if (sortState.field === 'date') {
+        const dateA = a.event_date ? a.event_date.split('T')[0] : '';
+        const dateB = b.event_date ? b.event_date.split('T')[0] : '';
+        const cmp = dateA.localeCompare(dateB);
+        return sortState.order === 'asc' ? cmp : -cmp;
+      }
+
+      if (sortState.field === 'balance') {
+        const balA = Number(a.balance ?? 0);
+        const balB = Number(b.balance ?? 0);
+        if (balA !== balB) {
+          return sortState.order === 'asc' ? balA - balB : balB - balA;
+        }
+        const totA = Number(a.total ?? 0);
+        const totB = Number(b.total ?? 0);
+        return sortState.order === 'asc' ? totA - totB : totB - totA;
+      }
+
+      if (sortState.field === 'status') {
+        const pA = STATUS_PRIORITY[a.status] || 99;
+        const pB = STATUS_PRIORITY[b.status] || 99;
+        return sortState.order === 'asc' ? pA - pB : pB - pA;
+      }
+
+      return 0;
+    });
+  }, [filteredMonthRentals, sortState]);
 
   // Etiqueta e estilo de badge
   const getRentalStatusBadge = (status: string) => {
@@ -480,8 +553,9 @@ export default function AdminDashboardPage() {
 
       {/* Eventos & Locações do Mês Selecionado */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4 sm:mb-6">
-          <div className="flex items-center gap-2 flex-wrap">
+        {/* Header da Seção: Título e Link */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 sm:mb-4">
+          <div className="flex items-center gap-2">
             <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
               Eventos & Locações do Mês
             </h3>
@@ -490,72 +564,107 @@ export default function AdminDashboardPage() {
             </span>
           </div>
 
-          {/* Filtro por Etiquetas: Todos, Aguardando, Alugados, Concluídos */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs text-slate-400 font-semibold mr-1 hidden sm:inline">Filtrar:</span>
-            
-            <button
-              type="button"
-              onClick={() => setStatusFilter('todos')}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                statusFilter === 'todos'
-                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              Todos ({monthRentalsList.length})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStatusFilter('aguardando')}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                statusFilter === 'aguardando'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-900/50'
-              }`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block"></span>
-              <span>Aguardando ({waitingRentalsCount})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStatusFilter('alugados')}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                statusFilter === 'alugados'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-900/50'
-              }`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span>
-              <span>Alugados ({rentedRentalsCount})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStatusFilter('concluidos')}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                statusFilter === 'concluidos'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-900/50'
-              }`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
-              <span>Concluídos ({completedRentalsCount})</span>
-            </button>
-
-            <Link
-              href="/admin/locacoes"
-              className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 flex items-center gap-1 shrink-0 ml-1.5"
-            >
-              <span>Ver todas</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+          <Link
+            href="/admin/locacoes"
+            className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 flex items-center gap-1 shrink-0 self-start sm:self-center"
+            title="Abrir página completa de locações"
+          >
+            <span>Ver todas as locações</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
-        {filteredMonthRentals.length === 0 ? (
+        {/* Seletores Simétricos, Compactos e Lado a Lado */}
+        <div className="mb-4 sm:mb-5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 grid grid-cols-4 gap-1 w-full max-w-2xl">
+          {/* Todos */}
+          <button
+            type="button"
+            onClick={() => setStatusFilter('todos')}
+            className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 truncate ${
+              statusFilter === 'todos'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-black'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            title="Mostrar todas as locações do mês"
+          >
+            <span className="truncate">Todos</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+              statusFilter === 'todos'
+                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                : 'bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+            }`}>
+              {monthRentalsList.length}
+            </span>
+          </button>
+
+          {/* Aguardando */}
+          <button
+            type="button"
+            onClick={() => setStatusFilter('aguardando')}
+            className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 truncate ${
+              statusFilter === 'aguardando'
+                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs font-black'
+                : 'text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400'
+            }`}
+            title="Filtrar temas aguardando retirada no mês"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
+            <span className="truncate">Aguardando</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+              statusFilter === 'aguardando'
+                ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                : 'bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+            }`}>
+              {waitingRentalsCount}
+            </span>
+          </button>
+
+          {/* Alugados */}
+          <button
+            type="button"
+            onClick={() => setStatusFilter('alugados')}
+            className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 truncate ${
+              statusFilter === 'alugados'
+                ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-xs font-black'
+                : 'text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400'
+            }`}
+            title="Filtrar temas alugados no mês"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+            <span className="truncate">Alugados</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+              statusFilter === 'alugados'
+                ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+                : 'bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+            }`}>
+              {rentedRentalsCount}
+            </span>
+          </button>
+
+          {/* Concluídos */}
+          <button
+            type="button"
+            onClick={() => setStatusFilter('concluidos')}
+            className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 truncate ${
+              statusFilter === 'concluidos'
+                ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs font-black'
+                : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+            }`}
+            title="Filtrar temas concluídos no mês"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+            <span className="truncate">Concluídos</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+              statusFilter === 'concluidos'
+                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                : 'bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+            }`}>
+              {completedRentalsCount}
+            </span>
+          </button>
+        </div>
+
+        {sortedAndFilteredMonthRentals.length === 0 ? (
           <div className="py-12 px-4 text-center bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center">
             <Calendar className="w-10 h-10 text-slate-300 dark:text-slate-600 mb-2 stroke-1" />
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -582,21 +691,98 @@ export default function AdminDashboardPage() {
           </div>
         ) : (
           <>
-            {/* 1. Tabela em Linha para Versão Web (Padrão da aba Locações) */}
+            {/* 1. Tabela em Linha para Versão Web com Ordenadores por Coluna */}
             <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold">
                   <tr>
                     <th className="py-3 px-4">Cliente / Contato</th>
-                    <th className="py-3 px-4">Tema / Variação</th>
-                    <th className="py-3 px-4">Intervalo de Datas</th>
-                    <th className="py-3 px-4">Total / Saldo</th>
-                    <th className="py-3 px-4">Status</th>
+
+                    {/* Ordenador de Tema */}
+                    <th
+                      onClick={() => handleSort('theme')}
+                      className="py-3 px-4 cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors select-none"
+                      title="Clique para ordenar por Tema (A-Z / Z-A)"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>Tema / Variação</span>
+                        {sortState.field === 'theme' ? (
+                          sortState.order === 'asc' ? (
+                            <ArrowUp className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          ) : (
+                            <ArrowDown className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3.5 h-3.5 opacity-40 shrink-0" />
+                        )}
+                      </div>
+                    </th>
+
+                    {/* Ordenador de Datas */}
+                    <th
+                      onClick={() => handleSort('date')}
+                      className="py-3 px-4 cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors select-none"
+                      title="Clique para ordenar por Data do Evento"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>Intervalo de Datas</span>
+                        {sortState.field === 'date' ? (
+                          sortState.order === 'asc' ? (
+                            <ArrowUp className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          ) : (
+                            <ArrowDown className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3.5 h-3.5 opacity-40 shrink-0" />
+                        )}
+                      </div>
+                    </th>
+
+                    {/* Ordenador de Saldo / Valor */}
+                    <th
+                      onClick={() => handleSort('balance')}
+                      className="py-3 px-4 cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors select-none"
+                      title="Clique para ordenar por Saldo Devedor / Valor"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>Total / Saldo</span>
+                        {sortState.field === 'balance' ? (
+                          sortState.order === 'asc' ? (
+                            <ArrowUp className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          ) : (
+                            <ArrowDown className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3.5 h-3.5 opacity-40 shrink-0" />
+                        )}
+                      </div>
+                    </th>
+
+                    {/* Ordenador de Status */}
+                    <th
+                      onClick={() => handleSort('status')}
+                      className="py-3 px-4 cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors select-none"
+                      title="Clique para ordenar por Status"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>Status</span>
+                        {sortState.field === 'status' ? (
+                          sortState.order === 'asc' ? (
+                            <ArrowUp className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          ) : (
+                            <ArrowDown className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3.5 h-3.5 opacity-40 shrink-0" />
+                        )}
+                      </div>
+                    </th>
+
                     <th className="py-3 px-4 text-right">Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900">
-                  {filteredMonthRentals.map((rental) => {
+                  {sortedAndFilteredMonthRentals.map((rental) => {
                     const badge = getRentalStatusBadge(rental.status);
                     const rawPhone = rental.customer?.phone?.replace(/\D/g, '') || '';
                     const waPhone = rawPhone.startsWith('55') ? rawPhone : `55${rawPhone}`;
@@ -703,7 +889,7 @@ export default function AdminDashboardPage() {
 
             {/* 2. Cards para Versão Mobile (md:hidden) */}
             <div className="md:hidden grid grid-cols-1 gap-3">
-              {filteredMonthRentals.map((rental) => {
+              {sortedAndFilteredMonthRentals.map((rental) => {
                 const badge = getRentalStatusBadge(rental.status);
                 const rawPhone = rental.customer?.phone?.replace(/\D/g, '') || '';
                 const waPhone = rawPhone.startsWith('55') ? rawPhone : `55${rawPhone}`;
