@@ -664,7 +664,8 @@ export class ApiService {
     const client = this.getClient();
     if (client) {
       try {
-        const { data } = await client
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        const query = client
           .from('rentals')
           .select(`
             *,
@@ -672,11 +673,18 @@ export class ApiService {
             theme:theme_id(*),
             lines:rental_lines(*),
             payments(*)
-          `)
-          .or(`id.eq.${id},id.ilike.%${id}`)
-          .maybeSingle();
+          `);
 
-        if (data) return data;
+        if (isUuid) {
+          const { data, error } = await query.eq('id', id).maybeSingle();
+          if (!error && data) return data;
+        } else {
+          const { data: allRentals, error } = await query.order('created_at', { ascending: false }).limit(200);
+          if (!error && allRentals) {
+            const found = allRentals.find((r: any) => r.id === id || r.id.endsWith(id));
+            if (found) return found;
+          }
+        }
       } catch (err) {
         console.error('[ApiService getRentalById Supabase Error]', err);
       }
