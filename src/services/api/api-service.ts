@@ -2,6 +2,7 @@ import { store } from '@/lib/store';
 import { supabaseAdmin, isSupabaseServerConfigured } from '@/lib/supabase/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Customer, Rental, RentalStatus, Payment, ThemeWithDetails, Orcamento } from '@/types/database';
+import { googleWorkspaceService, ContractPayload, ContractItemInput } from '@/services/google/google-service';
 
 /**
  * SISTEMA MAGIA FESTEIRA - API SERVICE INTEGRATOR (SUPABASE-FIRST)
@@ -709,6 +710,9 @@ export class ApiService {
     conflict?: unknown;
     orderNumber?: string;
     displayId?: string;
+    contractUrl?: string;
+    contractDriveId?: string;
+    calendarEventId?: string;
   }> {
     // Detecção inteligente de status histórico:
     // Se data do evento for anterior a 01/10/2026, ou notas/termos contiverem indicação de histórico/passado, ou solicitado explicitamente
@@ -858,6 +862,82 @@ export class ApiService {
       }
     }
 
+    // 5. Geração Automática de Contrato no Google Docs e Agendamento no Google Calendar
+    let contractUrl: string | undefined;
+    let contractDriveId: string | undefined;
+    let calendarEventId: string | undefined;
+
+    if (!isHistorical) {
+      try {
+        const itemsList: ContractItemInput[] = [];
+        if (theme) {
+          itemsList.push({ description: `Kit Decoração Tema ${theme.name}`, quantity: 1 });
+        }
+        if (data.extraItems) {
+          itemsList.push({ description: data.extraItems, quantity: 1 });
+        }
+
+        const contractPayload: ContractPayload = {
+          rentalId: rental.id,
+          orderNumber,
+          contractNumber: `LOC-2026-${orderNumber.padStart(4, '0')}`,
+          customer: {
+            name: customer.name,
+            phone: customer.phone,
+            document: customer.document || data.customerDocument,
+            address: customer.address || data.customerAddress,
+          },
+          event: {
+            name: data.eventName,
+            date: data.eventDate,
+            time: [data.startTime, data.endTime].filter(Boolean).join(' às ') || null,
+            location: data.deliveryLocation || customer.address,
+          },
+          rental: {
+            theme: theme.name,
+            pickupDate: data.pickupDate,
+            pickupTime: data.startTime,
+            returnDate: data.returnDate,
+            returnTime: data.endTime,
+            total: data.total,
+            paid: paidAmount,
+            balance: balanceAmount,
+            paymentMethod: data.paymentMethod,
+            paymentTerms: data.paymentTerms,
+            notes: data.notes,
+          },
+          items: itemsList,
+        };
+
+        const docRes = await googleWorkspaceService.generateContractDocument(contractPayload);
+        if (docRes.success && docRes.contractUrl) {
+          contractUrl = docRes.contractUrl;
+          contractDriveId = docRes.docId;
+          rental.contract_url = contractUrl;
+          rental.contract_drive_id = contractDriveId;
+
+          if (clientDb) {
+            await safeSupabaseServerOp(() =>
+              clientDb
+                .from('rentals')
+                .update({
+                  contract_url: contractUrl,
+                  contract_drive_id: contractDriveId,
+                })
+                .eq('id', rental.id)
+            );
+          }
+        }
+
+        const calRes = await googleWorkspaceService.syncGoogleCalendarEvent(contractPayload, contractUrl);
+        if (calRes.success && calRes.eventId) {
+          calendarEventId = calRes.eventId;
+        }
+      } catch (contractErr) {
+        console.warn('[ApiService Contract/Calendar Generation Warning]', contractErr);
+      }
+    }
+
     // Manter sincronizado no Store local (com skipSupabase=true para evitar duplicação)
     try {
       store.createRental(rental, true, true);
@@ -874,6 +954,221 @@ export class ApiService {
       customer,
       orderNumber,
       displayId: `#${orderNumber}`,
+      contractUrl,
+      contractDriveId,
+      calendarEventId,
+    };
+  }
+
+  /**
+   * Gera ou Atualiza o Contrato Oficial no Google Docs e Sincroniza a Google Agenda
+   * Permite que o operador humano personalize itens, valores e prazos na gaveta web.
+   */
+  public async generateRentalContract(
+    rentalId: string,
+    options?: {
+      items?: ContractItemInput[];
+      total?: number;
+      paid?: number;
+      paymentMethod?: Payment['method'];
+      paymentTerms?: string;
+      pickupDate?: string;
+      pickupTime?: string;
+      returnDate?: string;
+      returnTime?: string;
+      deliveryLocation?: string;
+      notes?: string;
+      customer?: {
+        name?: string;
+        phone?: string;
+        document?: string;
+        rg?: string;
+        address?: string;
+        neighborhood?: string;
+        city?: string;
+        cep?: string;
+      };
+      event?: {
+        name?: string;
+        date?: string;
+        time?: string;
+        location?: string;
+        neighborhood?: string;
+        cep?: string;
+      };
+    }
+  ): Promise<{
+    success: boolean;
+    contractUrl?: string;
+    docId?: string;
+    calendarEventId?: string;
+    formattedText?: string;
+    rental?: Rental;
+    error?: string;
+  }> {
+    const client = this.getClient();
+    let rental: Rental | null = null;
+    let customer: Customer | null = null;
+    let themeName = 'Tema Magia Festeira';
+
+    // 1. Localizar locação
+    if (client) {
+      try {
+        const { data: rData } = await client
+          .from('rentals')
+          .select('*, customer:customer_id(*), theme:theme_id(name)')
+          .eq('id', rentalId)
+          .maybeSingle();
+
+        if (rData) {
+          rental = rData;
+          customer = rData.customer;
+          if (rData.theme?.name) themeName = rData.theme.name;
+        }
+      } catch (e) {
+        console.warn('[ApiService generateRentalContract Supabase Fetch]', e);
+      }
+    }
+
+    if (!rental) {
+      const allRentals = store.getRentals();
+      const localR = allRentals.find((r) => r.id === rentalId);
+      if (localR) {
+        rental = localR;
+        customer = store.getCustomers().find((c) => c.id === localR.customer_id) || null;
+        const th = store.getThemeById(localR.theme_id);
+        if (th) themeName = th.name;
+      }
+    }
+
+    if (!rental) {
+      return { success: false, error: `Locação com ID ${rentalId} não encontrada.` };
+    }
+
+    // 2. Atualizar dados do cliente se informados
+    if (customer && options?.customer) {
+      const custUpdates: Partial<Customer> = {};
+      if (options.customer.name) custUpdates.name = options.customer.name;
+      if (options.customer.phone) custUpdates.phone = options.customer.phone;
+      if (options.customer.document) custUpdates.document = options.customer.document;
+      if (options.customer.address) custUpdates.address = options.customer.address;
+
+      if (Object.keys(custUpdates).length > 0) {
+        await this.updateCustomer(customer.id, custUpdates);
+        customer = { ...customer, ...custUpdates };
+      }
+    }
+
+    // 3. Atualizar dados da locação se informados
+    const newTotal = typeof options?.total === 'number' ? options.total : rental.total;
+    const newPaid = typeof options?.paid === 'number' ? options.paid : rental.paid;
+    const newBalance = Math.max(0, newTotal - newPaid);
+
+    const rentalUpdates: Partial<Rental> = {
+      total: newTotal,
+      paid: newPaid,
+      balance: newBalance,
+      pickup_date: options?.pickupDate || rental.pickup_date,
+      return_date: options?.returnDate || rental.return_date,
+      delivery_location: options?.deliveryLocation !== undefined ? options.deliveryLocation : rental.delivery_location,
+      notes: options?.notes !== undefined ? options.notes : rental.notes,
+    };
+
+    // 4. Salvar linhas de itens customizados se fornecidas
+    if (options?.items && options.items.length > 0) {
+      if (client) {
+        await safeSupabaseServerOp(async () => {
+          await client.from('rental_lines').delete().eq('rental_id', rental!.id);
+          const linesToInsert = options!.items!.map((it) => ({
+            id: crypto.randomUUID(),
+            rental_id: rental!.id,
+            description: it.description,
+            quantity: it.quantity,
+            unit_price: it.unitPrice || 0,
+            total_price: (it.unitPrice || 0) * it.quantity,
+          }));
+          await client.from('rental_lines').insert(linesToInsert);
+        });
+      }
+    }
+
+    // 5. Montar Payload do Contrato
+    const orderNumber = rentalId.slice(-4);
+    const contractItems: ContractItemInput[] =
+      options?.items && options.items.length > 0
+        ? options.items
+        : [
+            { description: `Kit de Decoração - ${themeName}`, quantity: 1, unitPrice: newTotal },
+            { description: 'Painel redondo sublimado e arco de sustentação', quantity: 1 },
+            { description: 'Trio de cilindros com capas personalizadas', quantity: 1 },
+            { description: 'Conjunto de bandejas, doceiras e boleira temática', quantity: 1 },
+          ];
+
+    const contractPayload: ContractPayload = {
+      rentalId: rental.id,
+      orderNumber,
+      contractNumber: `LOC-2026-${orderNumber.padStart(4, '0')}`,
+      customer: {
+        name: options?.customer?.name || customer?.name || 'Cliente Magia Festeira',
+        phone: options?.customer?.phone || customer?.phone || '',
+        document: options?.customer?.document || customer?.document || null,
+        rg: options?.customer?.rg || null,
+        address: options?.customer?.address || customer?.address || null,
+        neighborhood: options?.customer?.neighborhood || null,
+        city: options?.customer?.city || 'São Paulo',
+        cep: options?.customer?.cep || null,
+      },
+      event: {
+        name: options?.event?.name || 'Festa de Aniversário',
+        date: options?.event?.date || rental.event_date,
+        time: options?.event?.time || null,
+        location: options?.deliveryLocation || options?.event?.location || rental.delivery_location || customer?.address || null,
+        neighborhood: options?.event?.neighborhood || null,
+        cep: options?.event?.cep || null,
+      },
+      rental: {
+        theme: themeName,
+        pickupDate: options?.pickupDate || rental.pickup_date,
+        pickupTime: options?.pickupTime || null,
+        returnDate: options?.returnDate || rental.return_date,
+        returnTime: options?.returnTime || 'Até às 17h00',
+        total: newTotal,
+        paid: newPaid,
+        balance: newBalance,
+        paymentMethod: options?.paymentMethod,
+        paymentTerms: options?.paymentTerms,
+        notes: options?.notes || rental.notes,
+      },
+      items: contractItems,
+    };
+
+    // 6. Geração do Documento e Agendamento no Google
+    const docRes = await googleWorkspaceService.generateContractDocument(contractPayload);
+    const calRes = await googleWorkspaceService.syncGoogleCalendarEvent(contractPayload, docRes.contractUrl);
+
+    rentalUpdates.contract_url = docRes.contractUrl;
+    rentalUpdates.contract_drive_id = docRes.docId || null;
+
+    // 7. Atualizar no Supabase e no Store local
+    if (client) {
+      await safeSupabaseServerOp(() =>
+        client.from('rentals').update({
+          ...rentalUpdates,
+          updated_at: new Date().toISOString(),
+        }).eq('id', rental!.id)
+      );
+    }
+
+    const updatedLocal = store.updateRental(rental.id, rentalUpdates);
+    const finalRental = updatedLocal.rental || { ...rental, ...rentalUpdates };
+
+    return {
+      success: true,
+      contractUrl: docRes.contractUrl,
+      docId: docRes.docId,
+      calendarEventId: calRes.eventId,
+      formattedText: docRes.formattedText,
+      rental: finalRental,
     };
   }
 

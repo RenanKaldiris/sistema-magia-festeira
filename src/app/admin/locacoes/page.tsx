@@ -26,6 +26,7 @@ import {
   TrendingUp,
   Filter,
   RotateCcw,
+  FileText,
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { RentalWithDetails, RentalStatus, Payment } from '@/types/database';
@@ -33,6 +34,7 @@ import { formatDateBR } from '@/lib/dateUtils';
 import { RentalBatchActionBar } from '@/components/locacoes/RentalBatchActionBar';
 import { CreateRentalModal } from '@/components/locacoes/CreateRentalModal';
 import { RentalEditDrawer } from '@/components/locacoes/RentalEditDrawer';
+import { RentalContractDrawer } from '@/components/locacoes/RentalContractDrawer';
 import { RentalChartsModal } from '@/components/locacoes/RentalChartsModal';
 import { ExportRentalsModal } from '@/components/locacoes/ExportRentalsModal';
 import { DeleteConfirmationModal } from '@/components/temas/DeleteConfirmationModal';
@@ -101,6 +103,7 @@ function LocacoesManagementContent() {
   // Modais e Gavetas
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingRental, setEditingRental] = useState<RentalWithDetails | null>(null);
+  const [contractRental, setContractRental] = useState<RentalWithDetails | null>(null);
   const [isChartsModalOpen, setIsChartsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -930,18 +933,33 @@ function LocacoesManagementContent() {
                     )}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedRentalForPayment(rental);
-                      setPayAmount(rental.balance > 0 ? rental.balance : 50);
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 border border-emerald-200 dark:border-emerald-800 transition-colors"
-                  >
-                    <DollarSign className="w-3.5 h-3.5" />
-                    <span>Pagar</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setContractRental(rental);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-1 border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer"
+                      title="Gerar ou editar contrato"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Contrato</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedRentalForPayment(rental);
+                        setPayAmount(rental.balance > 0 ? rental.balance : 50);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer"
+                    >
+                      <DollarSign className="w-3.5 h-3.5" />
+                      <span>Pagar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -1185,17 +1203,29 @@ function LocacoesManagementContent() {
                       </td>
 
                       <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedRentalForPayment(rental);
-                            setPayAmount(rental.balance > 0 ? rental.balance : 50);
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-semibold inline-flex items-center gap-1 transition-colors border border-emerald-200 dark:border-emerald-800/50 cursor-pointer"
-                        >
-                          <DollarSign className="w-3.5 h-3.5" />
-                          <span>Pagar</span>
-                        </button>
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setContractRental(rental)}
+                            className="px-3 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 text-xs font-semibold inline-flex items-center gap-1 transition-colors border border-rose-200 dark:border-rose-800/50 cursor-pointer"
+                            title="Gerar ou editar contrato no Google Docs"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Contrato</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedRentalForPayment(rental);
+                              setPayAmount(rental.balance > 0 ? rental.balance : 50);
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-semibold inline-flex items-center gap-1 transition-colors border border-emerald-200 dark:border-emerald-800/50 cursor-pointer"
+                          >
+                            <DollarSign className="w-3.5 h-3.5" />
+                            <span>Pagar</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1249,6 +1279,21 @@ function LocacoesManagementContent() {
           setEditingRental(updated);
         }}
         onDelete={handleTriggerSingleDelete}
+        onOpenContract={(r) => {
+          setEditingRental(null);
+          setContractRental(r);
+        }}
+      />
+
+      {/* Gaveta de Geração e Edição de Contrato */}
+      <RentalContractDrawer
+        rental={contractRental}
+        isOpen={!!contractRental}
+        onClose={() => setContractRental(null)}
+        onContractGenerated={(_updated, url) => {
+          setRentals(store.getRentals());
+          showNotification('Contrato gerado e sincronizado com sucesso!');
+        }}
       />
 
       {/* Modal: Confirmar Exclusão */}

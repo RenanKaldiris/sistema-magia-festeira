@@ -1,0 +1,431 @@
+{
+  "lastSync": "2026-10-19T21:33:59.453Z",
+  "projectName": "Sistema Magia Festeira",
+  "version": "1.2.0",
+  "summary": {
+    "totalPages": 17,
+    "totalApiRoutes": 18,
+    "totalComponents": 28,
+    "totalScripts": 160
+  },
+  "pages": [
+    {
+      "route": "/admin/clientes",
+      "file": "src/app/admin/clientes/page.tsx"
+    },
+    {
+      "route": "/admin/ia",
+      "file": "src/app/admin/ia/page.tsx"
+    },
+    {
+      "route": "/admin/importacoes",
+      "file": "src/app/admin/importacoes/page.tsx"
+    },
+    {
+      "route": "/admin/integracoes",
+      "file": "src/app/admin/integracoes/page.tsx"
+    },
+    {
+      "route": "/admin/itens",
+      "file": "src/app/admin/itens/page.tsx"
+    },
+    {
+      "route": "/admin/itens/[id]",
+      "file": "src/app/admin/itens/[id]/page.tsx"
+    },
+    {
+      "route": "/admin/locacoes",
+      "file": "src/app/admin/locacoes/page.tsx"
+    },
+    {
+      "route": "/admin/logs",
+      "file": "src/app/admin/logs/page.tsx"
+    },
+    {
+      "route": "/admin/orcamentos",
+      "file": "src/app/admin/orcamentos/page.tsx"
+    },
+    {
+      "route": "/admin",
+      "file": "src/app/admin/page.tsx"
+    },
+    {
+      "route": "/admin/relatorios",
+      "file": "src/app/admin/relatorios/page.tsx"
+    },
+    {
+      "route": "/admin/temas",
+      "file": "src/app/admin/temas/page.tsx"
+    },
+    {
+      "route": "/admin/temas/[id]",
+      "file": "src/app/admin/temas/[id]/page.tsx"
+    },
+    {
+      "route": "/admin/usuarios",
+      "file": "src/app/admin/usuarios/page.tsx"
+    },
+    {
+      "route": "/catalogo",
+      "file": "src/app/catalogo/page.tsx"
+    },
+    {
+      "route": "/catalogo/[slug]",
+      "file": "src/app/catalogo/[slug]/page.tsx"
+    },
+    {
+      "route": "/",
+      "file": "src/app/page.tsx"
+    }
+  ],
+  "apis": [
+    {
+      "endpoint": "/api/convert-heic",
+      "file": "src/app/api/convert-heic/route.ts"
+    },
+    {
+      "endpoint": "/api/convert-image",
+      "file": "src/app/api/convert-image/route.ts"
+    },
+    {
+      "endpoint": "/api/db/status",
+      "file": "src/app/api/db/status/route.ts"
+    },
+    {
+      "endpoint": "/api/og/theme/[slug]",
+      "file": "src/app/api/og/theme/[slug]/route.ts"
+    },
+    {
+      "endpoint": "/api/upload",
+      "file": "src/app/api/upload/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/availability",
+      "file": "src/app/api/v1/availability/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/customers/by-phone",
+      "file": "src/app/api/v1/customers/by-phone/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/customers",
+      "file": "src/app/api/v1/customers/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/customers/[id]",
+      "file": "src/app/api/v1/customers/[id]/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/orcamentos",
+      "file": "src/app/api/v1/orcamentos/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/rentals",
+      "file": "src/app/api/v1/rentals/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/rentals/[id]/contract",
+      "file": "src/app/api/v1/rentals/[id]/contract/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/rentals/[id]/payments",
+      "file": "src/app/api/v1/rentals/[id]/payments/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/rentals/[id]/payments/[paymentId]",
+      "file": "src/app/api/v1/rentals/[id]/payments/[paymentId]/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/rentals/[id]",
+      "file": "src/app/api/v1/rentals/[id]/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/reports/summary",
+      "file": "src/app/api/v1/reports/summary/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/themes",
+      "file": "src/app/api/v1/themes/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/webhook/whatsapp",
+      "file": "src/app/api/v1/webhook/whatsapp/route.ts"
+    }
+  ],
+  "components": [
+    {
+      "name": "CustomerBatchActionBar",
+      "path": "src/components/clientes/CustomerBatchActionBar.tsx"
+    },
+    {
+      "name": "CustomerEditDrawer",
+      "path": "src/components/clientes/CustomerEditDrawer.tsx"
+    },
+    {
+      "name": "ExportCustomersModal",
+      "path": "src/components/clientes/ExportCustomersModal.tsx"
+    },
+    {
+      "name": "ImportCustomersModal",
+      "path": "src/components/clientes/ImportCustomersModal.tsx"
+    },
+    {
+      "name": "DatabaseKeepAlive",
+      "path": "src/components/database/DatabaseKeepAlive.tsx"
+    },
+    {
+      "name": "DatabaseStatusBadge",
+      "path": "src/components/database/DatabaseStatusBadge.tsx"
+    },
+    {
+      "name": "AdminSidebar",
+      "path": "src/components/layout/AdminSidebar.tsx"
+    },
+    {
+      "name": "Navbar",
+      "path": "src/components/layout/Navbar.tsx"
+    },
+    {
+      "name": "CreateRentalModal",
+      "path": "src/components/locacoes/CreateRentalModal.tsx"
+    },
+    {
+      "name": "ExportRentalsModal",
+      "path": "src/components/locacoes/ExportRentalsModal.tsx"
+    },
+    {
+      "name": "RentalBatchActionBar",
+      "path": "src/components/locacoes/RentalBatchActionBar.tsx"
+    },
+    {
+      "name": "RentalChartsModal",
+      "path": "src/components/locacoes/RentalChartsModal.tsx"
+    },
+    {
+      "name": "RentalContractDrawer",
+      "path": "src/components/locacoes/RentalContractDrawer.tsx"
+    },
+    {
+      "name": "RentalEditDrawer",
+      "path": "src/components/locacoes/RentalEditDrawer.tsx"
+    },
+    {
+      "name": "ApplyCategoryModal",
+      "path": "src/components/temas/ApplyCategoryModal.tsx"
+    },
+    {
+      "name": "ApplyDiscountModal",
+      "path": "src/components/temas/ApplyDiscountModal.tsx"
+    },
+    {
+      "name": "BatchActionBar",
+      "path": "src/components/temas/BatchActionBar.tsx"
+    },
+    {
+      "name": "CustomCatalogModal",
+      "path": "src/components/temas/CustomCatalogModal.tsx"
+    },
+    {
+      "name": "DeleteConfirmationModal",
+      "path": "src/components/temas/DeleteConfirmationModal.tsx"
+    },
+    {
+      "name": "ImportacoesTabContent",
+      "path": "src/components/temas/ImportacoesTabContent.tsx"
+    },
+    {
+      "name": "ItemEditDrawer",
+      "path": "src/components/temas/ItemEditDrawer.tsx"
+    },
+    {
+      "name": "ItensTabContent",
+      "path": "src/components/temas/ItensTabContent.tsx"
+    },
+    {
+      "name": "ManageCategoriesModal",
+      "path": "src/components/temas/ManageCategoriesModal.tsx"
+    },
+    {
+      "name": "OrcamentoModal",
+      "path": "src/components/temas/OrcamentoModal.tsx"
+    },
+    {
+      "name": "ThemeEditDrawer",
+      "path": "src/components/temas/ThemeEditDrawer.tsx"
+    },
+    {
+      "name": "ThemeProvider",
+      "path": "src/components/theme/ThemeProvider.tsx"
+    },
+    {
+      "name": "ThemeToggle",
+      "path": "src/components/theme/ThemeToggle.tsx"
+    },
+    {
+      "name": "OptimizedImage",
+      "path": "src/components/ui/OptimizedImage.tsx"
+    }
+  ],
+  "scripts": [
+    "activate-magia-workflow.mjs",
+    "apply-buffer-and-prompt-updates.js",
+    "apply-buffer-supabase-and-prompt.js",
+    "apply-concurrency-and-audio-fix.js",
+    "apply-new-sofia-prompt.mjs",
+    "apply-propostas-b-c.mjs",
+    "apply_cascade_delete_migration.cjs",
+    "apply_manager_router.js",
+    "buffer_guardar.js",
+    "buffer_sou_a_ultima.js",
+    "check-alerts.js",
+    "check-bot-buffer-execs.js",
+    "check-burst-results.js",
+    "check-env.js",
+    "check-evolution-instances.mjs",
+    "check-execs.mjs",
+    "check-executions.mjs",
+    "check-fb-ads-chats.js",
+    "check-postgres-nodes.js",
+    "check-recent-sofia.mjs",
+    "check-supabase-pausa.js",
+    "check_all_fks.cjs",
+    "check_db_policies.cjs",
+    "check_fk_constraints.cjs",
+    "check_rentals_db.cjs",
+    "check_tables.cjs",
+    "check_top_themes.cjs",
+    "clean-prompt-placeholders.js",
+    "convert-all-postgres-to-supabase-rest.js",
+    "deploy-auto-greeting-permanent-fix.mjs",
+    "deploy-fixed-workflow.mjs",
+    "deploy-fixes.js",
+    "deploy-hotfix-auto-greeting-and-reset.mjs",
+    "deploy-magia-workflow.mjs",
+    "deploy-n8n-workflow.mjs",
+    "deploy-reset-memory.mjs",
+    "deploy-retention-fix.mjs",
+    "deploy-sofia-lead-retention.mjs",
+    "deploy-sofia-melhorias-5pontos.mjs",
+    "deploy-sofia-melhorias-completas.mjs",
+    "deploy-sofia-perfeita.mjs",
+    "deploy-sofia-preco-silencioso.mjs",
+    "deploy-vision-and-humanization.mjs",
+    "download-chat-zips.js",
+    "dump-full-messages.js",
+    "enable-realtime.mjs",
+    "export-both-chats.js",
+    "fetch-full-dialogue.js",
+    "find-all-cristiane.js",
+    "find-all-greetings.js",
+    "find_theme_refs.cjs",
+    "fix-debora-and-caio.mjs",
+    "fix-sofia-now.mjs",
+    "inspect-all-taize.js",
+    "inspect-andreia-execs.js",
+    "inspect-buffer-nodes-full.js",
+    "inspect-buffer-params.js",
+    "inspect-buffer-pipeline.js",
+    "inspect-conversas-problema.js",
+    "inspect-conversations-today.js",
+    "inspect-cristiane-detail.js",
+    "inspect-cristiane-laura.js",
+    "inspect-detail-51719.js",
+    "inspect-issues.js",
+    "inspect-pause-nodes.js",
+    "inspect-pre-audio.js",
+    "inspect-recent-15.js",
+    "inspect-recent-executions.js",
+    "inspect-reset.js",
+    "inspect-specific-execs.js",
+    "inspect-timeline.js",
+    "inspect-workflow-deep.mjs",
+    "inspect-workflow-nodes.js",
+    "inspect-workflow-paths.js",
+    "inspect_items_media.cjs",
+    "inspect_media.cjs",
+    "list-n8n-creds.mjs",
+    "list-n8n-workflows.mjs",
+    "list-recent-execs-detailed.js",
+    "migrate-base64-to-storage.cjs",
+    "migrate-supabase.mjs",
+    "migrate_columns.cjs",
+    "migrate_media_and_categories.cjs",
+    "prepara_entrada_sofia.js",
+    "rebuild-sofia-stable.mjs",
+    "reconnect-sofia-tools.mjs",
+    "restore-safe-flow.js",
+    "run-backup.js",
+    "run-sofia-simulations.mjs",
+    "seed_items_media.cjs",
+    "setup-hostgator.mjs",
+    "setup_storage_policy.cjs",
+    "sofia_consultar_disponibilidade.js",
+    "sofia_listar_temas.js",
+    "sync-docs.mjs",
+    "test-and-watch.mjs",
+    "test-api-tools.mjs",
+    "test-api.mjs",
+    "test-avail-live.mjs",
+    "test-burst-3-messages.mjs",
+    "test-concurrency-fixes.js",
+    "test-cristiane-full-turns.mjs",
+    "test-fresh-lead.mjs",
+    "test-if-condition.js",
+    "test-interpreter-rules.js",
+    "test-n8n-webhook.mjs",
+    "test-not-found-theme.mjs",
+    "test-openai-cred-node.js",
+    "test-pause-and-5days-expiration.mjs",
+    "test-prompt-simulation.mjs",
+    "test-rafaela-turns.mjs",
+    "test-real-openai-call.js",
+    "test-realtime-sync.mjs",
+    "test-renan-real.mjs",
+    "test-reproduce-screenshot.mjs",
+    "test-reset-regex.js",
+    "test-sim-prompt.mjs",
+    "test-simulation-taize-and-eliana.mjs",
+    "test-simulation-zeca.mjs",
+    "test-simulation-zumbilandia.mjs",
+    "test-smart-match.mjs",
+    "test-sofia-live.mjs",
+    "test-store-theme-deletion.mjs",
+    "test-theme-search-variations.mjs",
+    "test-tools-live.mjs",
+    "test-turn1-mesa.js",
+    "test-turn2-general.mjs",
+    "test-turn2-renan.mjs",
+    "test-turn2-simulation.mjs",
+    "test-turn2-zeca.js",
+    "test-turn2.mjs",
+    "test-turn3-spiderman.mjs",
+    "test-turn3-zeca.js",
+    "test-turn3.mjs",
+    "test-turn4-5-zeca.js",
+    "test-turn4-date.mjs",
+    "test-vision-taize-clean.js",
+    "test-vision-taize-real.js",
+    "test_batch_delete_persistence.cjs",
+    "test_delete_3_themes.cjs",
+    "test_delete_reproduce.cjs",
+    "test_delete_supabase_client.cjs",
+    "test_delete_theme.cjs",
+    "test_delete_without_rentals.cjs",
+    "test_fk_fix.cjs",
+    "test_manager_router_live.mjs",
+    "test_promo_persistence.cjs",
+    "trace-backwards.js",
+    "trace-chains.js",
+    "update-historical-rentals.mjs",
+    "update-magia-workflow.mjs",
+    "update-prompt-mestre-rules.js",
+    "update-sofia-prompt.mjs",
+    "verify-acceptance.mjs",
+    "verify-clientes-features.mjs",
+    "verify-orcamentos-uploads.mjs",
+    "verify-parity-mobile-realtime.mjs",
+    "verify-photo-upload-creation.mjs",
+    "verify-temas-features.mjs",
+    "verify-uploads-catalog-review.mjs"
+  ]
+}

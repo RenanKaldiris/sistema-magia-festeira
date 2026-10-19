@@ -169,6 +169,9 @@ export async function POST(request: NextRequest) {
           customer: result.customer,
           orderNumber: result.orderNumber || '0001',
           displayId: result.displayId || `#${result.orderNumber || '0001'}`,
+          contractUrl: result.contractUrl,
+          contractDriveId: result.contractDriveId,
+          calendarEventId: result.calendarEventId,
         },
       },
       201

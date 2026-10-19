@@ -22,7 +22,8 @@ import {
   Edit2,
   Pencil,
   ArrowRight,
-  RefreshCw,
+  FileText,
+  ExternalLink,
 } from 'lucide-react';
 import { RentalWithDetails, RentalStatus, Payment } from '@/types/database';
 import { store } from '@/lib/store';
@@ -35,6 +36,7 @@ interface RentalEditDrawerProps {
   onSave: (updated: RentalWithDetails) => void;
   onDelete?: (rentalId: string) => void;
   onOpenPaymentModal?: (rental: RentalWithDetails) => void;
+  onOpenContract?: (rental: RentalWithDetails) => void;
 }
 
 export function RentalEditDrawer({
@@ -43,6 +45,7 @@ export function RentalEditDrawer({
   onClose,
   onSave,
   onDelete,
+  onOpenContract,
 }: RentalEditDrawerProps) {
   const [status, setStatus] = useState<RentalStatus>('reservado');
   const [eventDate, setEventDate] = useState('');
@@ -368,6 +371,46 @@ export function RentalEditDrawer({
                 </span>
               </div>
             )}
+          </div>
+
+          {/* Card do Contrato Oficial */}
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-rose-500/10 via-purple-500/10 to-blue-500/10 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="p-2 rounded-xl bg-rose-600 text-white shrink-0">
+                <FileText className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">
+                  Contrato de Locação
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+                  {rental.contract_url ? 'Contrato gerado no Google Drive' : 'Ainda não gerado'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {rental.contract_url && (
+                <a
+                  href={rental.contract_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold inline-flex items-center gap-1 transition-colors"
+                >
+                  <span>Ver Doc</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+              {onOpenContract && (
+                <button
+                  type="button"
+                  onClick={() => onOpenContract(rental)}
+                  className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold inline-flex items-center gap-1 transition-colors shadow-xs cursor-pointer"
+                >
+                  <span>{rental.contract_url ? 'Personalizar / Regerar' : 'Gerar Contrato'}</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Tema & Detalhes do Acervo */}

@@ -220,6 +220,8 @@ export interface Rental {
   balance: number;
   delivery_location?: string | null;
   notes?: string | null;
+  contract_url?: string | null;
+  contract_drive_id?: string | null;
   created_at: string;
   updated_at: string;
 }
