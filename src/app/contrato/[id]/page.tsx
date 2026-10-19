@@ -17,6 +17,7 @@ import {
   CheckSquare,
   Square,
   ArrowLeft,
+  Sparkles,
 } from 'lucide-react';
 import { formatDateBR } from '@/lib/dateUtils';
 import Link from 'next/link';
@@ -69,13 +70,14 @@ export default function ContratoPublicoPage({
   const [contract, setContract] = useState<ContractData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
 
   useEffect(() => {
     async function loadContract() {
       try {
         setLoading(true);
-        // Tenta buscar diretamente pela rota pública do contrato
+        // Busca na rota pública oficial do contrato
         const res = await fetch(`/api/v1/contrato/${rentalId}`, {
           cache: 'no-store',
         });
@@ -86,7 +88,7 @@ export default function ContratoPublicoPage({
           return;
         }
 
-        // Fallback secundário
+        // Fallback resiliente
         const fallbackRes = await fetch(`/api/v1/rentals?limit=100`, {
           headers: {
             'x-api-key': 'mf_live_sec_magiafesteira2026',
@@ -144,7 +146,7 @@ export default function ContratoPublicoPage({
           customerCity: 'São Paulo',
           customerCep: null,
 
-          eventName: `Aniversário de ${found.customer_name?.split(' ')[0] || 'Cliente'}`,
+          eventName: `Aniversário de ${(found.customer_name || 'Cliente').split(' ')[0]}`,
           eventDate: found.event_date || found.pickup_date,
           eventTime,
           deliveryLocation: found.delivery_location || found.customer?.address || 'Salão de Festas / Domicílio',
@@ -182,9 +184,72 @@ export default function ContratoPublicoPage({
   const handleCopyLink = () => {
     if (typeof window !== 'undefined') {
       navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
     }
+  };
+
+  const handleCopyFullText = () => {
+    if (!contract) return;
+    const itemsText = contract.items.map((it) => `• ${it.quantity || 1}x ${it.description}`).join('\n');
+    const fullText = `MAGIA FESTEIRA - LOCAÇÃO PARA DECORAÇÕES DE FESTAS
+CNPJ: 51.492.381/0001-90 | WhatsApp Oficial: (11) 97782-3876
+Endereço: Rua Adolina, 102 - Vila Mazzei, São Paulo - SP
+
+----------------------------------------------------------------------------------------------------
+CONTRATO DE LOCAÇÃO DE KITS E MOBILIÁRIO PARA FESTAS
+Contrato nº LOC-2026-#${contract.orderNumber} | Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}
+----------------------------------------------------------------------------------------------------
+
+CLÁUSULA 1ª – DA QUALIFICAÇÃO DAS PARTES
+• LOCADORA: MAGIA FESTEIRA, inscrita no CNPJ sob o nº 51.492.381/0001-90, com sede na Rua Adolina, 102 - Vila Mazzei, São Paulo - SP, WhatsApp Oficial (11) 97782-3876.
+• CONTRATANTE: ${contract.customerName}, CPF: ${contract.customerDocument || '—'}, RG: ${contract.customerRg || '—'}, Celular/WhatsApp: ${contract.customerPhone}, residente e domiciliado(a) em: ${contract.customerAddress || 'São Paulo - SP'}.
+
+CLÁUSULA 2ª – DO EVENTO E LOCAL DA CELEBRAÇÃO
+• Evento / Celebração: ${contract.eventName || 'Festa Comemorativa'}
+• Data do Evento: ${formatDateBR(contract.eventDate)} | Horário da Festa: ${contract.eventTime || 'A combinar'}
+• Local da Realização: ${contract.deliveryLocation || 'Domicílio do Contratante'}
+
+CLÁUSULA 3ª – DO CRONOGRAMA DE RETIRADA E DEVOLUÇÃO
+• Data da Retirada: ${formatDateBR(contract.pickupDate)} | Horário: ${contract.pickupTime || '10:00'}
+• Data da Devolução: ${formatDateBR(contract.returnDate)} | Horário Limite: ${contract.returnTime || 'Até às 17h00'}
+• Endereço de Coleta e Devolução: Rua Adolina, 102 - Vila Mazzei, São Paulo - SP.
+
+CLÁUSULA 4ª – DO VALOR E CONDIÇÕES DE PAGAMENTO
+• Tema Principal: ${contract.themeName}
+• Valor Total Contratado: R$ ${contract.total.toFixed(2).replace('.', ',')}
+• Sinal Pago na Reserva: R$ ${contract.paid.toFixed(2).replace('.', ',')}
+• Saldo Devedor Restante: R$ ${contract.balance.toFixed(2).replace('.', ',')}
+• Condição de Pagamento: ${contract.paymentTerms || contract.paymentMethod?.toUpperCase() || 'PIX'}
+*A liberação dos itens para saída fica condicionada à quitação integral do saldo devedor até o momento da retirada.*
+
+CLÁUSULA 5ª – DO ACERVO LOCADO (ITENS CONTRATADOS)
+${itemsText}
+
+CLÁUSULA 6ª – DAS OBSERVAÇÕES ESPECÍFICAS
+${contract.notes || 'Nenhuma observação operacional adicional registrada.'}
+
+CLÁUSULA 7ª – DAS CONDIÇÕES GERAIS, CONSERVAÇÃO E MULTAS
+7.1. CUIDADOS COM O ACERVO: É estritamente proibido o uso de cola quente, fitas adesivas de alta aderência (como silver tape ou dupla face agressiva), tachas ou grampos sobre tecidos sublimados, cilindros e painéis. É proibida a queima de velas ou exposição a chamas e intempéries (chuva/umidade) junto às peças.
+7.2. TAXA DE HIGIENIZAÇÃO: Todos os itens devem retornar devidamente limpos e em suas embalagens originais. Para cada item devolvido sujo ou com resíduos, será cobrada a taxa de R$ 10,00 para higienização especializada.
+7.3. AVARIAS E REPOSIÇÃO: Em caso de quebra, rasgo, manchas irreversíveis ou extravio de qualquer peça, o CONTRATANTE indenizará a LOCADORA pelo valor de mercado para reposição imediata da peça idêntica nova, acrescido de frete, no prazo de até 48 horas.
+7.4. MULTA POR ATRASO NA DEVOLUÇÃO: Havendo atraso na devolução além da data e horário limite estipulados na Cláusula 3ª, incidirá multa de R$ 60,00 por dia de atraso, sem prejuízo da cobrança de diárias adicionais e ressarcimento de eventuais prejuízos causados à próxima locação do acervo.
+7.5. POLÍTICA DE CANCELAMENTO / DESISTÊNCIA: Em caso de cancelamento da locação por parte do CONTRATANTE com menos de 15 (quinze) dias de antecedência da data da festa, o valor pago a título de sinal (reserva de agenda) NÃO será restituído, servindo como compensação à LOCADORA pela indisponibilização da data a outros clientes.
+7.6. CONFERÊNCIA E ITENS ESQUECIDOS: A conferência do acervo ocorre no ato da entrega/retirada e na devolução. Qualquer item de propriedade do cliente esquecido com a empresa deverá ser retirado em até 15 dias, sob pena de descarte.
+7.7. VALIDADE DO ACEITE DIGITAL: As partes reconhecem expressamente que o recebimento deste contrato por WhatsApp/meio eletrônico, somado ao pagamento do sinal ou retirada do acervo, constitui anuência e aceite pleno e irretratável de todas as cláusulas deste contrato, nos termos da Lei Federal nº 14.063/2020 e do Art. 441 do Código Civil Brasileiro.
+
+São Paulo, ${new Date().toLocaleDateString('pt-BR')}
+
+_____________________________________________        _____________________________________________
+CONTRATANTE: ${contract.customerName}                LOCADORA: Magia Festeira Decorações
+CPF: ${contract.customerDocument || '—'}             CNPJ: 51.492.381/0001-90
+
+[ ] Conferido na Retirada por: ___________________   Data: ___/___/2026
+[ ] Conferido na Devolução por: __________________   Data: ___/___/2026 - Avarias: (  ) Sim  (  ) Não
+`;
+    navigator.clipboard.writeText(fullText);
+    setCopiedText(true);
+    setTimeout(() => setCopiedText(false), 2500);
   };
 
   if (loading) {
@@ -226,12 +291,18 @@ export default function ContratoPublicoPage({
   const cleanPhone = (contract.customerPhone || '').replace(/\D/g, '');
   const phoneWithDDI = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
   const whatsappUrl = `https://wa.me/${phoneWithDDI}?text=${encodeURIComponent(
-    `Olá, ${contract.customerName}! 🎈 Segue seu Contrato Oficial de Locação da Magia Festeira para a festa do tema *${contract.themeName}*:\n\n📄 Acesse seu contrato em PDF aqui:\n${typeof window !== 'undefined' ? window.location.href : ''}\n\nQualquer dúvida estamos à disposição!`
+    `Olá, ${contract.customerName}! 🎈 Segue seu Contrato Oficial de Locação da Magia Festeira para a festa do tema *${contract.themeName}*:\n\n📄 *Acesse e salve seu contrato oficial em PDF aqui:*\n${typeof window !== 'undefined' ? window.location.href : ''}\n\nQualquer dúvida estamos à sua inteira disposição!`
   )}`;
 
+  const formattedDateToday = new Date().toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+
   return (
-    <div className="min-h-screen bg-slate-200 dark:bg-slate-950 py-4 sm:py-8 px-2 sm:px-4 font-sans text-slate-800 dark:text-slate-200 print:p-0 print:bg-white print:text-black">
-      {/* Estilos específicos para impressão e geração de PDF */}
+    <div className="min-h-screen bg-slate-200 dark:bg-slate-950 py-4 sm:py-8 px-2 sm:px-4 font-sans text-slate-900 dark:text-slate-100 print:p-0 print:bg-white print:text-black">
+      {/* Estilos específicos para impressão e geração perfeita de PDF A4 */}
       <style jsx global>{`
         @media print {
           body {
@@ -239,6 +310,7 @@ export default function ContratoPublicoPage({
             color: #000000 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            font-size: 11pt !important;
           }
           .no-print {
             display: none !important;
@@ -250,11 +322,11 @@ export default function ContratoPublicoPage({
             margin: 0 !important;
             max-width: 100% !important;
             width: 100% !important;
-            padding: 8mm 10mm !important;
+            padding: 0 !important;
           }
           @page {
-            size: A4;
-            margin: 8mm;
+            size: A4 portrait;
+            margin: 12mm 15mm;
           }
         }
       `}</style>
@@ -266,12 +338,17 @@ export default function ContratoPublicoPage({
             MF
           </div>
           <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
+                LOC-2026-#{contract.orderNumber}
+              </span>
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                Modelo Oficial Blindado
+              </span>
+            </div>
             <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
-              Contrato Oficial de Locação #{contract.orderNumber}
+              Contrato Oficial de Locação • {contract.customerName}
             </h1>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
-              {contract.themeName} • {contract.customerName}
-            </span>
           </div>
         </div>
 
@@ -280,6 +357,7 @@ export default function ContratoPublicoPage({
             type="button"
             onClick={handlePrint}
             className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            title="Abrir diálogo de impressão / Salvar como PDF"
           >
             <Printer className="w-4 h-4" />
             <span>Imprimir / Salvar PDF</span>
@@ -291,6 +369,7 @@ export default function ContratoPublicoPage({
               target="_blank"
               rel="noopener noreferrer"
               className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              title="Compartilhar no WhatsApp do cliente"
             >
               <MessageCircle className="w-4 h-4" />
               <span>WhatsApp</span>
@@ -299,271 +378,257 @@ export default function ContratoPublicoPage({
 
           <button
             type="button"
+            onClick={handleCopyFullText}
+            className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Copiar texto formal completo com todas as cláusulas"
+          >
+            {copiedText ? <Check className="w-4 h-4 text-emerald-600" /> : <FileText className="w-4 h-4" />}
+            <span>{copiedText ? 'Texto Copiado!' : 'Copiar Texto'}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={handleCopyLink}
             className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Copiar link do contrato"
           >
-            {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-            <span>{copied ? 'Link Copiado!' : 'Copiar Link'}</span>
+            {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+            <span>{copiedLink ? 'Link Copiado!' : 'Copiar Link'}</span>
           </button>
         </div>
       </div>
 
-      {/* FOLHA DO CONTRATO (FOLHA A4 COM FORMATO OFICIAL) */}
-      <div className="contract-sheet max-w-4xl mx-auto bg-white text-slate-900 p-6 sm:p-10 rounded-2xl shadow-xl border border-slate-200 space-y-5">
+      {/* FOLHA DO CONTRATO - FORMATO OFICIAL A4 JURÍDICO */}
+      <div className="contract-sheet max-w-4xl mx-auto bg-white text-slate-900 p-8 sm:p-12 rounded-xl shadow-xl border border-slate-300 font-serif leading-relaxed space-y-6">
         
-        {/* Cabeçalho Oficial */}
-        <div className="border-b-2 border-slate-900 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-center sm:text-left">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-rose-600 uppercase">
-              MAGIA FESTEIRA
-            </h1>
-            <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              LOCAÇÃO PARA DECORAÇÕES DE FESTAS E EVENTOS
+        {/* CABEÇALHO OFICIAL COM TIMBRE DA MAGIA FESTEIRA */}
+        <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-wide text-rose-600 uppercase font-sans">
+            MAGIA FESTEIRA
+          </h1>
+          <p className="text-xs font-bold text-slate-800 tracking-wider uppercase font-sans">
+            LOCAÇÃO PARA DECORAÇÕES DE FESTAS E EVENTOS
+          </p>
+          <p className="text-[11px] text-slate-600 font-sans">
+            CNPJ: <strong>51.492.381/0001-90</strong> | WhatsApp Oficial: <strong>(11) 97782-3876</strong>
+          </p>
+          <p className="text-[11px] text-slate-600 font-sans">
+            Endereço de Retirada e Devolução: Rua Adolina, 102 - Vila Mazzei, São Paulo - SP
+          </p>
+
+          <div className="pt-2">
+            <div className="inline-block border-y-2 border-slate-900 py-1.5 px-6 my-1">
+              <h2 className="text-sm sm:text-base font-extrabold uppercase tracking-wide text-slate-900 font-sans">
+                CONTRATO DE LOCAÇÃO DE KITS E MOBILIÁRIO PARA FESTAS
+              </h2>
+            </div>
+            <div className="text-xs text-slate-600 font-sans flex items-center justify-center gap-4 mt-1">
+              <span><strong>Contrato nº:</strong> LOC-2026-#{contract.orderNumber}</span>
+              <span>•</span>
+              <span><strong>Data de Emissão:</strong> {new Date().toLocaleDateString('pt-BR')}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* CORPO DO CONTRATO COM AS 7 CLÁUSULAS FORMAIS COMPLETAS */}
+        <div className="space-y-5 text-[12px] sm:text-[13px] text-slate-800 font-sans text-justify leading-relaxed">
+          
+          {/* CLÁUSULA 1ª */}
+          <div className="space-y-1">
+            <h3 className="font-extrabold text-slate-900 uppercase tracking-wide text-[12px] border-b border-slate-300 pb-0.5">
+              CLÁUSULA 1ª – DA QUALIFICAÇÃO DAS PARTES
+            </h3>
+            <p>
+              <strong>LOCADORA:</strong> <strong>MAGIA FESTEIRA</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº <strong>51.492.381/0001-90</strong>, com sede e espaço de atendimento na Rua Adolina, 102 - Vila Mazzei, São Paulo - SP, WhatsApp Oficial (11) 97782-3876.
             </p>
-            <p className="text-[11px] text-slate-600 mt-0.5">
-              CNPJ: 51.492.381/0001-90 | WhatsApp Oficial: (11) 97782-3876
-            </p>
-            <p className="text-[11px] text-slate-600">
-              Endereço: Rua Adolina, 102 - Vila Mazzei, São Paulo - SP
+            <p>
+              <strong>CONTRATANTE:</strong> <strong>{contract.customerName}</strong>, inscrito(a) no CPF sob o nº <strong>{contract.customerDocument || '—'}</strong>, RG: <strong>{contract.customerRg || '—'}</strong>, Telefone/WhatsApp: <strong>{contract.customerPhone}</strong>, com endereço residencial em: <strong>{contract.customerAddress || 'São Paulo - SP'}</strong>.
             </p>
           </div>
 
-          <div className="sm:text-right shrink-0">
-            <div className="inline-block px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-300 text-slate-900">
-              <span className="text-[10px] uppercase font-bold text-slate-500 block">Contrato Nº</span>
-              <span className="text-base font-mono font-black text-rose-600">
-                LOC-2026-#{contract.orderNumber}
+          {/* CLÁUSULA 2ª */}
+          <div className="space-y-1">
+            <h3 className="font-extrabold text-slate-900 uppercase tracking-wide text-[12px] border-b border-slate-300 pb-0.5">
+              CLÁUSULA 2ª – DO EVENTO E LOCAL DA CELEBRAÇÃO
+            </h3>
+            <p>
+              O presente contrato tem como finalidade a locação temporária do mobiliário e decoração destinados exclusivamente à realização da celebração denominada: <strong>{contract.eventName || 'Festa Comemorativa'}</strong>, a realizar-se na data de <strong>{formatDateBR(contract.eventDate)}</strong>, no horário estimado de <strong>{contract.eventTime || '13h às 20h'}</strong>, tendo como local do evento o endereço: <strong>{contract.deliveryLocation || 'Salão de Festas / Domicílio do Contratante'}</strong>.
+            </p>
+          </div>
+
+          {/* CLÁUSULA 3ª */}
+          <div className="space-y-1">
+            <h3 className="font-extrabold text-slate-900 uppercase tracking-wide text-[12px] border-b border-slate-300 pb-0.5">
+              CLÁUSULA 3ª – DO CRONOGRAMA DE RETIRADA E DEVOLUÇÃO
+            </h3>
+            <p>
+              As partes acordam expressamente as seguintes datas e limites operacionais para manuseio do acervo:
+            </p>
+            <ul className="list-disc pl-5 space-y-0.5">
+              <li>
+                <strong>Data da Retirada:</strong> <strong>{formatDateBR(contract.pickupDate)}</strong> (a partir das {contract.pickupTime || '10:00'}, mediante prévio alinhamento com a LOCADORA).
+              </li>
+              <li>
+                <strong>Data da Devolução:</strong> <strong>{formatDateBR(contract.returnDate)}</strong> (impreterivelmente até o horário limite de <strong>{contract.returnTime || '17h00'}</strong>).
+              </li>
+              <li>
+                <strong>Endereço de Coleta e Devolução:</strong> Rua Adolina, 102 - Vila Mazzei, São Paulo - SP.
+              </li>
+            </ul>
+          </div>
+
+          {/* CLÁUSULA 4ª */}
+          <div className="space-y-1">
+            <h3 className="font-extrabold text-slate-900 uppercase tracking-wide text-[12px] border-b border-slate-300 pb-0.5">
+              CLÁUSULA 4ª – DO VALOR E CONDIÇÕES DE PAGAMENTO
+            </h3>
+            <p>
+              Pela locação dos bens descritos na Cláusula 5ª no tema <strong>{contract.themeName}</strong>, o CONTRATANTE pagará à LOCADORA o valor total de <strong>R$ {contract.total.toFixed(2).replace('.', ',')}</strong>, distribuído na seguinte forma:
+            </p>
+            <div className="grid grid-cols-3 gap-2 py-1 text-center font-sans">
+              <div className="border border-slate-300 p-1.5 rounded bg-slate-50">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Valor Total</span>
+                <span className="text-xs font-black text-slate-900">R$ {contract.total.toFixed(2).replace('.', ',')}</span>
+              </div>
+              <div className="border border-emerald-300 p-1.5 rounded bg-emerald-50">
+                <span className="text-[10px] uppercase font-bold text-emerald-700 block">Sinal na Reserva (Pago)</span>
+                <span className="text-xs font-black text-emerald-700">R$ {contract.paid.toFixed(2).replace('.', ',')}</span>
+              </div>
+              <div className="border border-rose-300 p-1.5 rounded bg-rose-50">
+                <span className="text-[10px] uppercase font-bold text-rose-700 block">Saldo Restante</span>
+                <span className="text-xs font-black text-rose-700">R$ {contract.balance.toFixed(2).replace('.', ',')}</span>
+              </div>
+            </div>
+            <p>
+              <strong>Condição e Meio de Pagamento:</strong> {contract.paymentTerms || contract.paymentMethod?.toUpperCase() || 'PIX'}.
+            </p>
+            <p className="font-bold text-rose-700 bg-rose-50/80 p-1.5 rounded border border-rose-200">
+              * PARÁGRAFO ÚNICO: A liberação do acervo para saída do galpão fica expressa e obrigatoriamente condicionada à quitação integral do saldo remanescente até o momento exato da retirada.
+            </p>
+          </div>
+
+          {/* CLÁUSULA 5ª */}
+          <div className="space-y-1.5">
+            <h3 className="font-extrabold text-slate-900 uppercase tracking-wide text-[12px] border-b border-slate-300 pb-0.5 flex items-center justify-between">
+              <span>CLÁUSULA 5ª – DO ACERVO LOCADO (ITENS CONTRATADOS)</span>
+              <span className="text-[10px] font-normal text-slate-500 lowercase">
+                (conferir na entrega e na devolução)
               </span>
+            </h3>
+            <p>
+              Compõem a presente locação os itens relacionados a seguir, devendo todos ser devolvidos no mesmo estado de conservação em que foram recebidos:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 pt-1 font-sans text-xs">
+              {contract.items.map((it, idx) => (
+                <div key={idx} className="flex items-center gap-2 py-0.5 border-b border-slate-100">
+                  <span className="w-3.5 h-3.5 border border-slate-500 rounded-xs shrink-0 flex items-center justify-center text-[9px] text-slate-600">
+                    ☐
+                  </span>
+                  <span className="font-medium text-slate-900">
+                    {it.quantity && it.quantity > 1 ? `${it.quantity}x ` : ''}{it.description}
+                  </span>
+                </div>
+              ))}
             </div>
-            <span className="text-[11px] text-slate-500 block mt-1">
-              Emissão: {new Date().toLocaleDateString('pt-BR')}
-            </span>
           </div>
+
+          {/* CLÁUSULA 6ª */}
+          {contract.notes && (
+            <div className="space-y-1">
+              <h3 className="font-extrabold text-slate-900 uppercase tracking-wide text-[12px] border-b border-slate-300 pb-0.5">
+                CLÁUSULA 6ª – DAS OBSERVAÇÕES ESPECÍFICAS
+              </h3>
+              <p className="whitespace-pre-wrap text-slate-700">
+                {contract.notes}
+              </p>
+            </div>
+          )}
+
+          {/* CLÁUSULA 7ª */}
+          <div className="space-y-2">
+            <h3 className="font-extrabold text-slate-900 uppercase tracking-wide text-[12px] border-b border-slate-300 pb-0.5">
+              CLÁUSULA 7ª – DAS CONDIÇÕES GERAIS, CONSERVAÇÃO E MULTAS
+            </h3>
+            
+            <div className="space-y-1.5 text-[11.5px] sm:text-[12px] text-slate-800 leading-normal">
+              <p>
+                <strong>7.1. CUIDADOS COM O ACERVO:</strong> É estritamente proibido o uso de cola quente, fitas adesivas de alta fixação (tais como silver tape ou fita dupla face agressiva), tachas ou grampos sobre os tecidos sublimados, cilindros e painéis. É expressamente proibida a exposição das peças à chuva, umidade excessiva e chamas de velas acesas próximas às estruturas.
+              </p>
+              
+              <p>
+                <strong>7.2. TAXA DE HIGIENIZAÇÃO:</strong> Todos os itens locados devem retornar à LOCADORA devidamente limpos, secos e acondicionados em suas respectivas embalagens originais. Para cada item devolvido com resíduos, manchas ou sujidades que demandem lavagem química especializada, será cobrada a taxa de <strong>R$ 10,00 (dez reais)</strong> por peça.
+              </p>
+              
+              <p>
+                <strong>7.3. AVARIAS E REPOSIÇÃO:</strong> Em caso de avaria, quebra, perfuração, rasgo em tecido, queima ou extravio total/parcial de qualquer item do acervo, o CONTRATANTE indenizará a LOCADORA pelo valor de reposição de mercado de peça idêntica e nova, acrescido das despesas de frete para entrega imediata, devendo o pagamento ser liquidado no prazo improrrogável de até <strong>48 (quarenta e oito) horas</strong> após a conferência de retorno.
+              </p>
+              
+              <p>
+                <strong>7.4. MULTA POR ATRASO NA DEVOLUÇÃO:</strong> O atraso na devolução do acervo após a data e horário limite estipulados na Cláusula 3ª acarretará a incidência automática de multa penal compensatória de <strong>R$ 60,00 (sessenta reais) por dia de atraso</strong>, sem prejuízo da cobrança do valor das diárias adicionais e das perdas decorrentes de eventuais cancelamentos de reservas subsequentes do mesmo tema.
+              </p>
+              
+              <p>
+                <strong>7.5. POLÍTICA DE CANCELAMENTO / DESISTÊNCIA:</strong> Em razão do bloqueio e reserva exclusiva do acervo na data solicitada, caso ocorra o cancelamento ou desistência por iniciativa do CONTRATANTE com antecedência inferior a 15 (quinze) dias da data da celebração, o valor pago a título de sinal <strong>NÃO será restituído</strong>, sendo integralmente retido pela LOCADORA a título de taxa indenizatória de ocupação de agenda.
+              </p>
+              
+              <p>
+                <strong>7.6. CONFERÊNCIA E ITENS ESQUECIDOS:</strong> A conferência de entrada e saída é de responsabilidade mútua das partes. Qualquer objeto, adorno ou pertence pessoal de propriedade do CONTRATANTE esquecido nas instalações da LOCADORA ou junto às embalagens deverá ser retirado no prazo de até 15 (quinze) dias, findo o qual poderá ser descartado sem direito a qualquer indenização.
+              </p>
+              
+              <p>
+                <strong>7.7. VALIDADE DO ACEITE DIGITAL:</strong> Em estrita observância à Lei Federal nº 14.063/2020 e ao Art. 441 do Código Civil Brasileiro, as partes pactuam que o recebimento deste contrato por meio eletrônico (WhatsApp ou e-mail), acompanhado da confirmação de pagamento do sinal ou da retirada física do acervo, constitui anuência e aceite tácito, irrevogável e irretratável de todas as cláusulas e condições nele exaradas.
+              </p>
+            </div>
+          </div>
+
         </div>
 
-        {/* 1. DADOS DO CONTRATANTE */}
-        <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5 text-xs">
-          <span className="font-black text-slate-900 uppercase tracking-wider text-[11px] block border-b border-slate-200 pb-1">
-            1. DADOS DO(A) CONTRATANTE
-          </span>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 pt-1">
-            <div>
-              <span className="font-bold text-slate-600">Nome: </span>
-              <span className="font-semibold text-slate-900">{contract.customerName}</span>
-            </div>
-            <div>
-              <span className="font-bold text-slate-600">WhatsApp / Celular: </span>
-              <span className="font-semibold text-slate-900">{contract.customerPhone}</span>
-            </div>
-            <div>
-              <span className="font-bold text-slate-600">CPF: </span>
-              <span className="font-semibold text-slate-900">{contract.customerDocument || '—'}</span>
-            </div>
-            <div>
-              <span className="font-bold text-slate-600">RG: </span>
-              <span className="font-semibold text-slate-900">{contract.customerRg || '—'}</span>
-            </div>
-            <div className="sm:col-span-2">
-              <span className="font-bold text-slate-600">Endereço Residencial: </span>
-              <span className="font-semibold text-slate-900">
-                {contract.customerAddress || 'Rua Adolina, Vila Mazzei'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* 2. DADOS DO EVENTO & CRONOGRAMA */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          {/* Bloco Evento */}
-          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1">
-            <span className="font-black text-slate-900 uppercase tracking-wider text-[11px] block border-b border-slate-200 pb-1">
-              2. DADOS DO EVENTO
-            </span>
-            <div className="pt-1 space-y-1">
-              <div>
-                <span className="font-bold text-slate-600">Evento: </span>
-                <span className="font-semibold">{contract.eventName}</span>
-              </div>
-              <div>
-                <span className="font-bold text-slate-600">Data da Festa: </span>
-                <span className="font-bold text-rose-600">{formatDateBR(contract.eventDate)}</span>
-                <span className="text-slate-500 ml-1">({contract.eventTime})</span>
-              </div>
-              <div>
-                <span className="font-bold text-slate-600">Local da Festa: </span>
-                <span className="font-semibold">{contract.deliveryLocation}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Bloco Cronograma de Retirada e Devolução */}
-          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1">
-            <span className="font-black text-slate-900 uppercase tracking-wider text-[11px] block border-b border-slate-200 pb-1">
-              3. RETIRADA E DEVOLUÇÃO
-            </span>
-            <div className="pt-1 space-y-1">
-              <div>
-                <span className="font-bold text-slate-600">Data da Retirada: </span>
-                <span className="font-bold text-slate-900">{formatDateBR(contract.pickupDate)}</span>
-                <span className="text-slate-500 ml-1">({contract.pickupTime})</span>
-              </div>
-              <div>
-                <span className="font-bold text-slate-600">Data da Devolução: </span>
-                <span className="font-bold text-rose-600">{formatDateBR(contract.returnDate)}</span>
-                <span className="text-slate-500 ml-1 font-semibold">({contract.returnTime})</span>
-              </div>
-              <div className="text-[11px] text-slate-600">
-                <span className="font-bold">Endereço de Coleta: </span>
-                <span>Rua Adolina, 102 - Vila Mazzei, São Paulo - SP</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 4. DADOS DA LOCAÇÃO & VALORES */}
-        <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs">
-          <span className="font-black text-slate-900 uppercase tracking-wider text-[11px] block border-b border-slate-200 pb-1">
-            4. DADOS DA LOCAÇÃO & VALORES
-          </span>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center">
-            <div className="p-2 bg-white rounded-lg border border-slate-200">
-              <span className="text-[10px] uppercase font-bold text-slate-500 block">Tema Principal</span>
-              <span className="text-xs font-black text-slate-900 truncate block">{contract.themeName}</span>
-            </div>
-            <div className="p-2 bg-white rounded-lg border border-slate-200">
-              <span className="text-[10px] uppercase font-bold text-slate-500 block">Valor Total</span>
-              <span className="text-xs font-black text-slate-900 block">
-                R$ {contract.total.toFixed(2).replace('.', ',')}
-              </span>
-            </div>
-            <div className="p-2 bg-white rounded-lg border border-slate-200">
-              <span className="text-[10px] uppercase font-bold text-emerald-600 block">Sinal Pago</span>
-              <span className="text-xs font-black text-emerald-600 block">
-                R$ {contract.paid.toFixed(2).replace('.', ',')}
-              </span>
-            </div>
-            <div className="p-2 bg-rose-50 rounded-lg border border-rose-200">
-              <span className="text-[10px] uppercase font-bold text-rose-600 block">Saldo na Retirada</span>
-              <span className="text-xs font-black text-rose-600 block">
-                R$ {contract.balance.toFixed(2).replace('.', ',')}
-              </span>
-            </div>
-          </div>
-
-          <div className="pt-1 flex flex-col sm:flex-row justify-between gap-1 text-[11px] text-slate-700">
-            <div>
-              <span className="font-bold">Forma / Condição de Pagamento: </span>
-              <span className="font-semibold">{contract.paymentTerms}</span>
-            </div>
-            <div className="text-rose-700 font-bold">
-              * A retirada dos itens fica condicionada à quitação integral do saldo restante.
-            </div>
-          </div>
-        </div>
-
-        {/* 5. ITENS LOCADOS (O PADRÃO OFICIAL COM AS 9 LINHAS INDIVIDUAIS) */}
-        <div className="p-4 rounded-xl border border-slate-300 space-y-2">
-          <span className="font-black text-slate-900 uppercase tracking-wider text-xs block border-b border-slate-200 pb-1.5 flex items-center justify-between">
-            <span>5. ITENS LOCADOS (ACERVO CONTRATADO)</span>
-            <span className="text-[10px] font-normal text-slate-500 uppercase">
-              Conferir cada item no ato da entrega e devolução
-            </span>
-          </span>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 pt-1 text-xs">
-            {contract.items.map((it, idx) => (
-              <div key={idx} className="flex items-center gap-2 py-0.5 border-b border-slate-100 last:border-b-0">
-                <span className="w-3.5 h-3.5 border border-slate-400 rounded-xs shrink-0 flex items-center justify-center text-[9px] text-slate-400">
-                  ☐
-                </span>
-                <span className="font-medium text-slate-900">
-                  {it.description}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 6. OBSERVAÇÕES */}
-        {contract.notes && (
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
-            <span className="font-bold text-slate-800 uppercase text-[10px] block">
-              6. OBSERVAÇÕES ESPECÍFICAS
-            </span>
-            <p className="text-slate-700 whitespace-pre-wrap">{contract.notes}</p>
-          </div>
-        )}
-
-        {/* 7. CONDIÇÕES GERAIS, CONSERVAÇÃO E RESPONSABILIDADES */}
-        <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200 text-[10.5px] leading-relaxed text-slate-700 space-y-1.5">
-          <span className="font-black text-slate-900 uppercase tracking-wider text-[11px] block border-b border-slate-200 pb-1">
-            7. CONDIÇÕES GERAIS, CONSERVAÇÃO E MULTAS
-          </span>
-          <ul className="list-disc pl-4 space-y-1 pt-0.5">
-            <li>
-              <strong>CUIDADOS COM O ACERVO:</strong> É estritamente proibido o uso de cola quente, fita crepe, durex ou adesivos diretamente nos tecidos, painéis e cilindros. Proibido exposição à chuva, umidade e velas acesas próximas às peças.
-            </li>
-            <li>
-              <strong>CONDIÇÕES DE RETORNO:</strong> Todos os itens locados devem retornar à empresa inteiros, limpos e sem qualquer defeito em suas embalagens originais.
-            </li>
-            <li>
-              <strong>TAXA DE HIGIENIZAÇÃO:</strong> Será cobrada a taxa de <strong>R$ 10,00</strong> por cada item entregue sujo.
-            </li>
-            <li>
-              <strong>DEVOLUÇÃO & ATRASOS:</strong> A devolução deverá ser realizada impreterivelmente na data estipulada até o horário limite, no endereço: Rua Adolina, 102 - Vila Mazzei - SP. Não havendo devolução no período, será cobrada multa de <strong>R$ 60,00 por dia de atraso</strong>.
-            </li>
-            <li>
-              <strong>POLÍTICA DE CANCELAMENTO:</strong> Em caso de desistência pelo cliente com menos de 15 dias da data da festa, o sinal pago na reserva não será restituído para cobrir custos de indisponibilização da agenda.
-            </li>
-            <li>
-              <strong>ITENS ESQUECIDOS:</strong> O cliente está ciente dos itens retirados; qualquer item de sua propriedade esquecido na empresa será de sua inteira responsabilidade.
-            </li>
-            <li>
-              <strong>ACEITE DIGITAL:</strong> O envio deste documento por meio eletrônico (WhatsApp) somado ao pagamento do sinal constitui aceite pleno de todas as cláusulas deste contrato.
-            </li>
-          </ul>
-        </div>
-
-        {/* Data e Assinaturas */}
-        <div className="pt-6 text-xs space-y-6">
-          <div className="text-right text-slate-600 font-medium">
-            São Paulo, {new Date().toLocaleDateString('pt-BR')}
+        {/* DATA E ASSINATURAS */}
+        <div className="pt-6 space-y-6 text-xs font-sans">
+          <div className="text-right text-slate-700 font-medium">
+            São Paulo, {formattedDateToday}.
           </div>
 
           <div className="grid grid-cols-2 gap-8 pt-4">
             <div className="text-center space-y-1">
-              <div className="border-t border-slate-800 pt-1.5 font-bold text-slate-900">
+              <div className="border-t-2 border-slate-900 pt-1.5 font-bold text-slate-900 uppercase">
                 {contract.customerName}
               </div>
-              <span className="text-[10px] text-slate-500 uppercase block">
+              <span className="text-[10px] text-slate-600 block">
                 CONTRATANTE • CPF: {contract.customerDocument || '—'}
               </span>
             </div>
 
             <div className="text-center space-y-1">
-              <div className="border-t border-slate-800 pt-1.5 font-bold text-slate-900">
+              <div className="border-t-2 border-slate-900 pt-1.5 font-bold text-slate-900 uppercase">
                 Magia Festeira Decorações
               </div>
-              <span className="text-[10px] text-slate-500 uppercase block">
+              <span className="text-[10px] text-slate-600 block">
                 LOCADORA • CNPJ: 51.492.381/0001-90
               </span>
             </div>
           </div>
 
-          {/* Checklist de Balcão */}
-          <div className="p-3 bg-slate-100 rounded-xl border border-slate-300 flex items-center justify-around text-center text-xs font-bold text-slate-800">
-            <span className="inline-flex items-center gap-1.5">
-              <Square className="w-3.5 h-3.5 text-slate-500" />
-              <span>Conferido na Saída</span>
+          {/* CHECKLIST E PROTOCOLO DE CONFERÊNCIA DE BALCÃO */}
+          <div className="p-3.5 bg-slate-50 border-2 border-slate-300 rounded-lg space-y-2 text-[11px] text-slate-800">
+            <span className="font-black uppercase tracking-wider block text-[10px] border-b border-slate-300 pb-1 text-center">
+              PROTOCOLO DE CONFERÊNCIA DE BALCÃO
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Square className="w-3.5 h-3.5 text-slate-500" />
-              <span>Retirado / Entregue</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Square className="w-3.5 h-3.5 text-slate-500" />
-              <span>Devolvido sem Avarias</span>
-            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="border border-slate-300 p-2 rounded bg-white space-y-1">
+                <span className="font-bold block text-slate-900">1. CONFERÊNCIA NA RETIRADA (SAÍDA):</span>
+                <p className="text-[10px] text-slate-600">[ ] Itens completos conferidos sem avarias prévias</p>
+                <p className="text-[10px] text-slate-600">Responsável: _________________________________</p>
+                <p className="text-[10px] text-slate-600">Data da Saída: ___/___/2026</p>
+              </div>
+
+              <div className="border border-slate-300 p-2 rounded bg-white space-y-1">
+                <span className="font-bold block text-slate-900">2. CONFERÊNCIA NA DEVOLUÇÃO (RETORNO):</span>
+                <p className="text-[10px] text-slate-600">[ ] Itens recebidos e limpos • Avarias: (  ) Sim  (  ) Não</p>
+                <p className="text-[10px] text-slate-600">Responsável: _________________________________</p>
+                <p className="text-[10px] text-slate-600">Data de Retorno: ___/___/2026</p>
+              </div>
+            </div>
           </div>
         </div>
 

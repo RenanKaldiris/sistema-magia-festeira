@@ -131,44 +131,42 @@ Endereço de Retirada/Devolução: Rua Adolina, 102 - Vila Mazzei, São Paulo - 
 **Contrato nº** ${orderNum} | **Data de Emissão:** ${dateToday}
 ----------------------------------------------------------------------------------------------------
 
-**1. DADOS DO(A) CONTRATANTE**
-• Nome: ${data.customer.name}
-• CPF: ${data.customer.document || '—'} | RG: ${data.customer.rg || '—'}
-• WhatsApp / Celular: ${data.customer.phone}
-• Endereço Residencial: ${data.customer.address || '—'}, ${data.customer.neighborhood || '—'} - ${data.customer.city || 'São Paulo'} | CEP: ${data.customer.cep || '—'}
+CLÁUSULA 1ª – DA QUALIFICAÇÃO DAS PARTES
+• LOCADORA: MAGIA FESTEIRA, inscrita no CNPJ sob o nº ${cnpj}, com sede na Rua Adolina, 102 - Vila Mazzei, São Paulo - SP, WhatsApp Oficial: (11) 97782-3876.
+• CONTRATANTE: ${data.customer.name}, CPF: ${data.customer.document || '—'}, RG: ${data.customer.rg || '—'}, WhatsApp / Celular: ${data.customer.phone}, Endereço Residencial: ${data.customer.address || '—'}, ${data.customer.neighborhood || '—'} - ${data.customer.city || 'São Paulo'} | CEP: ${data.customer.cep || '—'}.
 
-**2. DADOS DO EVENTO**
+CLÁUSULA 2ª – DO EVENTO E LOCAL DA CELEBRAÇÃO
 • Celebração: ${data.event.name || 'Festa Comemorativa'}
-• Data do Evento: ${data.event.date} | Horário da Festa: ${data.event.time || 'A combinar'}
-• Local da Festa: ${data.event.location || 'Salão de Festas / Domicílio'}, ${data.event.neighborhood || '—'} | CEP: ${data.event.cep || '—'}
+• Data do Evento: ${data.event.date} | Horário da Festa: ${data.event.time || '13h às 20h'}
+• Local da Realização: ${data.event.location || 'Salão de Festas / Domicílio do Contratante'}, ${data.event.neighborhood || '—'} | CEP: ${data.event.cep || '—'}
 
-**3. RETIRADA, DEVOLUÇÃO E CRONOGRAMA**
-• Data da Retirada: ${data.rental.pickupDate} | Horário: ${data.rental.pickupTime || 'A combinar com a locadora'}
+CLÁUSULA 3ª – DO CRONOGRAMA DE RETIRADA E DEVOLUÇÃO
+• Data da Retirada: ${data.rental.pickupDate} | Horário: ${data.rental.pickupTime || '10:00 (a combinar)'}
 • Data da Devolução: ${data.rental.returnDate} | Horário Limite: ${data.rental.returnTime || 'Até às 17h00'}
-• Endereço de Coleta/Devolução: Rua Adolina, 102 - Vila Mazzei, São Paulo - SP
+• Endereço de Coleta e Devolução: Rua Adolina, 102 - Vila Mazzei, São Paulo - SP.
 
-**4. DADOS FINANCEIROS & PAGAMENTO**
+CLÁUSULA 4ª – DO VALOR E CONDIÇÕES DE PAGAMENTO
 • Tema Principal: ${data.rental.theme}
 • Valor Total Contratado: R$ ${data.rental.total.toFixed(2).replace('.', ',')}
 • Sinal Pago na Reserva: R$ ${data.rental.paid.toFixed(2).replace('.', ',')}
 • Saldo Devedor Restante: R$ ${data.rental.balance.toFixed(2).replace('.', ',')}
-• Forma / Condição de Pagamento: ${data.rental.paymentTerms || data.rental.paymentMethod?.toUpperCase() || 'PIX'}
+• Condição e Meio de Pagamento: ${data.rental.paymentTerms || data.rental.paymentMethod?.toUpperCase() || 'PIX'}
 *A liberação dos itens para saída fica condicionada à quitação integral do saldo devedor até o momento da retirada.*
 
-**5. ITENS LOCADOS (ACERVO CONTRATADO)**
+CLÁUSULA 5ª – DO ACERVO LOCADO (ITENS CONTRATADOS)
 ${itemsFormatted}
 
-**6. OBSERVAÇÕES ESPECÍFICAS**
-${data.rental.notes || 'Nenhuma observação adicional.'}
+CLÁUSULA 6ª – DAS OBSERVAÇÕES ESPECÍFICAS
+${data.rental.notes || 'Nenhuma observação operacional adicional registrada.'}
 
-**7. CONDIÇÕES GERAIS, CONSERVAÇÃO E RESPONSABILIDADES**
+CLÁUSULA 7ª – DAS CONDIÇÕES GERAIS, CONSERVAÇÃO E MULTAS
 7.1. CUIDADOS COM O ACERVO: É estritamente proibido o uso de cola quente, fitas adesivas de alta aderência (como silver tape ou dupla face agressiva), tachas ou grampos sobre tecidos sublimados, cilindros e painéis. É proibida a queima de velas ou exposição a chamas e intempéries (chuva/umidade) junto às peças.
 7.2. TAXA DE HIGIENIZAÇÃO: Todos os itens devem retornar devidamente limpos e em suas embalagens originais. Para cada item devolvido sujo ou com resíduos, será cobrada a taxa de ${dirtyFee} para higienização especializada.
-7.3. AVARIAS E REPOSIÇÃO: Em caso de quebra, rasgo, manchas irreversíveis ou extravio de qualquer peça, o CONTRATANTE indenizará a LOCADORA pelo valor de mercado para reposição imediata da peça idêntica nova, acrescido de frete, no prazo de até 48 horas.
-7.4. MULTA POR ATRASO NA DEVOLUÇÃO: Havendo atraso na devolução além da data e horário limite estipulados na Cláusula 3, incidirá multa de ${lateFee} por dia de atraso, sem prejuízo da cobrança de diárias adicionais e ressarcimento de eventuais prejuízos causados à próxima locação do acervo.
+7.3. AVARIAS E REPOSIÇÃO: Em caso de quebra, rasgo, manchas irreversíveis ou extravio de qualquer peça, o CONTRATANTE indenizará a LOCADORA pelo valor de reposição de mercado de peça idêntica nova, acrescido de frete, no prazo de até 48 horas.
+7.4. MULTA POR ATRASO NA DEVOLUÇÃO: Havendo atraso na devolução além da data e horário limite estipulados na Cláusula 3ª, incidirá multa de ${lateFee} por dia de atraso, sem prejuízo da cobrança de diárias adicionais e ressarcimento de eventuais prejuízos causados à próxima locação do acervo.
 7.5. POLÍTICA DE CANCELAMENTO / DESISTÊNCIA: Em caso de cancelamento da locação por parte do CONTRATANTE com menos de 15 (quinze) dias de antecedência da data da festa, o valor pago a título de sinal (reserva de agenda) NÃO será restituído, servindo como compensação à LOCADORA pela indisponibilização da data a outros clientes.
 7.6. CONFERÊNCIA E ITENS ESQUECIDOS: A conferência do acervo ocorre no ato da entrega/retirada e na devolução. Qualquer item de propriedade do cliente esquecido com a empresa deverá ser retirado em até 15 dias, sob pena de descarte.
-7.7. VALIDADE DO ACEITE DIGITAL: As partes reconhecem expressamente que o recebimento deste contrato por WhatsApp/meio eletrônico, somado ao pagamento do sinal ou retirada do acervo, constitui anuência e aceite irretratável de todas as cláusulas acima.
+7.7. VALIDADE DO ACEITE DIGITAL: As partes reconhecem expressamente que o recebimento deste contrato por WhatsApp ou meio eletrônico, somado ao pagamento do sinal ou retirada do acervo, constitui anuência e aceite irretratável de todas as cláusulas acima (amparado pela Lei 14.063/2020 e Art. 441 do Código Civil).
 
 São Paulo, ${dateToday}
 

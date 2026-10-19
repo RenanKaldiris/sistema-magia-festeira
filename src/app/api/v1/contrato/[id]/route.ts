@@ -70,10 +70,10 @@ export async function GET(
       customerName: rental.customer?.name || rental.customer_name || 'Cliente Magia Festeira',
       customerPhone: rental.customer?.phone || rental.customer_phone || '',
       customerDocument: rental.customer?.document || null,
-      customerRg: null,
+      customerRg: rental.customer?.rg || null,
       customerAddress: rental.customer?.address || rental.delivery_location || null,
-      customerNeighborhood: null,
-      customerCity: 'São Paulo',
+      customerNeighborhood: rental.customer?.neighborhood || null,
+      customerCity: rental.customer?.city || 'São Paulo',
       customerCep: null,
 
       eventName: `Aniversário de ${(rental.customer?.name || rental.customer_name || 'Cliente').split(' ')[0]}`,
