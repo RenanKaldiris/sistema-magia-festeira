@@ -21,6 +21,21 @@ async function safeSupabaseServerOp(operation: () => PromiseLike<unknown>) {
   }
 }
 
+export function getDefaultRentalItems(themeName?: string | null): ContractItemInput[] {
+  const themeText = themeName ? `no tema ${themeName}` : 'no tema escolhido';
+  return [
+    { description: '1 arco de ferro desmontável', quantity: 1, unitPrice: 0 },
+    { description: '3 cilindros P,M,G', quantity: 1, unitPrice: 0 },
+    { description: `Capas para o painel e cilindros ${themeText}`, quantity: 1, unitPrice: 0 },
+    { description: '1 boleira', quantity: 1, unitPrice: 0 },
+    { description: '2 doceiras redondas', quantity: 1, unitPrice: 0 },
+    { description: '1 doceira retangular', quantity: 1, unitPrice: 0 },
+    { description: '1 vaso', quantity: 1, unitPrice: 0 },
+    { description: '1 buchinho', quantity: 1, unitPrice: 0 },
+    { description: '1 porta balões de chão ( sem os balões)', quantity: 1, unitPrice: 0 },
+  ];
+}
+
 export class ApiService {
   private getClient() {
     if (isSupabaseConfigured && supabase) {
@@ -655,9 +670,10 @@ export class ApiService {
             *,
             customer:customer_id(*),
             theme:theme_id(*),
+            lines:rental_lines(*),
             payments(*)
           `)
-          .eq('id', id)
+          .or(`id.eq.${id},id.ilike.%${id}`)
           .maybeSingle();
 
         if (data) return data;
@@ -666,7 +682,7 @@ export class ApiService {
       }
     }
     const rentals = store.getRentals();
-    return rentals.find((r) => r.id === id) || null;
+    return rentals.find((r) => r.id === id || r.id.endsWith(id)) || null;
   }
 
   public async createRental(data: {
@@ -862,21 +878,57 @@ export class ApiService {
       }
     }
 
-    // 5. Geração Automática de Contrato no Google Docs e Agendamento no Google Calendar
-    let contractUrl: string | undefined;
+    // 5. Geração Automática de Contrato Digital Oficial (A4 / PDF) e Agendamento no Google Calendar
+    const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sistema-magia-festeira-blond.vercel.app';
+    const contractUrl = `${appBaseUrl}/contrato/${rental.id}`;
     let contractDriveId: string | undefined;
     let calendarEventId: string | undefined;
 
+    rental.contract_url = contractUrl;
+
+    // 9 itens padrão oficiais do acervo
+    const standardItems = getDefaultRentalItems(theme?.name);
+    if (data.extraItems) {
+      standardItems.push({ description: data.extraItems, quantity: 1, unitPrice: 0 });
+    }
+
+    // Salvar itens em rental_lines no Supabase
+    if (clientDb) {
+      await safeSupabaseServerOp(async () => {
+        const linesToInsert = standardItems.map((it) => ({
+          id: crypto.randomUUID(),
+          rental_id: rental.id,
+          description: it.description,
+          quantity: it.quantity,
+          unit_price: it.unitPrice || 0,
+          total_price: (it.unitPrice || 0) * it.quantity,
+        }));
+        await clientDb.from('rental_lines').insert(linesToInsert);
+
+        await clientDb
+          .from('rentals')
+          .update({
+            contract_url: contractUrl,
+          })
+          .eq('id', rental.id);
+      });
+    }
+
+    // Salvar no Store local
+    store.setRentalLines(
+      rental.id,
+      standardItems.map((it, idx) => ({
+        id: `rl-${rental.id}-${idx + 1}`,
+        rental_id: rental.id,
+        description: it.description,
+        quantity: it.quantity,
+        unit_price: it.unitPrice || 0,
+        total_price: (it.unitPrice || 0) * it.quantity,
+      }))
+    );
+
     if (!isHistorical) {
       try {
-        const itemsList: ContractItemInput[] = [];
-        if (theme) {
-          itemsList.push({ description: `Kit Decoração Tema ${theme.name}`, quantity: 1 });
-        }
-        if (data.extraItems) {
-          itemsList.push({ description: data.extraItems, quantity: 1 });
-        }
-
         const contractPayload: ContractPayload = {
           rentalId: rental.id,
           orderNumber,
@@ -906,35 +958,15 @@ export class ApiService {
             paymentTerms: data.paymentTerms,
             notes: data.notes,
           },
-          items: itemsList,
+          items: standardItems,
         };
-
-        const docRes = await googleWorkspaceService.generateContractDocument(contractPayload);
-        if (docRes.success && docRes.contractUrl) {
-          contractUrl = docRes.contractUrl;
-          contractDriveId = docRes.docId;
-          rental.contract_url = contractUrl;
-          rental.contract_drive_id = contractDriveId;
-
-          if (clientDb) {
-            await safeSupabaseServerOp(() =>
-              clientDb
-                .from('rentals')
-                .update({
-                  contract_url: contractUrl,
-                  contract_drive_id: contractDriveId,
-                })
-                .eq('id', rental.id)
-            );
-          }
-        }
 
         const calRes = await googleWorkspaceService.syncGoogleCalendarEvent(contractPayload, contractUrl);
         if (calRes.success && calRes.eventId) {
           calendarEventId = calRes.eventId;
         }
       } catch (contractErr) {
-        console.warn('[ApiService Contract/Calendar Generation Warning]', contractErr);
+        console.warn('[ApiService Calendar Sync Warning]', contractErr);
       }
     }
 
@@ -1092,17 +1124,28 @@ export class ApiService {
       }
     }
 
-    // 5. Montar Payload do Contrato
+    // 5. Montar Itens do Contrato (9 itens padrão oficiais caso não fornecidos)
     const orderNumber = rentalId.slice(-4);
     const contractItems: ContractItemInput[] =
       options?.items && options.items.length > 0
         ? options.items
-        : [
-            { description: `Kit de Decoração - ${themeName}`, quantity: 1, unitPrice: newTotal },
-            { description: 'Painel redondo sublimado e arco de sustentação', quantity: 1 },
-            { description: 'Trio de cilindros com capas personalizadas', quantity: 1 },
-            { description: 'Conjunto de bandejas, doceiras e boleira temática', quantity: 1 },
-          ];
+        : getDefaultRentalItems(themeName);
+
+    // Salvar no Store local
+    store.setRentalLines(
+      rental.id,
+      contractItems.map((it, idx) => ({
+        id: `rl-${rental!.id}-${idx + 1}`,
+        rental_id: rental!.id,
+        description: it.description,
+        quantity: it.quantity,
+        unit_price: it.unitPrice || 0,
+        total_price: (it.unitPrice || 0) * it.quantity,
+      }))
+    );
+
+    const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sistema-magia-festeira-blond.vercel.app';
+    const contractUrl = `${appBaseUrl}/contrato/${rental.id}`;
 
     const contractPayload: ContractPayload = {
       rentalId: rental.id,
@@ -1142,12 +1185,20 @@ export class ApiService {
       items: contractItems,
     };
 
-    // 6. Geração do Documento e Agendamento no Google
-    const docRes = await googleWorkspaceService.generateContractDocument(contractPayload);
-    const calRes = await googleWorkspaceService.syncGoogleCalendarEvent(contractPayload, docRes.contractUrl);
+    // 6. Geração do Texto Formatado e Agendamento no Google Calendar
+    const formattedText = googleWorkspaceService.buildContractText(contractPayload);
+    let calendarEventId: string | undefined;
 
-    rentalUpdates.contract_url = docRes.contractUrl;
-    rentalUpdates.contract_drive_id = docRes.docId || null;
+    try {
+      const calRes = await googleWorkspaceService.syncGoogleCalendarEvent(contractPayload, contractUrl);
+      if (calRes.success && calRes.eventId) {
+        calendarEventId = calRes.eventId;
+      }
+    } catch (calErr) {
+      console.warn('[ApiService Calendar Sync Warning]', calErr);
+    }
+
+    rentalUpdates.contract_url = contractUrl;
 
     // 7. Atualizar no Supabase e no Store local
     if (client) {
@@ -1164,10 +1215,9 @@ export class ApiService {
 
     return {
       success: true,
-      contractUrl: docRes.contractUrl,
-      docId: docRes.docId,
-      calendarEventId: calRes.eventId,
-      formattedText: docRes.formattedText,
+      contractUrl,
+      calendarEventId,
+      formattedText,
       rental: finalRental,
     };
   }

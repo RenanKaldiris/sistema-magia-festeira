@@ -1477,11 +1477,21 @@ class MagiaStore {
         theme,
         theme_variant: variant,
         kit,
-        lines: [],
+        lines: this.rentalLines.filter((l) => l.rental_id === r.id),
         payments: rentalPayments,
         calendar_sync: sync,
       };
     });
+  }
+
+  public getRentalLines(rentalId: string): RentalLine[] {
+    return this.rentalLines.filter((l) => l.rental_id === rentalId);
+  }
+
+  public setRentalLines(rentalId: string, lines: RentalLine[]) {
+    this.rentalLines = this.rentalLines.filter((l) => l.rental_id !== rentalId).concat(lines);
+    this.saveToLocalStorage();
+    this.notifyListeners();
   }
 
   public getImports() {

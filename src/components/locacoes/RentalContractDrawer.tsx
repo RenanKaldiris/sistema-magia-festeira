@@ -136,29 +136,60 @@ export function RentalContractDrawer({
             unitPrice: l.unit_price || 0,
           }))
         );
-      } else {
+        const themeName = rental.theme?.name;
+        const themeText = themeName ? `no tema ${themeName}` : 'no tema escolhido';
         const defaultList: ContractItemRow[] = [
           {
             id: 'item-1',
-            description: `Kit Painel e Estrutura - Tema ${rental.theme?.name || 'Magia Festeira'}`,
+            description: '1 arco de ferro desmontável',
             quantity: 1,
             unitPrice: 0,
           },
           {
             id: 'item-2',
-            description: 'Trio de cilindros com capas personalizadas do tema',
+            description: '3 cilindros P,M,G',
             quantity: 1,
             unitPrice: 0,
           },
           {
             id: 'item-3',
-            description: 'Conjunto de doceiras, boleira e bandejas temáticas',
+            description: `Capas para o painel e cilindros ${themeText}`,
             quantity: 1,
             unitPrice: 0,
           },
           {
             id: 'item-4',
-            description: 'Suporte de balões de chão (sem balões inclusos)',
+            description: '1 boleira',
+            quantity: 1,
+            unitPrice: 0,
+          },
+          {
+            id: 'item-5',
+            description: '2 doceiras redondas',
+            quantity: 1,
+            unitPrice: 0,
+          },
+          {
+            id: 'item-6',
+            description: '1 doceira retangular',
+            quantity: 1,
+            unitPrice: 0,
+          },
+          {
+            id: 'item-7',
+            description: '1 vaso',
+            quantity: 1,
+            unitPrice: 0,
+          },
+          {
+            id: 'item-8',
+            description: '1 buchinho',
+            quantity: 1,
+            unitPrice: 0,
+          },
+          {
+            id: 'item-9',
+            description: '1 porta balões de chão ( sem os balões)',
             quantity: 1,
             unitPrice: 0,
           },
@@ -248,7 +279,26 @@ export function RentalContractDrawer({
     );
   };
 
-  // Gerar Contrato no Google Docs via API
+  // Restaurar os 9 itens padrão oficiais da Magia Festeira
+  const handleResetToStandardItems = () => {
+    if (!rental) return;
+    const themeName = rental.theme?.name;
+    const themeText = themeName ? `no tema ${themeName}` : 'no tema escolhido';
+    const defaultList: ContractItemRow[] = [
+      { id: `item-1-${Date.now()}`, description: '1 arco de ferro desmontável', quantity: 1, unitPrice: 0 },
+      { id: `item-2-${Date.now()}`, description: '3 cilindros P,M,G', quantity: 1, unitPrice: 0 },
+      { id: `item-3-${Date.now()}`, description: `Capas para o painel e cilindros ${themeText}`, quantity: 1, unitPrice: 0 },
+      { id: `item-4-${Date.now()}`, description: '1 boleira', quantity: 1, unitPrice: 0 },
+      { id: `item-5-${Date.now()}`, description: '2 doceiras redondas', quantity: 1, unitPrice: 0 },
+      { id: `item-6-${Date.now()}`, description: '1 doceira retangular', quantity: 1, unitPrice: 0 },
+      { id: `item-7-${Date.now()}`, description: '1 vaso', quantity: 1, unitPrice: 0 },
+      { id: `item-8-${Date.now()}`, description: '1 buchinho', quantity: 1, unitPrice: 0 },
+      { id: `item-9-${Date.now()}`, description: '1 porta balões de chão ( sem os balões)', quantity: 1, unitPrice: 0 },
+    ];
+    setItems(defaultList);
+  };
+
+  // Salvar e Atualizar Contrato Oficial no Sistema
   const handleGenerateContract = async () => {
     if (!rental) return;
     setIsGenerating(true);
@@ -296,7 +346,7 @@ export function RentalContractDrawer({
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Erro ao gerar documento no Google Docs.');
+        throw new Error(data.error || 'Erro ao salvar contrato.');
       }
 
       const generatedUrl = data.data.contractUrl;
@@ -304,7 +354,7 @@ export function RentalContractDrawer({
       setFormattedPreview(data.data.formattedText || null);
       setStatusMessage({
         type: 'success',
-        text: 'Contrato gerado e sincronizado com o Google Drive e Agenda com sucesso!',
+        text: 'Contrato salvo e atualizado com sucesso! Pronto para impressão ou envio via WhatsApp.',
       });
 
       if (onContractGenerated && data.data.rental) {
@@ -314,17 +364,22 @@ export function RentalContractDrawer({
       console.error('[GenerateContract Error]', err);
       setStatusMessage({
         type: 'error',
-        text: (err as Error).message || 'Falha ao conectar com o serviço do Google.',
+        text: (err as Error).message || 'Falha ao salvar contrato.',
       });
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // Copiar Link
+  // Copiar Link do Contrato
   const handleCopyLink = () => {
-    if (contractUrl) {
-      navigator.clipboard.writeText(contractUrl);
+    const url =
+      contractUrl ||
+      (typeof window !== 'undefined'
+        ? `${window.location.origin}/contrato/${rental?.id}`
+        : `https://sistema-magia-festeira-blond.vercel.app/contrato/${rental?.id}`);
+    if (url) {
+      navigator.clipboard.writeText(url);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2500);
     }
@@ -332,13 +387,19 @@ export function RentalContractDrawer({
 
   // Montar link direto de WhatsApp com mensagem de envio do contrato
   const whatsappShareUrl = useMemo(() => {
-    if (!customerPhone || !contractUrl) return '';
+    if (!customerPhone || !rental) return '';
     const cleanPhone = customerPhone.replace(/\D/g, '');
     const phoneWithDDI = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+    const directUrl =
+      contractUrl ||
+      (typeof window !== 'undefined'
+        ? `${window.location.origin}/contrato/${rental.id}`
+        : `https://sistema-magia-festeira-blond.vercel.app/contrato/${rental.id}`);
+
     const text =
       `Olá, ${customerName}! 🎈 Segue o Contrato Oficial de Locação da Magia Festeira para a festa do tema *${rental?.theme?.name || 'Decoração'}*:\n\n` +
-      `📄 *Acesse e revise seu contrato aqui:*\n${contractUrl}\n\n` +
-      `Qualquer dúvida estamos à disposição!`;
+      `📄 *Acesse e salve seu contrato em PDF aqui:*\n${directUrl}\n\n` +
+      `Qualquer dúvida estamos à sua inteira disposição!`;
     return `https://wa.me/${phoneWithDDI}?text=${encodeURIComponent(text)}`;
   }, [customerPhone, customerName, contractUrl, rental]);
 
@@ -399,59 +460,58 @@ export function RentalContractDrawer({
           </div>
         )}
 
-        {/* Card de Contrato Gerado (se já existir) */}
-        {contractUrl && (
-          <div className="m-4 p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-rose-500/10 via-purple-500/10 to-blue-500/10 border border-rose-300 dark:border-rose-850 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-rose-600 text-white shrink-0">
-                <FileText className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">
-                  Contrato no Google Drive
-                </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
-                  Pronto para edição colaborativa e impressão
-                </span>
-              </div>
+        {/* Card de Ações Rápidas do Contrato Oficial */}
+        <div className="m-4 p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-rose-500/10 via-purple-500/10 to-blue-500/10 border border-rose-300 dark:border-rose-850 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-rose-600 text-white shrink-0">
+              <FileText className="w-4 h-4" />
             </div>
-
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <a
-                href={contractUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 sm:flex-none px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-              >
-                <span>Abrir Google Docs</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
-                title="Copiar link do contrato"
-              >
-                {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                <span className="hidden sm:inline">{copiedLink ? 'Copiado' : 'Copiar'}</span>
-              </button>
-
-              {whatsappShareUrl && (
-                <a
-                  href={whatsappShareUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Enviar no WhatsApp da cliente"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">WhatsApp</span>
-                </a>
-              )}
+            <div className="min-w-0">
+              <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">
+                Contrato Oficial Digital & PDF
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+                Folha A4 oficial com os 9 itens padrão e pronta para visualização, impressão ou envio
+              </span>
             </div>
           </div>
-        )}
+
+          <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+            <a
+              href={`/contrato/${rental.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 sm:flex-none px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              title="Abrir folha oficial para visualização e impressão em PDF"
+            >
+              <span>Imprimir / Salvar PDF</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+              title="Copiar link do contrato"
+            >
+              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">{copiedLink ? 'Copiado' : 'Copiar Link'}</span>
+            </button>
+
+            {whatsappShareUrl && (
+              <a
+                href={whatsappShareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                title="Enviar no WhatsApp da cliente"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">WhatsApp</span>
+              </a>
+            )}
+          </div>
+        </div>
 
         {/* Abas de Navegação */}
         <div className="flex border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 shrink-0 text-xs font-semibold">
@@ -524,14 +584,26 @@ export function RentalContractDrawer({
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowItemSearch(!showItemSearch)}
-                  className="px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-rose-200 dark:border-rose-800"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Item do Estoque</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleResetToStandardItems}
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
+                    title="Restaurar a lista com os 9 itens padrão oficiais"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>9 Itens Padrão</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowItemSearch(!showItemSearch)}
+                    className="px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-rose-200 dark:border-rose-800"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Item do Estoque</span>
+                  </button>
+                </div>
               </div>
 
               {/* Caixa de Busca do Catálogo de Peças */}
@@ -915,7 +987,7 @@ export function RentalContractDrawer({
               </div>
               <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 font-mono text-[11px] leading-relaxed text-slate-800 dark:text-slate-200 max-h-96 overflow-y-auto whitespace-pre-wrap">
                 {formattedPreview ||
-                  `MAGIA FESTEIRA - LOCAÇÃO PARA DECORAÇÕES DE FESTAS\nCNPJ: 51.492.381/0001-90 | WhatsApp: (11) 97782-3876\n\nCONTRATO DE LOCAÇÃO DE KITS E MOBILIÁRIO\nContrato nº LOC-2026-#${orderDisplay}\n\n1. CONTRATANTE: ${customerName}\nCPF: ${customerDocument || '—'} | Cel: ${customerPhone}\n\n2. LOCAÇÃO: ${rental.theme?.name}\nTotal: R$ ${total.toFixed(2)} | Sinal: R$ ${paid.toFixed(2)} | Saldo: R$ ${balance.toFixed(2)}\n\n3. ITENS LOCADOS:\n${items.map((i) => `• ${i.quantity}x ${i.description}`).join('\n')}\n\n(Clique em 'Gerar e Salvar no Google Drive' para compilar o documento oficial)`}
+                  `MAGIA FESTEIRA - LOCAÇÃO PARA DECORAÇÕES DE FESTAS\nCNPJ: 51.492.381/0001-90 | WhatsApp: (11) 97782-3876\n\nCONTRATO DE LOCAÇÃO DE KITS E MOBILIÁRIO\nContrato nº LOC-2026-#${orderDisplay}\n\n1. CONTRATANTE: ${customerName}\nCPF: ${customerDocument || '—'} | Cel: ${customerPhone}\n\n2. LOCAÇÃO: ${rental.theme?.name}\nTotal: R$ ${total.toFixed(2)} | Sinal: R$ ${paid.toFixed(2)} | Saldo: R$ ${balance.toFixed(2)}\n\n3. ITENS LOCADOS (9 ITENS PADRÃO):\n${items.map((i) => `• ${i.quantity}x ${i.description}`).join('\n')}\n\n(Clique em 'Salvar e Atualizar Contrato' para persistir e 'Imprimir / Salvar PDF' para emitir a folha A4)`}
               </div>
             </div>
           )}
@@ -932,24 +1004,37 @@ export function RentalContractDrawer({
             Fechar
           </button>
 
-          <button
-            type="button"
-            onClick={handleGenerateContract}
-            disabled={isGenerating}
-            className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            {isGenerating ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Gerando no Google Drive...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                <span>{contractUrl ? 'Regerar e Atualizar Contrato' : 'Gerar e Salvar no Google Drive'}</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href={`/contrato/${rental.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200 dark:border-slate-700"
+              title="Abrir página oficial do contrato para impressão ou salvar em PDF"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-rose-500" />
+              <span>Imprimir / Salvar PDF</span>
+            </a>
+
+            <button
+              type="button"
+              onClick={handleGenerateContract}
+              disabled={isGenerating}
+              className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Salvando Contrato...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>Salvar e Atualizar Contrato</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
       </div>

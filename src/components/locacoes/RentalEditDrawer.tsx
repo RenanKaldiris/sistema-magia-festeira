@@ -384,23 +384,22 @@ export function RentalEditDrawer({
                   Contrato de Locação
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
-                  {rental.contract_url ? 'Contrato gerado no Google Drive' : 'Ainda não gerado'}
+                  {rental.contract_url ? 'Contrato digital oficial ativo' : 'Ainda não gerado'}
                 </span>
               </div>
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              {rental.contract_url && (
-                <a
-                  href={rental.contract_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold inline-flex items-center gap-1 transition-colors"
-                >
-                  <span>Ver Doc</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
+              <a
+                href={`/contrato/${rental.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold inline-flex items-center gap-1 transition-colors"
+                title="Visualizar ou imprimir contrato em PDF"
+              >
+                <span>Ver Contrato</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
               {onOpenContract && (
                 <button
                   type="button"

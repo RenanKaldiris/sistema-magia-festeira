@@ -1,10 +1,10 @@
 {
-  "lastSync": "2026-10-19T21:33:59.453Z",
+  "lastSync": "2026-10-19T22:12:54.203Z",
   "projectName": "Sistema Magia Festeira",
   "version": "1.2.0",
   "summary": {
-    "totalPages": 17,
-    "totalApiRoutes": 18,
+    "totalPages": 18,
+    "totalApiRoutes": 19,
     "totalComponents": 28,
     "totalScripts": 160
   },
@@ -74,6 +74,10 @@
       "file": "src/app/catalogo/[slug]/page.tsx"
     },
     {
+      "route": "/contrato/[id]",
+      "file": "src/app/contrato/[id]/page.tsx"
+    },
+    {
       "route": "/",
       "file": "src/app/page.tsx"
     }
@@ -102,6 +106,10 @@
     {
       "endpoint": "/api/v1/availability",
       "file": "src/app/api/v1/availability/route.ts"
+    },
+    {
+      "endpoint": "/api/v1/contrato/[id]",
+      "file": "src/app/api/v1/contrato/[id]/route.ts"
     },
     {
       "endpoint": "/api/v1/customers/by-phone",

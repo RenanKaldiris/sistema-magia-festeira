@@ -63,7 +63,7 @@ Para garantir consistência absoluta na interface, todos os novos componentes, b
 
 ### 2.3 Componentes Estruturais de UI
 - **Gaveta Lateral de Edição (Drawer):** Desliza da direita para a esquerda (`fixed inset-y-0 right-0 w-full sm:max-w-xl z-50 bg-white dark:bg-slate-900 shadow-2xl p-6 overflow-y-auto border-l border-slate-200 dark:border-slate-800`). Utilizado para edição rápida de temas, itens, locações e clientes sem perder o scroll da listagem principal.
-- **Gaveta de Contrato Inteligente (`RentalContractDrawer`):** Drawer lateral especializado para personalização de itens locados do acervo, cálculo dinâmico de sinal/saldo e geração de contrato no Google Drive com link editável e envio facilitado por WhatsApp.
+- **Gaveta de Contrato Inteligente (`RentalContractDrawer`):** Drawer lateral especializado para personalização dos itens locados do acervo (inicializado com os 9 itens padrão oficiais), cálculo dinâmico de sinal/saldo, persistência em `rental_lines` e emissão direta de contrato digital oficial em folha A4 (`/contrato/[id]`) com impressão limpa (`window.print()`), salvamento em PDF e compartilhamento instantâneo via WhatsApp.
 - **Barra de Ações em Lote Flutuante (`BatchActionBar`):** Fixada no rodapé central da tela quando itens são selecionados por checkbox (`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white rounded-2xl shadow-2xl px-6 py-3.5 flex items-center gap-4`). Permite exclusão múltipla, alteração de categoria ou aplicação de desconto em massa.
 - **Badges de Status:** Pílulas compactas com cantos arredondados totais (`rounded-full px-2.5 py-0.5 text-xs font-semibold`).
 - **Logo Oficial:**
@@ -117,6 +117,7 @@ Para garantir consistência absoluta na interface, todos os novos componentes, b
 | `/` | Landing / Redirecionamento | Rota raiz que redireciona automaticamente o visitante para `/catalogo`. |
 | `/catalogo` | Catálogo Geral de Temas | Vitrine responsiva e acolhedora com busca em tempo real, filtro por categorias (ex: Aniversário Menino, Menina, Batizado, Chá Revelação), visualização em cards com foto principal, badges e link direto para WhatsApp com mensagem personalizada. |
 | `/catalogo/[slug]` | Página do Tema | Exibe carrossel de fotos em alta qualidade, lista de itens inclusos (ex: arco de ferro, cilindros, boleiras), opções de kits e botão fixo de solicitação de reserva no WhatsApp com o nome do tema injetado. |
+| `/contrato/[id]` | Contrato Digital Oficial (A4 / PDF) | Folha oficial do contrato de locação com layout A4 profissional, 9 itens padrão (com caixas de conferência/checklist), dados completos do contratante e evento, cláusulas de conservação e multas, assinaturas e botões para Imprimir / Salvar PDF (`window.print()`), WhatsApp e Copiar Link. |
 
 ---
 
@@ -129,9 +130,9 @@ Todas as rotas de API residem em `src/app/api/...` e possuem validação estrita
 2. `GET / POST /api/v1/themes`
    - Listagem com filtros e cadastro de novos temas de decoração.
 3. `GET / POST /api/v1/rentals`
-   - Listagem e criação de locações com verificação de bloqueio anti-colisão.
+   - Listagem e criação de locações com verificação de bloqueio anti-colisão, geração automática do `contract_url` e inserção dos 9 itens padrão em `rental_lines`.
 4. `GET / PATCH / DELETE /api/v1/rentals/[id]`
-   - Leitura detalhada, atualização de status e exclusão de locações.
+   - Leitura detalhada (incluindo `lines:rental_lines(*)`), atualização de status e exclusão de locações.
 5. `POST /api/v1/rentals/[id]/payments`
    - Registro de pagamentos parciais (sinal) ou liquidação total de locação.
 6. `GET / POST /api/v1/customers`
@@ -149,7 +150,9 @@ Todas as rotas de API residem em `src/app/api/...` e possuem validação estrita
 12. `GET /api/db/status`
     - Checagem de integridade e latência do PostgreSQL.
 13. `POST /api/v1/rentals/[id]/contract`
-    - Gera ou atualiza o contrato no Google Docs (modelo oficial blindado) e agenda no Google Calendar oficial. Permite personalização de peças do acervo, acréscimos/descontos e devolução pelo Drawer `RentalContractDrawer.tsx`.
+    - Salva e atualiza o contrato oficial: persiste customizações em `rental_lines`, atualiza valores e prazos, agenda no Google Calendar e retorna a URL digital do contrato (`/contrato/[id]`).
+14. `GET /api/v1/contrato/[id]`
+    - Rota pública para visualização e renderização do contrato oficial em PDF/A4 pelo cliente ou operador, sem necessidade de autenticação de administrador.
 
 ---
 
