@@ -13,6 +13,8 @@ import {
   Clock,
   MessageCircle,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { store } from '@/lib/store';
 import { formatDateBR } from '@/lib/dateUtils';
@@ -52,62 +54,78 @@ export default function AdminDashboardPage() {
     return rentals.filter((r) => r.status === 'devolvido').length;
   }, [rentals]);
 
-  // Locações do mês vigente (para cálculos de saldo recebido e saldo a receber do mês)
-  const currentMonthRentals = useMemo(() => {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+  // Navegação de mês inteligente (inicia sempre no mês e ano vigentes do sistema)
+  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth());
+
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  const handlePrevMonth = () => {
+    if (selectedMonth === 0) {
+      setSelectedMonth(11);
+      setSelectedYear((prev) => prev - 1);
+    } else {
+      setSelectedMonth((prev) => prev - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === 11) {
+      setSelectedMonth(0);
+      setSelectedYear((prev) => prev + 1);
+    } else {
+      setSelectedMonth((prev) => prev + 1);
+    }
+  };
+
+  const handleResetToCurrentMonth = () => {
+    const realNow = new Date();
+    setSelectedYear(realNow.getFullYear());
+    setSelectedMonth(realNow.getMonth());
+  };
+
+  const isCurrentSystemMonth = useMemo(() => {
+    const realNow = new Date();
+    return selectedYear === realNow.getFullYear() && selectedMonth === realNow.getMonth();
+  }, [selectedYear, selectedMonth]);
+
+  const currentMonthLabel = `${monthNames[selectedMonth]} de ${selectedYear}`;
+
+  // Locações do mês selecionado (não canceladas)
+  const selectedMonthRentals = useMemo(() => {
     return rentals.filter((r) => {
       if (!r.event_date || r.status === 'cancelado') return false;
       const evtDate = new Date(r.event_date.split('T')[0] + 'T12:00:00Z');
-      return evtDate.getUTCFullYear() === currentYear && evtDate.getUTCMonth() === currentMonth;
+      return evtDate.getUTCFullYear() === selectedYear && evtDate.getUTCMonth() === selectedMonth;
     });
-  }, [rentals]);
+  }, [rentals, selectedYear, selectedMonth]);
 
-  // Saldo Recebido no mês vigente (seguindo o mesmo cálculo da tela de locações)
-  const currentMonthReceived = useMemo(() => {
-    return currentMonthRentals.reduce(
+  // Saldo Recebido no mês selecionado (ajustado de acordo com a navegação de meses)
+  const selectedMonthReceived = useMemo(() => {
+    return selectedMonthRentals.reduce(
       (acc, r) => acc + (r.status === 'historico' ? (r.paid || r.total || 0) : (r.paid || 0)),
       0
     );
-  }, [currentMonthRentals]);
+  }, [selectedMonthRentals]);
 
-  // Saldo a Receber no mês vigente (seguindo o mesmo cálculo da tela de locações)
-  const currentMonthBalanceToReceive = useMemo(() => {
-    return currentMonthRentals
+  // Saldo a Receber no mês selecionado (ajustado de acordo com a navegação de meses)
+  const selectedMonthBalanceToReceive = useMemo(() => {
+    return selectedMonthRentals
       .filter((r) => r.status !== 'historico')
       .reduce((acc, r) => acc + (r.balance || 0), 0);
-  }, [currentMonthRentals]);
+  }, [selectedMonthRentals]);
 
-  // Próximos Eventos: considerando a data vigente do sistema, apenas eventos futuros limitados aos próximos 15 dias
-  const upcomingRentals = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    
-    // Limite máximo: 15 dias à frente
-    const in15Days = new Date(today.getTime() + 15 * 24 * 60 * 60 * 1000);
-    const in15DaysStr = `${in15Days.getFullYear()}-${String(in15Days.getMonth() + 1).padStart(2, '0')}-${String(in15Days.getDate()).padStart(2, '0')}`;
-
-    return rentals
-      .filter((r) => {
-        // Não visualiza nenhuma locação cancelada, devolvida ou de histórico passado
-        if (r.status === 'cancelado' || r.status === 'devolvido' || r.status === 'historico') {
-          return false;
-        }
-
-        const eventDateStr = r.event_date ? r.event_date.split('T')[0] : '';
-        if (!eventDateStr) return false;
-
-        // Somente eventos futuros a partir da data de hoje até os próximos 15 dias
-        return eventDateStr >= todayStr && eventDateStr <= in15DaysStr;
-      })
-      .sort((a, b) => {
-        const aDate = a.event_date ? a.event_date.split('T')[0] : '';
-        const bDate = b.event_date ? b.event_date.split('T')[0] : '';
-        return aDate.localeCompare(bDate);
-      });
-  }, [rentals]);
+  // Lista de locações do mês selecionado, ordenadas cronologicamente
+  const monthRentalsList = useMemo(() => {
+    return [...selectedMonthRentals].sort((a, b) => {
+      const aDate = a.event_date ? a.event_date.split('T')[0] : '';
+      const bDate = b.event_date ? b.event_date.split('T')[0] : '';
+      return aDate.localeCompare(bDate);
+    });
+  }, [selectedMonthRentals]);
 
   // Identificação dinâmica de conflito real de estoque entre reservas ativas
   const stockConflict = useMemo(() => {
@@ -147,23 +165,45 @@ export default function AdminDashboardPage() {
           <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Visão Geral da Operação
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">
-            Indicadores de estoque, locações ativas e agenda dos próximos eventos.
-          </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Botoes Desktop */}
+        <div className="hidden sm:flex items-center gap-2">
           <Link
             href="/admin/locacoes"
-            className="flex-1 sm:flex-initial text-center px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
+            className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
           >
             + Nova Reserva
           </Link>
           <Link
             href="/admin/temas"
-            className="flex-1 sm:flex-initial text-center px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-xs transition-colors"
+            className="px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-xs transition-colors"
           >
             Novo Tema
+          </Link>
+        </div>
+
+        {/* 3 Botoes Padronizados no Mobile: Quantidade de Temas, Nova Reserva e Novo Tema */}
+        <div className="grid grid-cols-3 gap-1.5 w-full sm:hidden">
+          <Link
+            href="/admin/temas"
+            className="flex items-center justify-center gap-1 py-2 px-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold shadow-xs transition-colors text-center truncate"
+            title="Ir para página de temas"
+          >
+            <Palette className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+            <span className="truncate">{totalThemes} Temas</span>
+          </Link>
+          <Link
+            href="/admin/locacoes"
+            className="flex items-center justify-center py-2 px-1 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center truncate"
+          >
+            + Reserva
+          </Link>
+          <Link
+            href="/admin/temas"
+            className="flex items-center justify-center py-2 px-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold shadow-xs transition-colors text-center truncate"
+          >
+            + Tema
           </Link>
         </div>
       </div>
@@ -190,12 +230,58 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+      {/* Navegador Inteligente de Meses */}
+      <div className="flex items-center justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-3 sm:px-5 py-2.5 shadow-xs">
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          <button
+            onClick={handlePrevMonth}
+            className="p-1.5 sm:p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+            title="Mês anterior"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          <div className="text-left min-w-[130px] sm:min-w-[180px]">
+            <span className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white capitalize block leading-tight">
+              {currentMonthLabel}
+            </span>
+            {isCurrentSystemMonth ? (
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider block">
+                Mês Vigente
+              </span>
+            ) : (
+              <button
+                onClick={handleResetToCurrentMonth}
+                className="text-[10px] text-rose-600 dark:text-rose-400 hover:underline font-bold block cursor-pointer"
+              >
+                Voltar ao mês atual
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={handleNextMonth}
+            className="p-1.5 sm:p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+            title="Próximo mês"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="text-right text-xs">
+          <span className="text-slate-400 dark:text-slate-500 hidden sm:inline">Locações no mês: </span>
+          <span className="font-extrabold text-slate-800 dark:text-slate-200 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800">
+            {monthRentalsList.length} {monthRentalsList.length === 1 ? 'evento' : 'eventos'}
+          </span>
+        </div>
+      </div>
+
       {/* 4 Primary KPI Cards com Links Diretos */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6">
-        {/* 1. Total Themes -> Leva para página de Temas */}
+        {/* 1. Total Themes -> Visivel no Desktop, no Mobile ja fica no topo */}
         <Link
           href="/admin/temas"
-          className="col-span-2 sm:col-span-1 p-3 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-rose-300 dark:hover:border-rose-700 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+          className="hidden sm:flex col-span-1 p-3 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-rose-300 dark:hover:border-rose-700 hover:shadow-md transition-all cursor-pointer flex-col justify-between group"
           title="Clique para ir à página de Temas"
         >
           <div className="flex items-center justify-between gap-1">
@@ -216,11 +302,11 @@ export default function AdminDashboardPage() {
           </div>
         </Link>
 
-        {/* 2. Saldo Recebido (Mês Vigente) - Compacto no Mobile */}
+        {/* 2. Saldo Recebido (Mês Selecionado) - Compacto no Mobile */}
         <Link
-          href="/admin/locacoes?period=current_month&financial=paid"
+          href="/admin/locacoes?financial=paid"
           className="col-span-1 p-2.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
-          title="Clique para ver as locações quitadas do mês vigente"
+          title={`Clique para ver as locações quitadas de ${currentMonthLabel}`}
         >
           <div className="flex items-center justify-between gap-1">
             <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
@@ -232,19 +318,19 @@ export default function AdminDashboardPage() {
           </div>
           <div className="mt-1.5 sm:mt-3">
             <div className="text-sm xs:text-base sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 leading-tight truncate">
-              R$ {currentMonthReceived.toFixed(2).replace('.', ',')}
+              R$ {selectedMonthReceived.toFixed(2).replace('.', ',')}
             </div>
-            <span className="text-[9px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate">
-              mês vigente
+            <span className="text-[9px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate capitalize">
+              {monthNames[selectedMonth]}
             </span>
           </div>
         </Link>
 
-        {/* 3. Saldo a Receber (Mês Vigente) - Compacto no Mobile */}
+        {/* 3. Saldo a Receber (Mês Selecionado) - Compacto no Mobile */}
         <Link
-          href="/admin/locacoes?period=current_month&financial=pending"
+          href="/admin/locacoes?financial=pending"
           className="col-span-1 p-2.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
-          title="Clique para ver as locações com saldo a receber no mês vigente"
+          title={`Clique para ver as locações com saldo a receber de ${currentMonthLabel}`}
         >
           <div className="flex items-center justify-between gap-1">
             <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
@@ -256,10 +342,10 @@ export default function AdminDashboardPage() {
           </div>
           <div className="mt-1.5 sm:mt-3">
             <div className="text-sm xs:text-base sm:text-2xl font-black text-amber-600 dark:text-amber-400 leading-tight truncate">
-              R$ {currentMonthBalanceToReceive.toFixed(2).replace('.', ',')}
+              R$ {selectedMonthBalanceToReceive.toFixed(2).replace('.', ',')}
             </div>
-            <span className="text-[9px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate">
-              mês vigente
+            <span className="text-[9px] sm:text-[11px] text-slate-400 dark:text-slate-500 block mt-0.5 truncate capitalize">
+              {monthNames[selectedMonth]}
             </span>
           </div>
         </Link>
@@ -325,21 +411,16 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Próximos Eventos & Locações (Apenas próximos 15 dias da data vigente) */}
+      {/* Eventos & Locações do Mês Selecionado */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 sm:mb-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                Próximos Eventos & Locações
-              </h3>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40">
-                Próximos 15 dias
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Eventos futuros a partir da data de hoje. Clique na locação para abrir as informações completas.
-            </p>
+          <div className="flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              Eventos & Locações do Mês
+            </h3>
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 capitalize">
+              {monthNames[selectedMonth]} / {selectedYear}
+            </span>
           </div>
 
           <Link
@@ -351,14 +432,14 @@ export default function AdminDashboardPage() {
           </Link>
         </div>
 
-        {upcomingRentals.length === 0 ? (
+        {monthRentalsList.length === 0 ? (
           <div className="py-12 px-4 text-center bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center">
             <Calendar className="w-10 h-10 text-slate-300 dark:text-slate-600 mb-2 stroke-1" />
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              Nenhum evento agendado para os próximos 15 dias.
+              Nenhuma locação agendada para {currentMonthLabel}.
             </p>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-md">
-              Locações com datas anteriores ou além dos próximos 15 dias não são exibidas aqui.
+              Navegue pelos meses acima ou acesse a agenda completa para ver outros períodos.
             </p>
             <Link
               href="/admin/locacoes"
@@ -369,7 +450,7 @@ export default function AdminDashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-            {upcomingRentals.map((rental) => (
+            {monthRentalsList.map((rental) => (
               <div
                 key={rental.id}
                 onClick={() => setSelectedRental(rental)}
